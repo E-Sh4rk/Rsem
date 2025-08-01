@@ -1,6 +1,6 @@
 (executable
-  (package tree-sitter-lang)
-  (public_name parse-r)
+  (package typed-r)
+  (public_name main)
   (name Main)
-  (libraries tree-sitter-lang.r)
+  (libraries typed-r.r typed-r.lang)
 )

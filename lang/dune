@@ -1,0 +1,5 @@
+(library
+  (public_name typed-r.lang)
+  (name lang)
+  (libraries typed-r.r)
+)

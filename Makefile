@@ -5,7 +5,7 @@ build:
 	dune build
 
 run:
-	dune exec parse-r
+	dune exec main
 
 clean:
 	dune clean
