@@ -9,6 +9,10 @@ open Lang
     ~dump_tree:Boilerplate.dump_tree
     ~dump_extras:Boilerplate.dump_extras *)
 
+let treat_def past =
+  let ast = PAst.transform past in
+  Format.printf "%a" Ast.pp_e ast
+
 let () =
   let res = Parse.file "test.r" in
   match res.program with
@@ -16,5 +20,6 @@ let () =
   | Some prog ->
     Boilerplate.dump_extras res.extras ;
     let tree = Boilerplate.map_program () prog in
-    let ast = Parser.of_parser tree in
-    Format.printf "%a" Ast.pp ast
+    let prog = Parser.of_parser tree in
+    Format.printf "%a" PAst.pp prog ;
+    List.iter treat_def prog

@@ -1,19 +1,17 @@
+
+open Common
+
+type label = string
+[@@deriving show]
+
 type const =
 | CStr of string
 [@@deriving show]
 
 type e =
 | Const of const
-| Id of string
+| Id of Variable.t
 | Call of e * arg option list
 [@@deriving show]
-and arg =
-| Unnamed of e
-| Named of arg_id * e option
-and arg_id =
-| NullId
-| ArgId of string
-(* TODO: dots *)
-
-type t = e list
+and arg = label * e
 [@@deriving show]

@@ -1,4 +1,4 @@
-(executable
+(library
   (public_name typed-r.r_types)
   (name r_types)
   (libraries mlsem.types mlsem.common)

@@ -1,6 +1,6 @@
 open Tree_sitter_run
 open Raw_tree
-module A = Ast
+module A = PAst
 
 let extract2 tree =
   match tree with

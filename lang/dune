@@ -3,5 +3,5 @@
   (name lang)
   (preprocess
     (pps ppx_deriving.show ppx_deriving.eq))
-  (libraries typed-r.r)
+  (libraries typed-r.r mlsem.system mlsem.common typed-r.r_types)
 )
