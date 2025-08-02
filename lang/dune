@@ -1,5 +1,7 @@
 (library
   (public_name typed-r.lang)
   (name lang)
+  (preprocess
+    (pps ppx_deriving.show ppx_deriving.eq))
   (libraries typed-r.r)
 )
