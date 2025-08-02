@@ -39,6 +39,7 @@ let weak_type_var = '\'' '_' ['a'-'z''A'-'Z''0'-'9''_']*
 rule token = parse
 | newline { enter_newline lexbuf |> token }
 | blank   { token lexbuf }
+| "val" { VAL }
 | "where" { WHERE }
 | "and"   { AND_KW }
 | "or"    { OR_KW }

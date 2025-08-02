@@ -1,5 +1,6 @@
 open Tree_sitter_r
 open Lang
+open Common
 
 (* let () =
   Tree_sitter_run.Main.run
@@ -9,11 +10,25 @@ open Lang
     ~dump_tree:Boilerplate.dump_tree
     ~dump_extras:Boilerplate.dump_extras *)
 
-let treat_def past =
-  let ast = PAst.transform PAst.empty_env past in
-  Format.printf "%a@.@." Ast.pp_e ast
+module StrMap = Map.Make(String)
+
+let treat_def (idenv, env) past =
+  let ast = PAst.transform { PAst.id = idenv } past in
+  Format.printf "%a@.@." Ast.pp_e ast ;
+  idenv, env
+
+let add_def (idenv, env) (str, tye) =
+  let open R_types.Types in
+  let ty, _ = Builder.type_expr_to_typ Builder.empty_tenv Builder.empty_vtenv tye in
+  let v = Variable.create_let (Some str) in
+  let idenv = StrMap.add str v idenv in
+  let env = Env.add v (TyScheme.mk_poly (GTy.mk ty)) env in
+  idenv, env
 
 let () =
+  let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
+  let idenv, env =
+    List.fold_left add_def (StrMap.empty, Env.empty) tdefs in
   let res = Parse.file "test.r" in
   match res.program with
   | None -> ()
@@ -22,4 +37,4 @@ let () =
     let tree = Boilerplate.map_program () prog in
     let prog = Parser.of_parser tree in
     Format.printf "%a@.@." PAst.pp prog ;
-    List.iter treat_def prog
+    List.fold_left treat_def (idenv, env) prog |> ignore

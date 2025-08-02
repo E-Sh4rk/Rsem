@@ -2,5 +2,5 @@
   (package typed-r)
   (public_name main)
   (name Main)
-  (libraries typed-r.r typed-r.lang)
+  (libraries typed-r.r typed-r.lang typed-r.r_types mlsem.common)
 )

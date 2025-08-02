@@ -1,0 +1,2 @@
+
+val print : 'a -> 'a

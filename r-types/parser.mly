@@ -26,7 +26,7 @@
         TCustom str
 %}
 
-%token EOF
+%token VAL EOF
 %token LPAREN RPAREN EQUAL COMMA CONS COLON COLON_OPT
 %token INTERROGATION_MARK EXCLAMATION_MARK
 %token ARROW AND OR NEG DIFF
@@ -43,7 +43,8 @@
 %token<char> LCHAR
 %token<string> LSTRING
 
-%start<type_expr> typ
+%start<type_expr> unique_typ
+%start<Defs.type_defs> defs
 
 %right ARROW
 %left OR
@@ -53,6 +54,18 @@
 %nonassoc NEG
 
 %%
+
+(* === DEFS === *)
+
+defs:
+| defs=def* EOF { defs }
+
+def:
+| VAL id=ID COLON ty=typ { (id, ty) }
+
+(* === TYPES === *)
+
+unique_typ : t=typ EOF { t }
 
 %inline param_type_def:
 | name=ID EQUAL t=typ_norec { (name, [], t) }
