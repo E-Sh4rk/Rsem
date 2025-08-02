@@ -51,6 +51,7 @@ and aux_case c tree =
     let e2 = aux_cargs t2 in
     A.Call (e1, e2)
   | "Id" -> A.Id (aux_tok tree)
+  | "Str" -> A.Const (A.CStr (aux_string tree))
   | _ -> failwith ("TODO: "^c)
 
 and aux_cargs tree =
@@ -88,10 +89,35 @@ and aux_arg_id tree =
 and aux_param tree =
   match tree with
   | Case ("Str", tree) -> aux_string tree
-  | Case ("Choice_dots", _) -> failwith "TODO"
+  | Case ("Choice_dots", _) -> failwith "TODO: dots param"
   | _ -> assert false
 
-and aux_string (* map_string_ *) _ = failwith "TODO"
+and aux_string (* map_string_ *) tree =
+  match tree with
+  | Case ("Raw_str_lit", tok) -> aux_tok tok
+  | Case ("Single_quoted_str", tree)
+  | Case ("Double_quoted_str", tree) ->
+    let _, tree, _ = extract3 tree in
+    aux_quoted_string tree
+  | _ -> assert false
+
+and aux_quoted_string tree =
+  match tree with
+  | Option None -> failwith "TODO: none strings"
+  | Option (Some tree) -> aux_quoted_string' tree
+  | _ -> assert false
+
+and aux_quoted_string' tree =
+  match tree with
+  | List lst -> List.map aux_quoted_string_elt lst |> String.concat ""
+  | _ -> assert false
+
+and aux_quoted_string_elt tree =
+  match tree with
+  | Case ("Pat_dc28280", tok) (* Simply quoted *) -> aux_tok tok
+  | Case ("Pat_3a2a380", tok) (* Doubly quoted *) -> aux_tok tok
+  | Case ("Esc_seq", _) -> failwith "TODO: escape seq"
+  | _ -> assert false
 
 and aux_tok tree  =
   match tree with

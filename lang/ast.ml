@@ -1,5 +1,9 @@
+type const =
+| CStr of string
+[@@deriving show]
 
 type e =
+| Const of const
 | Id of string
 | Call of e * arg option list
 [@@deriving show]
