@@ -9,3 +9,6 @@ run:
 
 clean:
 	dune clean
+
+deps:
+	opam install . --deps-only

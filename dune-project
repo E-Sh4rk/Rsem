@@ -1,5 +1,6 @@
-(lang dune 3.7)
+(lang dune 3.13)
 (name typed-r)
+(using menhir 3.0)
 
 (generate_opam_files true)
 
@@ -16,5 +17,5 @@
 (package
  (name typed-r)
  (synopsis "A static type-checker for R")
- (depends (ocaml (>= 5.3.0)) dune)
+ (depends (ocaml (>= 5.3.0)) dune mlsem sstt)
 )
