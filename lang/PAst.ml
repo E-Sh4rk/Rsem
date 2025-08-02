@@ -1,3 +1,4 @@
+open Common
 
 type const =
 | CStr of string
@@ -19,12 +20,45 @@ and arg_id =
 type t = e list
 [@@deriving show]
 
-let aux_const _ = failwith "TODO"
+module StrMap = Map.Make(String)
+type env = { id: Variable.t StrMap.t }
 
-let aux_e e =
+let empty_env = { id = StrMap.empty }
+
+let id_of_argid aid =
+  match aid with
+  | NullId -> "__NULL__"
+  | ArgId str -> str
+let id_of_pos i =
+  Format.asprintf "__%i__" i
+
+let aux_arg f i arg =
+  match arg with
+  | Unnamed e ->
+    id_of_pos i, Some (f e)
+  | Named (aid, e) ->
+    id_of_argid aid, Option.map f e
+let aux_arg f i arg =
+  match arg with
+  | None -> id_of_pos i, None
+  | Some arg -> aux_arg f i arg
+
+let aux_const c =
+  match c with
+  | CStr str -> Ast.CStr str
+
+let var env str =
+  match StrMap.find_opt str env.id with
+  | None -> Variable.create_let (Some str)
+  | Some v -> v
+
+let rec aux_e env e =
   match e with
-  | Const c -> aux_const c
-  | Id _ -> failwith "TODO"
-  | Call _ -> failwith "TODO"
+  | Const c -> Ast.Const (aux_const c)
+  | Id str -> Ast.Id (var env str)
+  | Call (e,args) ->
+    let e = aux_e env e in
+    let args = List.mapi (aux_arg (aux_e env)) args in
+    Ast.Call (e, args)
 
-let transform t = aux_e t
+let transform env t = aux_e env t

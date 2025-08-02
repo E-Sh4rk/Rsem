@@ -11,7 +11,7 @@ type const =
 type e =
 | Const of const
 | Id of Variable.t
-| Call of e * arg option list
+| Call of e * arg list
 [@@deriving show]
-and arg = label * e
+and arg = label * e option
 [@@deriving show]

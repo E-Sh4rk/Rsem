@@ -10,8 +10,8 @@ open Lang
     ~dump_extras:Boilerplate.dump_extras *)
 
 let treat_def past =
-  let ast = PAst.transform past in
-  Format.printf "%a" Ast.pp_e ast
+  let ast = PAst.transform PAst.empty_env past in
+  Format.printf "%a@.@." Ast.pp_e ast
 
 let () =
   let res = Parse.file "test.r" in
@@ -21,5 +21,5 @@ let () =
     Boilerplate.dump_extras res.extras ;
     let tree = Boilerplate.map_program () prog in
     let prog = Parser.of_parser tree in
-    Format.printf "%a" PAst.pp prog ;
+    Format.printf "%a@.@." PAst.pp prog ;
     List.iter treat_def prog
