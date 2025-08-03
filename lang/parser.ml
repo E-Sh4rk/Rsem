@@ -1,6 +1,54 @@
 open Tree_sitter_run
 open Raw_tree
 module A = PAst
+open Common
+
+let conv_pos tspos = (* TODO *)
+  {
+    Lexing.pos_fname = "" ;
+    pos_lnum = tspos.Loc.row ;
+    pos_bol = 0;
+    pos_cnum = tspos.Loc.column ;
+  }
+
+(* let conv_loc tsloc =
+  Position.lex_join (conv_pos tsloc.Loc.start) (conv_pos tsloc.end_) *)
+
+let rec option_first lst =
+  match lst with
+  | [] -> None
+  | (Some r)::_ -> Some r
+  | None::lst -> option_first lst
+let option_last lst = List.rev lst |> option_first
+let start_loc_of_tree tree =
+  let rec aux tree =
+    match tree with
+    | Token (loc, _) -> Some (conv_pos loc.start)
+    | List lst -> List.map aux lst |> option_first
+    | Tuple lst -> List.map aux lst |> option_first
+    | Case (_, tree) -> aux tree
+    | Option None -> None
+    | Option (Some tree) -> aux tree
+    | Any _ -> None
+  in
+  match aux tree with None -> Lexing.dummy_pos | Some p -> p
+let end_loc_of_tree tree =
+  let rec aux tree =
+    match tree with
+    | Token (loc, _) -> Some (conv_pos loc.end_)
+    | List lst -> List.map aux lst |> option_last
+    | Tuple lst -> List.map aux lst |> option_last
+    | Case (_, tree) -> aux tree
+    | Option None -> None
+    | Option (Some tree) -> aux tree
+    | Any _ -> None
+  in
+  match aux tree with None -> Lexing.dummy_pos | Some p -> p
+
+let loc_of_tree tree =
+  Position.lex_join
+    (start_loc_of_tree tree)
+    (end_loc_of_tree tree)
 
 let extract2 tree =
   match tree with
@@ -39,8 +87,9 @@ and aux_elt_case c tree =
   | _ -> assert false
 
 and aux_e tree =
+  let loc = loc_of_tree tree in
   match tree with
-  | Case (c, tree) -> aux_case c tree
+  | Case (c, tree) -> loc, aux_case c tree
   | _ -> assert false
 
 and aux_case c tree =

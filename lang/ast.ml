@@ -8,10 +8,12 @@ type const =
 | CStr of string
 [@@deriving show]
 
-type e =
+type e' =
 | Const of const
 | Id of Variable.t
 | Call of e * arg list
 [@@deriving show]
 and arg = label * e option
+[@@deriving show]
+and e = Eid.t * e'
 [@@deriving show]

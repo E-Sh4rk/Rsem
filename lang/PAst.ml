@@ -1,11 +1,16 @@
-open Common
 open R_types
+open Common
+
+module Position = struct
+  type t = Position.t
+  let pp fmt _ = Format.fprintf fmt "_"
+end
 
 type const =
 | CStr of string
 [@@deriving show]
 
-type e =
+type e' =
 | Const of const
 | Id of string
 | Call of e * arg option list
@@ -13,6 +18,8 @@ type e =
 and arg =
 | Unnamed of e
 | Named of arg_id * e option
+and e = Position.t * e'
+[@@deriving show]
 and arg_id =
 | NullId
 | ArgId of string
@@ -53,13 +60,16 @@ let var env str =
   | None -> Variable.create_let (Some str)
   | Some v -> v
 
-let rec aux_e env e =
-  match e with
+let rec aux_e env (pos,e) =
+  let eid = Eid.unique_with_pos pos in
+  let e = match e with
   | Const c -> Ast.Const (aux_const c)
   | Id str -> Ast.Id (var env str)
   | Call (e,args) ->
     let e = aux_e env e in
     let args = List.mapi (aux_arg (aux_e env)) args in
     Ast.Call (e, args)
+  in
+  eid, e
 
 let transform env t = aux_e env t
