@@ -57,8 +57,8 @@
 %token<char> LCHAR
 %token<string> LSTRING
 
-%start<type_expr> unique_typ
-%start<Defs.type_defs> defs
+%start<Builder.type_expr> unique_typ
+%start<Builder.type_defs> defs
 
 %right ARROW
 %left OR
