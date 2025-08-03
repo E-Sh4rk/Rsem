@@ -1,4 +1,5 @@
 open Common
+open R_types
 
 type const =
 | CStr of string
@@ -27,10 +28,10 @@ let empty_env = { id = StrMap.empty }
 
 let id_of_argid aid =
   match aid with
-  | NullId -> "__NULL__"
-  | ArgId str -> str
+  | NullId -> Args.id_of_null
+  | ArgId str -> Args.id_of_name str
 let id_of_pos i =
-  Format.asprintf "__%i__" i
+  Args.id_of_pos i
 
 let aux_arg f i arg =
   match arg with

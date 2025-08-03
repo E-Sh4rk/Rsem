@@ -1,6 +1,7 @@
 %{ (* Emacs, use -*- tuareg -*- to open this file. *)
 
   open Types.Builder
+  open Defs
 
   let builtin_type_or_custom str =
     match str with
@@ -24,6 +25,13 @@
         TBase (TTupleN (int_of_string nb))
       else
         TCustom str
+
+  let record_fields fields =
+    fields |> List.mapi (fun i (n,t,b) ->
+      let n = match n with None -> Args.id_of_pos i | Some n -> Args.id_of_name n in
+      n,t,b
+    )
+
 %}
 
 %token VAL EOF
@@ -100,7 +108,8 @@ atomic_typ:
 | s=TVAR_WEAK { TVarWeak s }
 | LPAREN RPAREN { TBase TUnit }
 | LPAREN t=typ RPAREN { t }
-| LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE { TRecord (o, fs) }
+| LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE
+{ TRecord (o, record_fields fs) }
 | LBRACKET re=typ_re RBRACKET { TSList re }
 
 %inline optional_open:
@@ -108,8 +117,10 @@ atomic_typ:
 | DOUBLEPOINT { true }
 
 %inline typ_field:
-  id=ID COLON t=simple_typ { (id, t, false) }
-| id=ID COLON_OPT t=simple_typ { (id, t, true) }
+  id=ID COLON t=simple_typ { (Some id, t, false) }
+| id=ID COLON_OPT t=simple_typ { (Some id, t, true) }
+| t=simple_typ { (None, t, false) }
+| INTERROGATION_MARK t=simple_typ { (None, t, true) }
 
 %inline type_constant:
 | i=tint { TInt (Some i, Some i) }

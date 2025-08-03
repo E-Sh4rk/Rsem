@@ -1,2 +1,2 @@
 
-val print : 'a -> 'a
+val print : { 'a } -> 'a
