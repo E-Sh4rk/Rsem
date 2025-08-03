@@ -17,6 +17,10 @@ let treat_def (idenv, env) past =
   Format.printf "%a@.@." Ast.pp_e ast ;
   let mlast = Transform.to_mlsem ast in
   Format.printf "%a@.@." System.Ast.pp mlast ;
+  let renvs = System.Refinement.refinement_envs env mlast in
+  let anns = System.Reconstruction.infer env renvs mlast in
+  let typ = System.Checker.typeof_def env anns mlast in
+  Format.printf "%a@.@." Types.TyScheme.pp typ ;
   idenv, env
 
 let add_def (idenv, env) (str, tye) =
