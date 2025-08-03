@@ -3,12 +3,14 @@ open Raw_tree
 module A = PAst
 open Common
 
-let conv_pos tspos = (* TODO *)
+let line_length = 0x10000
+let conv_pos tspos =
+  let bol = tspos.Loc.row*line_length in
   {
     Lexing.pos_fname = "" ;
     pos_lnum = tspos.Loc.row ;
-    pos_bol = 0;
-    pos_cnum = tspos.Loc.column ;
+    pos_bol = bol ;
+    pos_cnum = bol + tspos.Loc.column ;
   }
 
 (* let conv_loc tsloc =
