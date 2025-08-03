@@ -1,5 +1,7 @@
 open Tree_sitter_r
 open Lang
+open R_types
+open Types
 open Common
 
 (* let () =
@@ -12,11 +14,19 @@ open Common
 
 module StrMap = Map.Make(String)
 
+let extend_env mlast env =
+  let fv = System.Ast.fv mlast in
+  let dom = Env.domain env |> VarSet.of_list in
+  let missing = VarSet.diff fv dom in
+  missing |> VarSet.elements |> List.fold_left
+    (fun env v -> Env.add v (TyScheme.mk_mono GTy.dyn) env) env
+
 let treat_def (idenv, env) past =
   let ast = PAst.transform { PAst.id = idenv } past in
   Format.printf "%a@.@." Ast.pp_e ast ;
   let mlast = Transform.to_mlsem ast in
   Format.printf "%a@.@." System.Ast.pp mlast ;
+  let env = extend_env mlast env in
   let renvs = System.Refinement.refinement_envs env mlast in
   let anns = System.Reconstruction.infer env renvs mlast in
   let typ = System.Checker.typeof_def env anns mlast in
