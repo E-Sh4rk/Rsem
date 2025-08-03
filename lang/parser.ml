@@ -133,14 +133,14 @@ and aux_arg tree =
 
 and aux_arg_id tree =
   match tree with
-  | Case ("Choice_str", tree) -> A.ArgId (aux_param tree)
+  | Case ("Choice_str", tree) -> aux_param tree
   | Case ("Null", _) -> A.NullId
   | _ -> assert false
 
 and aux_param tree =
   match tree with
-  | Case ("Str", tree) -> aux_string tree
-  | Case ("Choice_dots", _) -> failwith "TODO: dots param"
+  | Case ("Str", tree) -> A.ArgId (aux_string tree)
+  | Case ("Choice_dots", _) -> A.EllipsisId
   | _ -> assert false
 
 and aux_string (* map_string_ *) tree =

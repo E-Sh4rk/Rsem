@@ -12,8 +12,6 @@ let rec aux_e (eid,e) =
   | Const c -> A.Const (aux_const c)
   | Id v -> A.Var v
   | Call (f, args) ->
-    let args = List.filter_map
-      (function (_, None) -> None | (lbl, Some e) -> Some (lbl,e)) args in
     let args = List.map (fun (lbl,e) -> lbl,e,Variable.create_gen None) args in
     let a = Eid.dummy, A.Const A.EmptyRecord in
     let add_arg a (lbl, _, x) =

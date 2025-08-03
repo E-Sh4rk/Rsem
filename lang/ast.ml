@@ -13,7 +13,7 @@ type e' =
 | Id of Variable.t
 | Call of e * arg list
 [@@deriving show]
-and arg = label * e option
+and arg = label * e
 [@@deriving show]
 and e = Eid.t * e'
 [@@deriving show]

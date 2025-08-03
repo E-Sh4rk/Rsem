@@ -22,8 +22,8 @@ and e = Position.t * e'
 [@@deriving show]
 and arg_id =
 | NullId
+| EllipsisId
 | ArgId of string
-(* TODO: dots *)
 
 type t = e list
 [@@deriving show]
@@ -37,19 +37,19 @@ let id_of_argid aid =
   match aid with
   | NullId -> Args.id_of_null
   | ArgId str -> Args.id_of_name str
+  | EllipsisId -> Args.id_of_ellipsis
 let id_of_pos i =
   Args.id_of_pos i
 
 let aux_arg f i arg =
   match arg with
   | Unnamed e ->
-    id_of_pos i, Some (f e)
-  | Named (aid, e) ->
-    id_of_argid aid, Option.map f e
+    id_of_pos i, f e
+  | Named (aid, Some e) ->
+    id_of_argid aid, f e
+  | Named (_, None) -> failwith "TODO: Named absent arguments"
 let aux_arg f i arg =
-  match arg with
-  | None -> id_of_pos i, None
-  | Some arg -> aux_arg f i arg
+  Option.map (aux_arg f i) arg
 
 let aux_const c =
   match c with
@@ -68,6 +68,7 @@ let rec aux_e env (pos,e) =
   | Call (e,args) ->
     let e = aux_e env e in
     let args = List.mapi (aux_arg (aux_e env)) args in
+    let args = List.filter_map Fun.id args in
     Ast.Call (e, args)
   in
   eid, e
