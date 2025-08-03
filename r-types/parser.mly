@@ -26,9 +26,15 @@
       else
         TCustom str
 
+  type field_name = Ellipis | Named of string | Positional
+
   let record_fields fields =
     fields |> List.mapi (fun i (n,t,b) ->
-      let n = match n with None -> Args.id_of_pos i | Some n -> Args.id_of_name n in
+      let n = match n with
+      | Positional -> Args.id_of_pos i
+      | Named n -> Args.id_of_name n
+      | Ellipis -> Args.id_of_ellipsis
+      in
       n,t,b
     )
 
@@ -39,7 +45,7 @@
 %token INTERROGATION_MARK EXCLAMATION_MARK
 %token ARROW AND OR NEG DIFF
 %token TIMES PLUS MINUS
-%token LBRACE RBRACE DOUBLEPOINT
+%token LBRACE RBRACE DOUBLEPOINT TRIPLEPOINT
 %token AND_KW OR_KW
 %token WHERE
 %token LBRACKET RBRACKET SEMICOLON
@@ -117,10 +123,12 @@ atomic_typ:
 | DOUBLEPOINT { true }
 
 %inline typ_field:
-  id=ID COLON t=simple_typ { (Some id, t, false) }
-| id=ID COLON_OPT t=simple_typ { (Some id, t, true) }
-| t=simple_typ { (None, t, false) }
-| INTERROGATION_MARK t=simple_typ { (None, t, true) }
+  id=ID COLON t=simple_typ { (Named id, t, false) }
+| id=ID COLON_OPT t=simple_typ { (Named id, t, true) }
+| TRIPLEPOINT COLON t=simple_typ { (Ellipis, t, false) }
+| TRIPLEPOINT COLON_OPT t=simple_typ { (Ellipis, t, true) }
+| t=simple_typ { (Positional, t, false) }
+| INTERROGATION_MARK t=simple_typ { (Positional, t, true) }
 
 %inline type_constant:
 | i=tint { TInt (Some i, Some i) }

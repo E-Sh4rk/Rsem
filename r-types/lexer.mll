@@ -65,6 +65,7 @@ rule token = parse
 | ";"     { SEMICOLON }
 | "*"     { TIMES }
 | ".."    { DOUBLEPOINT }
+| "..."   { TRIPLEPOINT }
 | "-"     { MINUS }
 | "+"     { PLUS  }
 | int as i { LINT (Z.of_string i) }
