@@ -15,6 +15,8 @@ module StrMap = Map.Make(String)
 let treat_def (idenv, env) past =
   let ast = PAst.transform { PAst.id = idenv } past in
   Format.printf "%a@.@." Ast.pp_e ast ;
+  let mlast = Transform.to_mlsem ast in
+  Format.printf "%a@.@." System.Ast.pp mlast ;
   idenv, env
 
 let add_def (idenv, env) (str, tye) =
