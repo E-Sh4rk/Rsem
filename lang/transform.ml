@@ -1,19 +1,21 @@
 open Ast
 open Common
 open R_types
+open Types
 module A = System.Ast
+module C = System.Const
 
 let aux_const c =
   match c with
-  | CStr str -> A.String str
+  | CStr str -> C.String str
 
 let rec aux_e (eid,e) =
   let e = match e with
-  | Const c -> A.Const (aux_const c)
+  | Const c -> A.Value (aux_const c |> C.typeof |> GTy.mk)
   | Id v -> A.Var v
   | Call (f, args) ->
     let args = List.map (fun (lbl,e) -> lbl,e,Variable.create_gen None) args in
-    let a = Eid.dummy, A.Const A.EmptyRecord in
+    let a = Eid.dummy, A.Value (Record.empty_closed |> GTy.mk) in
     let add_arg a (lbl, _, x) =
       let xe = Eid.dummy, A.Var x in
       Eid.dummy, A.Constructor (A.RecUpd lbl, [a; xe])

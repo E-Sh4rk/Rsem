@@ -1,6 +1,6 @@
 %{ (* Emacs, use -*- tuareg -*- to open this file. *)
 
-  open Types.Builder
+  open Types.TyExpr
   open Defs
 
   let builtin_type_or_custom str =
