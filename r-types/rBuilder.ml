@@ -1,14 +1,13 @@
 open Defs
 
 module Ext = struct
-  type vec = INT |  LGL | DBL | CLX | CHR | RAW
+  type prim = INT |  LGL | DBL | CLX | CHR | RAW
   type t =
-    | Na
-    | Vec of bool * vec
+    | Vec of bool * prim
+    | Scalar of prim
 
   let to_typ _ t =
     match t with
-    | Na -> Vecs.na
     | Vec (false, INT) -> Vecs.int
     | Vec (false, LGL) -> Vecs.lgl
     | Vec (false, DBL) -> Vecs.dbl
@@ -21,6 +20,12 @@ module Ext = struct
     | Vec (true, CLX) -> Vecs.clx_na
     | Vec (true, CHR) -> Vecs.chr_na
     | Vec (true, RAW) -> Vecs.raw_na
+    | Scalar INT -> Scalars.int
+    | Scalar LGL -> Scalars.lgl
+    | Scalar DBL -> Scalars.dbl
+    | Scalar CLX -> Scalars.clx
+    | Scalar CHR -> Scalars.chr
+    | Scalar RAW -> Scalars.raw
 end
 
 include (Types.Builder'.Make(Ext))

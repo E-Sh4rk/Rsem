@@ -7,9 +7,9 @@ module C = System.Const
 
 let typeof_const c =
   match c with
-  | CChr _ -> Vecs.chr
-  | CDbl _ -> Vecs.dbl
-  | CLgl _ -> Vecs.lgl
+  | CChr _ -> Scalars.chr
+  | CDbl _ -> Scalars.dbl
+  | CLgl _ -> Scalars.lgl
   | CNull -> Null.null
 
 let rec aux_e (eid,e) =

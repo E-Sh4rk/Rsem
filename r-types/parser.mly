@@ -6,7 +6,12 @@
 
   let builtin_type_or_custom str =
     match str with
-    | "NA" -> TExt (Na)
+    | "int" -> TExt (Scalar INT)
+    | "lgl" -> TExt (Scalar LGL)
+    | "dbl" -> TExt (Scalar DBL)
+    | "clx" -> TExt (Scalar CLX)
+    | "chr" -> TExt (Scalar CHR)
+    | "raw" -> TExt (Scalar RAW)
     | "INT" -> TExt (Vec (false, INT))
     | "LGL" -> TExt (Vec (false, LGL))
     | "DBL" -> TExt (Vec (false, DBL))
@@ -19,20 +24,14 @@
     | "CLX?" -> TExt (Vec (true, CLX))
     | "CHR?" -> TExt (Vec (true, CHR))
     | "RAW?" -> TExt (Vec (true, RAW))
-    (* Legacy *)
     | "empty" -> TBase TEmpty
     | "any" -> TBase TAny
+    (* Legacy *)
     | "tuple" -> TBase TTupleAny
     | "arrow" -> TBase TArrowAny
     | "record" -> TBase TRecordAny
     | "enum" -> TBase TEnumAny
     | "tag" -> TBase TTagAny
-    | "int" -> TBase (TInt (None, None))
-    | "char" -> TBase TChar
-    | "float" -> TBase TFloat
-    | "string" -> TBase TString
-    | "list" -> TBase TList
-    | "bool" -> TBase TBool
     | str ->
       let regexp = Str.regexp {|^tuple\([0-9]*\)$|} in
       if Str.string_match regexp str 0 then
