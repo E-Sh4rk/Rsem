@@ -4,3 +4,5 @@
 print("Hello World!")
 print(42)
 print(TRUE)
+
+-42

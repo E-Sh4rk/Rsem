@@ -108,6 +108,9 @@ and aux_case c tree =
   | "True" -> A.Const (A.CBool true)
   | "False" -> A.Const (A.CBool false)
   | "Null" -> A.Const (A.CNull)
+  | "Un_op" ->
+    let op, arg = aux_unary tree in
+    A.Unop (op, arg)
   | _ -> failwith ("TODO: "^c)
 
 and aux_cargs tree =
@@ -180,6 +183,20 @@ and aux_float (* map_float_ *) tree =
   | Case ("Hex_lit", tok) -> aux_tok tok
   | Case ("Num_lit", tok) -> aux_tok tok
   | _ -> assert false
+
+and aux_unary (* map_unary_operator *) tree =
+  let aux tree =
+    let _, _, a = extract3 tree in
+    aux_e a
+  in
+  match tree with
+  | Case ("QMARK_rep_nl_exp", tree) -> "?", aux tree
+  | Case ("TILDE_rep_nl_exp", tree) -> "~", aux tree
+  | Case ("BANG_rep_nl_exp", tree) -> "!", aux tree
+  | Case ("PLUS_rep_nl_exp", tree) -> "+", aux tree
+  | Case ("DASH_rep_nl_exp", tree) -> "-", aux tree
+  | _ -> assert false
+
 
 and aux_tok tree  =
   match tree with

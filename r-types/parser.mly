@@ -75,7 +75,18 @@ defs:
 | defs=def* EOF { defs }
 
 def:
-| VAL id=ID COLON ty=typ { (id, ty) }
+| VAL id=op_id COLON ty=typ { (id, ty) }
+
+op_id:
+| id=ID { id }
+| LPAREN id=prefix RPAREN { id }
+
+prefix:
+| INTERROGATION_MARK { "?" }
+| EXCLAMATION_MARK { "!" }
+| NEG { "~" }
+| PLUS { "+" }
+| MINUS { "-" }
 
 (* === TYPES === *)
 
