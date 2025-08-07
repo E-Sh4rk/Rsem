@@ -8,6 +8,9 @@ end
 
 type const =
 | CStr of string
+| CFloat of string
+| CBool of bool
+| CNull
 [@@deriving show]
 
 type e' =
@@ -53,7 +56,10 @@ let aux_arg f i arg =
 
 let aux_const c =
   match c with
-  | CStr str -> Ast.CStr str
+  | CStr str -> Ast.CChr str
+  | CFloat str -> Ast.CDbl str
+  | CBool b -> Ast.CLgl b
+  | CNull -> Ast.CNull
 
 let var env str =
   match StrMap.find_opt str env.id with

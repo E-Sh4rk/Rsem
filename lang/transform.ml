@@ -5,13 +5,16 @@ open Types
 module A = System.Ast
 module C = System.Const
 
-let aux_const c =
+let typeof_const c =
   match c with
-  | CStr str -> C.String str
+  | CChr _ -> Vecs.chr
+  | CDbl _ -> Vecs.dbl
+  | CLgl _ -> Vecs.lgl
+  | CNull -> Null.null
 
 let rec aux_e (eid,e) =
   let e = match e with
-  | Const c -> A.Value (aux_const c |> C.typeof |> GTy.mk)
+  | Const c -> A.Value (typeof_const c |> GTy.mk)
   | Id v -> A.Var v
   | Call (f, args) ->
     let args = List.map (fun (lbl,e) -> lbl,e,Variable.create_gen None) args in

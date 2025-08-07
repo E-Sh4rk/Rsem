@@ -5,7 +5,10 @@ type label = string
 [@@deriving show]
 
 type const =
-| CStr of string
+| CChr of string
+| CDbl of string
+| CLgl of bool
+| CNull
 [@@deriving show]
 
 type e' =

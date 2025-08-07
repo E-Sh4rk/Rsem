@@ -43,6 +43,10 @@ module Vecs = struct
     Ty.register "VEC?" ty ; ty
 end
 
+module Null = struct
+  let null = Enum.define "Null" |> Enum.typ
+end
+
 module Builder = struct
   type type_expr = Builder.type_expr
   (* type type_expr =

@@ -103,6 +103,11 @@ and aux_case c tree =
     A.Call (e1, e2)
   | "Id" -> A.Id (aux_tok tree)
   | "Str" -> A.Const (A.CStr (aux_string tree))
+  | "Float" -> A.Const (A.CFloat (aux_float tree))
+  | "Inf" -> A.Const (A.CFloat "Inf")
+  | "True" -> A.Const (A.CBool true)
+  | "False" -> A.Const (A.CBool false)
+  | "Null" -> A.Const (A.CNull)
   | _ -> failwith ("TODO: "^c)
 
 and aux_cargs tree =
@@ -168,6 +173,12 @@ and aux_quoted_string_elt tree =
   | Case ("Pat_dc28280", tok) (* Simply quoted *) -> aux_tok tok
   | Case ("Pat_3a2a380", tok) (* Doubly quoted *) -> aux_tok tok
   | Case ("Esc_seq", _) -> failwith "TODO: escape seq"
+  | _ -> assert false
+
+and aux_float (* map_float_ *) tree =
+  match tree with
+  | Case ("Hex_lit", tok) -> aux_tok tok
+  | Case ("Num_lit", tok) -> aux_tok tok
   | _ -> assert false
 
 and aux_tok tree  =
