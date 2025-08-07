@@ -46,12 +46,3 @@ end
 module Null = struct
   let null = Enum.define "Null" |> Enum.typ
 end
-
-module Builder = struct
-  type type_expr = Builder.type_expr
-  (* type type_expr =
-  | Primitive of Builder.type_expr *)
-
-  type type_def = string * Builder.type_expr
-  type type_defs = type_def list
-end

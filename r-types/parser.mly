@@ -1,6 +1,7 @@
 %{ (* Emacs, use -*- tuareg -*- to open this file. *)
 
   open Types.TyExpr
+  open RBuilder.Ext
   open Defs
 
   let builtin_type_or_custom str =
@@ -25,6 +26,23 @@
         TBase (TTupleN (int_of_string nb))
       else
         TCustom str
+
+  let builtin_enum_or_custom str =
+    match str with
+    | "NA" -> TExt (Na)
+    | "INT" -> TExt (Vec (false, INT))
+    | "LGL" -> TExt (Vec (false, LGL))
+    | "DBL" -> TExt (Vec (false, DBL))
+    | "CLX" -> TExt (Vec (false, CLX))
+    | "CHR" -> TExt (Vec (false, CHR))
+    | "RAW" -> TExt (Vec (false, RAW))
+    | "INT?" -> TExt (Vec (true, INT))
+    | "LGL?" -> TExt (Vec (true, LGL))
+    | "DBL?" -> TExt (Vec (true, DBL))
+    | "CLX?" -> TExt (Vec (true, CLX))
+    | "CHR?" -> TExt (Vec (true, CHR))
+    | "RAW?" -> TExt (Vec (true, RAW))
+    | str -> TEnum str
 
   type field_name = Ellipis | Named of string | Positional
 
@@ -57,8 +75,8 @@
 %token<char> LCHAR
 %token<string> LSTRING
 
-%start<Builder.type_expr> unique_typ
-%start<Builder.type_defs> defs
+%start<RBuilder.type_expr> unique_typ
+%start<RBuilder.type_defs> defs
 
 %right ARROW
 %left OR
@@ -118,7 +136,7 @@ simple_typ:
 atomic_typ:
   x=type_constant { TBase x }
 | s=ID { builtin_type_or_custom s }
-| s=CID { TEnum s }
+| s=CID { builtin_enum_or_custom s }
 | s=PCID t=typ RPAREN { TTag (s, t) }
 | s=PCID RPAREN { TTag (s, TBase TUnit) }
 | s=TVAR { TVar s }

@@ -35,7 +35,7 @@ let treat_def (idenv, env) past =
 
 let add_def (idenv, env) (str, tye) =
   let open R_types.Types in
-  let ty, _ = Builder.type_expr_to_typ Builder.empty_tenv Builder.empty_vtenv tye in
+  let ty, _ = RBuilder.type_expr_to_typ RBuilder.empty_tenv RBuilder.empty_vtenv tye in
   let v = Variable.create_let (Some str) in
   let idenv = StrMap.add str v idenv in
   let env = Env.add v (TyScheme.mk_poly (GTy.mk ty)) env in
