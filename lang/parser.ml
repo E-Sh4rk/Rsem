@@ -111,6 +111,9 @@ and aux_case c tree =
   | "Un_op" ->
     let op, arg = aux_unary tree in
     A.Unop (op, arg)
+  | "Bin_op" ->
+    let op, arg = aux_binary tree in
+    A.Binop (op, arg)
   | _ -> failwith ("TODO: "^c)
 
 and aux_cargs tree =
@@ -197,6 +200,43 @@ and aux_unary (* map_unary_operator *) tree =
   | Case ("DASH_rep_nl_exp", tree) -> "-", aux tree
   | _ -> assert false
 
+and aux_binary (* map_binary_operator *) tree =
+  let aux tree =
+    let a1, _, _, a2 = extract4 tree in
+    aux_e a1, aux_e a2
+  in
+  match tree with
+  | Case ("Exp_QMARK_rep_nl_exp", tree) -> "?", aux tree
+  | Case ("Exp_TILDE_rep_nl_exp", tree) -> "~", aux tree
+  | Case ("Exp_LTDASH_rep_nl_exp", tree) -> "<-", aux tree
+  | Case ("Exp_LTLTDASH_rep_nl_exp", tree) -> "<<-", aux tree
+  | Case ("Exp_COLONEQ_rep_nl_exp", tree) -> ":=", aux tree
+  | Case ("Exp_DASHGT_rep_nl_exp", tree) -> "->", aux tree
+  | Case ("Exp_DASHGTGT_rep_nl_exp", tree) -> "->>", aux tree
+  | Case ("Exp_EQ_rep_nl_exp", tree) -> "=", aux tree
+  | Case ("Exp_BAR_rep_nl_exp", tree) -> "|", aux tree
+  | Case ("Exp_AMP_rep_nl_exp", tree) -> "&", aux tree
+  | Case ("Exp_BARBAR_rep_nl_exp", tree) -> "||", aux tree
+  | Case ("Exp_AMPAMP_rep_nl_exp", tree) -> "&&", aux tree
+  | Case ("Exp_LT_rep_nl_exp", tree) -> "<", aux tree
+  | Case ("Exp_LTEQ_rep_nl_exp", tree) -> "<=", aux tree
+  | Case ("Exp_GT_rep_nl_exp", tree) -> ">", aux tree
+  | Case ("Exp_GTEQ_rep_nl_exp", tree) -> ">=", aux tree
+  | Case ("Exp_EQEQ_rep_nl_exp", tree) -> "==", aux tree
+  | Case ("Exp_BANGEQ_rep_nl_exp", tree) -> "!=", aux tree
+  | Case ("Exp_PLUS_rep_nl_exp", tree) -> "+", aux tree
+  | Case ("Exp_DASH_rep_nl_exp", tree) -> "-", aux tree
+  | Case ("Exp_STAR_rep_nl_exp", tree) -> "*", aux tree
+  | Case ("Exp_SLASH_rep_nl_exp", tree) -> "/", aux tree
+  | Case ("Exp_STARSTAR_rep_nl_exp", tree) -> "**", aux tree
+  | Case ("Exp_HAT_rep_nl_exp", tree) -> "^", aux tree
+  | Case ("Exp_pat_43ed24e_rep_nl_exp", _) ->
+    (* pattern %[^%\\\n]*% *)
+    let a1, tok, _, a2 = extract4 tree in
+    aux_tok tok, (aux_e a1, aux_e a2)
+  | Case ("Exp_BARGT_rep_nl_exp", tree) -> "|>", aux tree
+  | Case ("Exp_COLON_rep_nl_exp", tree) -> ":", aux tree
+  | _ -> assert false
 
 and aux_tok tree  =
   match tree with

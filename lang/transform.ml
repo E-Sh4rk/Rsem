@@ -18,6 +18,8 @@ let rec aux_e (eid,e) =
     | Const c -> A.Value (typeof_const c |> GTy.mk)
     | Id v -> A.Var v
     | Unop (v,e) -> aux (Call ((Eid.dummy, Id v), [(Args.id_of_pos 0, e)]))
+    | Binop (v,e1,e2) ->
+      aux (Call ((Eid.dummy, Id v), [(Args.id_of_pos 0, e1);(Args.id_of_pos 1, e2)]))
     | Call (f, args) ->
       let args = List.map (fun (lbl,e) -> lbl,e,Variable.create_gen None) args in
       let a = Eid.dummy, A.Value (Record.empty_closed |> GTy.mk) in

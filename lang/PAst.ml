@@ -17,6 +17,7 @@ type e' =
 | Const of const
 | Id of string
 | Unop of string * e
+| Binop of string * (e * e)
 | Call of e * arg option list
 [@@deriving show]
 and arg =
@@ -73,6 +74,7 @@ let rec aux_e env (pos,e) =
   | Const c -> Ast.Const (aux_const c)
   | Id str -> Ast.Id (var env str)
   | Unop (str, e) -> Ast.Unop (var env str, aux_e env e)
+  | Binop (str, (e1,e2)) -> Ast.Binop (var env str, aux_e env e1, aux_e env e2)
   | Call (e,args) ->
     let e = aux_e env e in
     let args = List.mapi (aux_arg (aux_e env)) args in

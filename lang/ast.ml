@@ -15,6 +15,7 @@ type e' =
 | Const of const
 | Id of Variable.t
 | Unop of Variable.t * e
+| Binop of Variable.t * e * e
 | Call of e * arg list
 [@@deriving show]
 and arg = label * e
