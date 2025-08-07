@@ -21,9 +21,7 @@ let newline = ('\010' | '\013' | "\013\010")
 
 let blank   = [' ' '\009' '\012']
 
-let id = ['a'-'z''_']['a'-'z''A'-'Z''0'-'9''_''\'''?''!']*
-let constr_id = ['A'-'Z']['a'-'z''A'-'Z''0'-'9''_''\'''?''!']*
-let param_constr_id = ['A'-'Z']['a'-'z''A'-'Z''0'-'9''_''\'''?''!']*'('
+let id = ['a'-'z''_''A'-'Z']['a'-'z''A'-'Z''0'-'9''_''\'''?''!']*
 
 let decimal = ['0'-'9']+ ('_'+ ['0'-'9']+)*
 
@@ -79,8 +77,6 @@ rule token = parse
 | '\'' ([^ '\'' '\\' '\010' '\013'] as c) '\'' { LCHAR c }
 | '\'' '\\' (backslash_escapes as c) '\'' { LCHAR (char_for_backslash c) }
 | id as s { ID s }
-| constr_id as s { CID s }
-| param_constr_id as s { PCID (String.sub s 0 ((String.length s) - 1)) }
 | type_var as s { TVAR s }
 | weak_type_var as s { TVAR_WEAK s }
 | eof     { EOF }
