@@ -33,18 +33,24 @@ let treat_def (idenv, env) past =
   Format.printf "%a@.@." Types.TyScheme.pp typ ;
   idenv, env
 
-let add_def (idenv, env) (str, tye) =
+let add_def (tenv, idenv, env) def =
   let open R_types.Types in
-  let ty, _ = RBuilder.type_expr_to_typ RBuilder.empty_tenv RBuilder.empty_vtenv tye in
-  let v = Variable.create_let (Some str) in
-  let idenv = StrMap.add str v idenv in
-  let env = Env.add v (TyScheme.mk_poly (GTy.mk ty)) env in
-  idenv, env
+  match def with
+  | RBuilder.Sig (str, tye) ->
+    let ty, _ = RBuilder.type_expr_to_typ tenv RBuilder.empty_vtenv tye in
+    let v = Variable.create_let (Some str) in
+    let idenv = StrMap.add str v idenv in
+    let env = Env.add v (TyScheme.mk_poly (GTy.mk ty)) env in
+    tenv, idenv, env
+  | RBuilder.Aliases lst ->
+    let tenv = RBuilder.define_aliases tenv RBuilder.empty_vtenv lst in
+    tenv, idenv, env
+
 
 let () =
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
-  let idenv, env =
-    List.fold_left add_def (StrMap.empty, Env.empty) tdefs in
+  let _, idenv, env =
+    List.fold_left add_def (RBuilder.empty_tenv, StrMap.empty, Env.empty) tdefs in
   let res = Parse.file "test.r" in
   match res.program with
   | None -> ()

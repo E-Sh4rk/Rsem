@@ -25,5 +25,7 @@ end
 
 include (Types.Builder'.Make(Ext))
 
-type type_def = string * type_expr
+type type_def =
+| Sig of string * type_expr
+| Aliases of (string * string list * type_expr) list
 type type_defs = type_def list

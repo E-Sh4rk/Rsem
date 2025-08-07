@@ -58,7 +58,7 @@
 
 %}
 
-%token VAL UNARY BINARY EOF
+%token VAL UNARY BINARY TYPE EOF
 %token LPAREN RPAREN EQUAL COMMA CONS COLON COLON_OPT
 %token INTERROGATION_MARK EXCLAMATION_MARK
 %token ARROW AND OR NEG DIFF
@@ -93,9 +93,10 @@ defs:
 | defs=def* EOF { defs }
 
 def:
-| VAL id=op_id COLON ty=typ { (id, ty) }
-| VAL UNARY id=op_id COLON ty=typ { (id^"__1", ty) }
-| VAL BINARY id=op_id COLON ty=typ { (id^"__2", ty) }
+| VAL id=op_id COLON ty=typ { Sig (id, ty) }
+| VAL UNARY id=op_id COLON ty=typ { Sig (id^"__1", ty) }
+| VAL BINARY id=op_id COLON ty=typ { Sig (id^"__2", ty) }
+| TYPE defs=separated_nonempty_list(AND_KW, param_type_def) { Aliases defs }
 
 op_id:
 | id=ID { id }
@@ -112,14 +113,14 @@ prefix:
 
 unique_typ : t=typ EOF { t }
 
-%inline param_type_def:
-| name=ID EQUAL t=typ_norec { (name, [], t) }
-| name=ID LPAREN params=separated_list(COMMA, TVAR) RPAREN EQUAL t=typ_norec { (name, params, t) }
-
 typ:
   t=typ_norec { t }
 | t=typ_norec WHERE ts=separated_nonempty_list(AND_KW, param_type_def)
   { TWhere (t, ts) }
+
+%inline param_type_def:
+| name=ID EQUAL t=typ_norec { (name, [], t) }
+| name=ID LPAREN params=separated_list(COMMA, TVAR) RPAREN EQUAL t=typ_norec { (name, params, t) }
 
 typ_norec:
   t=simple_typ { t }

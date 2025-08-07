@@ -42,6 +42,7 @@ rule token = parse
 | "val" { VAL }
 | "unary" { UNARY }
 | "binary" { BINARY }
+| "type"  { TYPE }
 | "where" { WHERE }
 | "and"   { AND_KW }
 | "or"    { OR_KW }
