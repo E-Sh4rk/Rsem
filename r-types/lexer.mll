@@ -40,6 +40,8 @@ rule token = parse
 | newline { enter_newline lexbuf |> token }
 | blank   { token lexbuf }
 | "val" { VAL }
+| "unary" { UNARY }
+| "binary" { BINARY }
 | "where" { WHERE }
 | "and"   { AND_KW }
 | "or"    { OR_KW }

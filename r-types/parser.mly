@@ -58,7 +58,7 @@
 
 %}
 
-%token VAL EOF
+%token VAL UNARY BINARY EOF
 %token LPAREN RPAREN EQUAL COMMA CONS COLON COLON_OPT
 %token INTERROGATION_MARK EXCLAMATION_MARK
 %token ARROW AND OR NEG DIFF
@@ -94,6 +94,8 @@ defs:
 
 def:
 | VAL id=op_id COLON ty=typ { (id, ty) }
+| VAL UNARY id=op_id COLON ty=typ { (id^"__1", ty) }
+| VAL BINARY id=op_id COLON ty=typ { (id^"__2", ty) }
 
 op_id:
 | id=ID { id }
