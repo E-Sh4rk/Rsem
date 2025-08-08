@@ -25,6 +25,10 @@ module Scalars = struct
   let clxn, clx = _scalar "clx"
   let chrn, chr = _scalar "chr"
   let rawn, raw = _scalar "raw"
+
+  let scalar =
+    let ty = Ty.disj [ int;lgl;dbl;clx;chr;raw ] in
+    Ty.register "scalar" ty ; ty
 end
 
 module Vecs = struct  

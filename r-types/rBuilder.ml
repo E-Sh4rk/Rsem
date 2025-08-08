@@ -4,7 +4,9 @@ module Ext = struct
   type prim = INT |  LGL | DBL | CLX | CHR | RAW
   type t =
     | Vec of bool * prim
+    | AnyVec of bool
     | Scalar of prim
+    | AnyScalar
 
   let to_typ _ t =
     match t with
@@ -20,12 +22,15 @@ module Ext = struct
     | Vec (true, CLX) -> Vecs.clx_na
     | Vec (true, CHR) -> Vecs.chr_na
     | Vec (true, RAW) -> Vecs.raw_na
+    | AnyVec false -> Vecs.vec
+    | AnyVec true -> Vecs.vec_na
     | Scalar INT -> Scalars.int
     | Scalar LGL -> Scalars.lgl
     | Scalar DBL -> Scalars.dbl
     | Scalar CLX -> Scalars.clx
     | Scalar CHR -> Scalars.chr
     | Scalar RAW -> Scalars.raw
+    | AnyScalar -> Scalars.scalar
 end
 
 include (Types.Builder'.Make(Ext))
