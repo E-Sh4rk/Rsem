@@ -9,38 +9,44 @@ module Args = struct
   let id_of_ellipsis = "..."
 end
 
+open Sstt.Extensions.Hierarchy
+let _h =
+  let h = new_hierarchy () in
+  printer_params' h |> Types.Ty.add_printer_param ;
+  h
+
 module Scalars = struct
-  let int = Enum.define "int" |> Enum.typ
-  let lgl = Enum.define "lgl" |> Enum.typ
-  let dbl = Enum.define "dbl" |> Enum.typ
-  let clx = Enum.define "clx" |> Enum.typ
-  let chr = Enum.define "chr" |> Enum.typ
-  let raw = Enum.define "raw" |> Enum.typ
+  let _scalar name =
+    let n = new_node _h ~name ~subnodes:[] in
+    n, mk _h n
+  let intn, int = _scalar "int"
+  let lgln, lgl = _scalar "lgl"
+  let dbln, dbl = _scalar "dbl"
+  let clxn, clx = _scalar "clx"
+  let chrn, chr = _scalar "chr"
+  let rawn, raw = _scalar "raw"
 end
 
-module Vecs = struct
-  let _na str = Enum.define ("_NA_"^str) |> Enum.typ
+module Vecs = struct  
+  let _vec scalar name =
+    let n = new_node _h ~name ~subnodes:[scalar] in
+    n, mk _h n
+  let intn, int = _vec Scalars.intn "INT"
+  let lgln, lgl = _vec Scalars.lgln "LGL"
+  let dbln, dbl = _vec Scalars.dbln "DBL"
+  let clxn, clx = _vec Scalars.clxn "CLX"
+  let chrn, chr = _vec Scalars.chrn "CHR"
+  let rawn, raw = _vec Scalars.rawn "RAW"
 
-  let _vec scalar str =
-    let ty = Enum.define ("_VEC_"^str) |> Enum.typ in
-    let ty = Ty.cup ty scalar in
-    Ty.register str ty ; ty
-  let int = _vec Scalars.int "INT"
-  let lgl = _vec Scalars.lgl "LGL"
-  let dbl = _vec Scalars.dbl "DBL"
-  let clx = _vec Scalars.clx "CLX"
-  let chr = _vec Scalars.chr "CHR"
-  let raw = _vec Scalars.raw "RAW"
-
-  let _vec_na vec str =
-    let ty = Ty.cup vec (_na str) in
-    Ty.register (str^"?") ty ; ty
-  let int_na = _vec_na int "INT"
-  let lgl_na = _vec_na lgl "LGL"
-  let dbl_na = _vec_na dbl "DBL"
-  let clx_na = _vec_na clx "CLX"
-  let chr_na = _vec_na chr "CHR"
-  let raw_na = _vec_na raw "RAW"
+  let _vec_na vec name =
+    let n = new_node _h ~name ~subnodes:[vec] in
+    n, mk _h n
+  let int_na_n, int_na = _vec_na intn "INT?"
+  let lgl_na_n, lgl_na = _vec_na lgln "LGL?"
+  let dbl_na_n, dbl_na = _vec_na dbln "DBL?"
+  let clx_na_n, clx_na = _vec_na clxn "CLX?"
+  let chr_na_n, chr_na = _vec_na chrn "CHR?"
+  let raw_na_n, raw_na = _vec_na rawn "RAW?"
 
   let vec =
     let ty = Ty.disj [ int;lgl;dbl;clx;chr;raw ] in
