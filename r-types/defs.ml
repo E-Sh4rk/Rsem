@@ -63,3 +63,8 @@ end
 module Null = struct
   let null = Enum.define "Null" |> Enum.typ
 end
+
+module Ref = struct
+  let abs = Abstract.define "ref" [Inv]
+  let mk ty = Abstract.mk abs [ty]
+end

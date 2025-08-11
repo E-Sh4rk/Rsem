@@ -13,7 +13,10 @@ type const =
 
 type e' =
 | Const of const
-| Id of Variable.t
+| Id of bool (* unref? *) * Variable.t
+| Declare of Variable.t * e
+| Let of Variable.t * e * e
+| VarAssign of bool (* superassign *) * Variable.t * e
 | Unop of Variable.t * e
 | Binop of Variable.t * e * e
 | Call of e * arg list

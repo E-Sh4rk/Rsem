@@ -10,3 +10,5 @@ print(TRUE)
 42 + 24
 
 c(print(42), print(FALSE))
+
+i <- 42

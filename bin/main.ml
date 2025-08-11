@@ -50,7 +50,7 @@ let add_def (tenv, idenv, env) def =
 let () =
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
   let _, idenv, env =
-    List.fold_left add_def (RBuilder.empty_tenv, StrMap.empty, Env.empty) tdefs in
+    List.fold_left add_def (RBuilder.empty_tenv, StrMap.empty, Defs.initial_env) tdefs in
   let res = Parse.file "test.r" in
   match res.program with
   | None -> ()
