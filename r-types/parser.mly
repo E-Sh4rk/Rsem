@@ -67,7 +67,7 @@
 %token WHERE
 %token LBRACKET RBRACKET SEMICOLON
 %token<string> ID
-%token<string> TVAR TVAR_WEAK
+%token<string> TVAR TVAR_WEAK TVAR_WEAK_LIMITED
 %token<float> LFLOAT
 %token<Z.t> LINT
 %token<bool> LBOOL
@@ -138,8 +138,9 @@ simple_typ:
 atomic_typ:
   x=type_constant { TBase x }
 | s=ID { builtin_type_or_custom s }
-| s=TVAR { TVar s }
-| s=TVAR_WEAK { TVarWeak s }
+| s=TVAR { TVar (NoInfer, s) }
+| s=TVAR_WEAK_LIMITED { TVar (LimitedInfer, s) }
+| s=TVAR_WEAK { TVar (Infer, s) }
 | LPAREN RPAREN { TBase TUnit }
 | LPAREN t=typ RPAREN { t }
 | LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE
