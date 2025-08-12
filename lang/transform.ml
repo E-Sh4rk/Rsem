@@ -12,18 +12,33 @@ let typeof_const c =
   | CLgl _ -> Scalars.lgl
   | CNull -> Null.null
 
+type varkind = VRef | VCst
+let varinfo = Hashtbl.create 100
+let mark_var v k =
+  Hashtbl.replace varinfo v k
+let var_mark v =
+  match Hashtbl.find_opt varinfo v with None -> VCst | Some m -> m
+
 let rec aux_e (eid,e) =
   let rec aux e =
     match e with
     | Const c -> A.Value (typeof_const c |> GTy.mk)
-    | Id (false, v) -> A.Var v
-    | Id (true, _) -> failwith "TODO" (* unref but only if ref var *)
-    | Declare _ -> failwith "TODO"
-    | Let (v, e1, e2) -> A.Let ([], v, aux_e e1, aux_e e2)
+    | Id v ->
+      begin match var_mark v with
+      | VCst -> A.Var v
+      | VRef -> A.App ((Eid.dummy, A.Var Defs.cref), (Eid.dummy, A.Var v))
+      end
+    | Declare (v,e) ->
+      mark_var v VRef ;
+      let e1 = Eid.dummy, A.Value (Ref.mk (TVar.mk KInfer None |> TVar.typ) |> GTy.mk) in
+      A.Let ([], v, e1, aux_e e)
+    | Let (v, e1, e2) ->
+      mark_var v VCst ;
+      A.Let ([], v, aux_e e1, aux_e e2)
     | VarAssign (_, _, _) -> failwith "TODO"
-    | Unop (v,e) -> aux (Call ((Eid.dummy, Id (true, v)), [(Args.id_of_pos 0, e)]))
+    | Unop (v,e) -> aux (Call ((Eid.dummy, Id v), [(Args.id_of_pos 0, e)]))
     | Binop (v,e1,e2) ->
-      aux (Call ((Eid.dummy, Id (true, v)), [(Args.id_of_pos 0, e1);(Args.id_of_pos 1, e2)]))
+      aux (Call ((Eid.dummy, Id v), [(Args.id_of_pos 0, e1);(Args.id_of_pos 1, e2)]))
     | Call (f, args) ->
       let args = List.map (fun (lbl,e) -> lbl,e,Variable.create_gen None) args in
       let a = Eid.dummy, A.Value (Record.empty_closed |> GTy.mk) in

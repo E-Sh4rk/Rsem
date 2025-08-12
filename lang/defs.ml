@@ -2,8 +2,17 @@ open R_types
 open Types
 open Common
 
-let unref, unref_t = failwith "TODO"
-let cref, cref_t = failwith "TODO"
+let tv = TVar.mk TVar.KTemporary (Some "'a")
+
+let unref, unref_t =
+  let v = Variable.create_let (Some "unref") in
+  let ty = Arrow.mk (Ref.mk (TVar.typ tv)) (TVar.typ tv) in
+  v, ty
+
+let cref, cref_t =
+  let v = Variable.create_let (Some "cref") in
+  let ty = Arrow.mk (TVar.typ tv) (Ref.mk (TVar.typ tv)) in
+  v, ty
 
 let defs = [unref, unref_t ; cref, cref_t]
 

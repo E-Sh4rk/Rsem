@@ -72,7 +72,7 @@ let rec aux_e env (pos,e) =
   let eid = Eid.unique_with_pos pos in
   let e = match e with
   | Const c -> Ast.Const (aux_const c)
-  | Id str -> Ast.Id (true, var env str)
+  | Id str -> Ast.Id (var env str)
   | Unop (str, e) -> Ast.Unop (var env (str^"__1"), aux_e env e)
   | Binop (str, (e1,e2)) -> Ast.Binop (var env (str^"__2"), aux_e env e1, aux_e env e2)
   | Call (e,args) ->
