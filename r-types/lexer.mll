@@ -32,8 +32,7 @@ let float_comma = decimal '.' decimal (['e' 'E'] ['-' '+']? decimal)?
 let float = (float_e | float_comma)
 
 let type_var = '\'' ['a'-'z''A'-'Z''0'-'9']['a'-'z''A'-'Z''0'-'9''_']*
-let limited_weak_type_var = '\'' '_' ['a'-'z''A'-'Z''0'-'9']['a'-'z''A'-'Z''0'-'9''_']*
-let weak_type_var = '\'' '_' '_' ['a'-'z''A'-'Z''0'-'9']['a'-'z''A'-'Z''0'-'9''_']*
+let weak_type_var = '\'' '_' ['a'-'z''A'-'Z''0'-'9']['a'-'z''A'-'Z''0'-'9''_']*
 
 rule token = parse
 | newline { enter_newline lexbuf |> token }
@@ -79,7 +78,6 @@ rule token = parse
 | '\'' '\\' (backslash_escapes as c) '\'' { LCHAR (char_for_backslash c) }
 | id as s { ID s }
 | type_var as s { TVAR (String.sub s 1 ((String.length s) - 1)) }
-| limited_weak_type_var as s { TVAR_WEAK_LIMITED (String.sub s 1 ((String.length s) - 1)) }
 | weak_type_var as s { TVAR_WEAK (String.sub s 1 ((String.length s) - 1)) }
 | eof     { EOF }
 | _ { raise (LexerError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }

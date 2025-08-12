@@ -12,7 +12,7 @@ end
 open Sstt.Extensions.Hierarchy
 let _h =
   let h = new_hierarchy () in
-  printer_params' h |> Types.Ty.add_printer_param ;
+  printer_params h |> Types.Ty.add_printer_param ;
   h
 
 module Scalars = struct
