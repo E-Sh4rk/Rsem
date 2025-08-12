@@ -67,14 +67,19 @@ let var env str =
   match StrMap.find_opt str env.id with
   | None -> Variable.create_let (Some str)
   | Some v -> v
-
+  
 let rec aux_e env (pos,e) =
   let eid = Eid.unique_with_pos pos in
   let e = match e with
   | Const c -> Ast.Const (aux_const c)
   | Id str -> Ast.Id (var env str)
   | Unop (str, e) -> Ast.Unop (var env (str^"__1"), aux_e env e)
-  | Binop (str, (e1,e2)) -> Ast.Binop (var env (str^"__2"), aux_e env e1, aux_e env e2)
+  | Binop (str, (e1,e2)) ->
+    begin match str, e1, e2 with
+    | "<-", (_, Id id), e2 -> Ast.VarAssign (false, var env id, aux_e env e2)
+    | "<<-", (_, Id id), e2 -> Ast.VarAssign (true, var env id, aux_e env e2)
+    | _, _, _ -> Ast.Binop (var env (str^"__2"), aux_e env e1, aux_e env e2)
+    end
   | Call (e,args) ->
     let e = aux_e env e in
     let args = List.mapi (aux_arg (aux_e env)) args in

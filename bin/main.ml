@@ -21,17 +21,23 @@ let extend_env mlast env =
   missing |> VarSet.elements |> List.fold_left
     (fun env v -> Env.add v (TyScheme.mk_mono GTy.dyn) env) env
 
-let treat_def (idenv, env) past =
-  let ast = PAst.transform { PAst.id = idenv } past in
-  Format.printf "%a@.@." Ast.pp_e ast ;
+let treat_ast v (idenv, env) ast =
   let mlast = Transform.to_mlsem ast in
   Format.printf "%a@.@." System.Ast.pp mlast ;
   let env = extend_env mlast env in
   let renvs = System.Refinement.refinement_envs env mlast in
   let anns = System.Reconstruction.infer env renvs mlast in
   let typ = System.Checker.typeof_def env anns mlast in
-  Format.printf "%a@.@." Types.TyScheme.pp typ ;
+  Format.printf "%a: %a@.@." Variable.pp v Types.TyScheme.pp typ ;
   idenv, env
+
+let dummy_var = Variable.create_gen (Some "_")
+let treat_def (idenv, env) past =
+  let (id,ast) = PAst.transform { PAst.id = idenv } past in
+  Format.printf "%a@.@." Ast.pp_e (id,ast) ;
+  match ast with
+  | VarAssign (false, v, e) -> treat_ast v (idenv, env) e
+  | _ -> treat_ast dummy_var (idenv, env) (id, ast)
 
 let add_def (tenv, idenv, env) def =
   let open R_types.Types in
