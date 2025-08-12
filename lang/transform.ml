@@ -26,16 +26,18 @@ let rec aux_e (eid,e) =
     | Id v ->
       begin match var_mark v with
       | VCst -> A.Var v
-      | VRef -> A.App ((Eid.dummy, A.Var Defs.cref), (Eid.dummy, A.Var v))
+      | VRef -> A.App ((Eid.dummy, A.Var Defs.unref), (Eid.dummy, A.Var v))
       end
     | Declare (v,e) ->
       mark_var v VRef ;
-      let e1 = Eid.dummy, A.Value (Ref.mk (TVar.mk KInfer None |> TVar.typ) |> GTy.mk) in
+      let e1 = Eid.dummy, A.Var Defs.uref in
       A.Let ([], v, e1, aux_e e)
     | Let (v, e1, e2) ->
       mark_var v VCst ;
       A.Let ([], v, aux_e e1, aux_e e2)
-    | VarAssign (_, _, _) -> failwith "TODO"
+    | VarAssign (_ (* TODO: superassign *), v, e) ->
+      A.App ((Eid.dummy, A.Var Defs.setref),
+        (Eid.dummy, A.Constructor (A.Tuple 2, [Eid.dummy, A.Var v; aux_e e])))
     | Unop (v,e) -> aux (Call ((Eid.dummy, Id v), [(Args.id_of_pos 0, e)]))
     | Binop (v,e1,e2) ->
       aux (Call ((Eid.dummy, Id v), [(Args.id_of_pos 0, e1);(Args.id_of_pos 1, e2)]))
