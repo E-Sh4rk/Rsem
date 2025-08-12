@@ -12,3 +12,7 @@ print(TRUE)
 c(print(42), print(FALSE))
 
 i <- 42
+
+f <- function(a){
+    a
+}
