@@ -61,6 +61,7 @@ let rec aux_e (eid,e) =
       let e = A.App (aux_e f, a) in
       List.fold_left add_def e args
     | Function _ -> failwith "TODO"
+    | Braced _ -> failwith "TODO"
   in
   (eid, aux e)
 

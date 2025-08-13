@@ -21,6 +21,7 @@ type e' =
 | Binop of Variable.t * e * e
 | Call of e * arg list
 | Function of param list * e
+| Braced of e list
 [@@deriving show]
 and arg = label * e
 [@@deriving show]

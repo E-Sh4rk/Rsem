@@ -77,11 +77,15 @@ let aux_option f tree =
 
 let rec aux_prog tree =
   match tree with
-  | Tuple [_ ; List lst] ->
-    List.map aux_elt lst |> List.concat
+  | Tuple [_ ; elts] -> aux_elts elts
   | _ -> assert false
 
-and aux_elt tree =
+and aux_elts tree =
+  match tree with
+  | List lst -> List.map aux_elt lst |> List.concat
+  | _ -> assert false
+
+and aux_elt (* map_anon_choice_arg_value_c460aa0 *) tree =
   match tree with
   | Case (c, tree) -> aux_elt_case c tree
   | _ -> assert false
@@ -119,11 +123,14 @@ and aux_case c tree =
     let op, arg = aux_binary tree in
     A.Binop (op, arg)
   | "Func_defi" ->
-    let (k,_,params,_,e) = extract5 tree in
+    let k,_,params,_,e = extract5 tree in
     let k = aux_fkind k in
     let params = aux_params params in
     let e = aux_e e in
     A.Function (k, params, e)
+  | "Braced_exp" ->
+    let _, es, _ = extract3 tree in
+    A.Braced (aux_elts es)
   | _ -> failwith ("TODO: "^c)
 
 and aux_cargs tree =

@@ -20,6 +20,7 @@ type e' =
 | Binop of string * (e * e)
 | Call of e * arg option list
 | Function of bool (* \x fun? *) * param list option * e
+| Braced of e list
 [@@deriving show]
 and arg =
 | Unnamed of e
@@ -101,6 +102,9 @@ let rec aux_e env (pos,e) =
       | Some lst -> List.map (aux_param (aux_e env)) lst
     in
     Ast.Function (params, aux_e env e)
+  | Braced es ->
+    (* TODO: update env *)
+    Ast.Braced (List.map (aux_e env) es)
   in
   eid, e
 
