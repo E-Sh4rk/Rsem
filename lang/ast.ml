@@ -20,8 +20,11 @@ type e' =
 | Unop of Variable.t * e
 | Binop of Variable.t * e * e
 | Call of e * arg list
+| Function of param list * e
 [@@deriving show]
 and arg = label * e
+[@@deriving show]
+and param = NoDefault of label | Default of label * e
 [@@deriving show]
 and e = Eid.t * e'
 [@@deriving show]

@@ -19,6 +19,7 @@ type e' =
 | Unop of string * e
 | Binop of string * (e * e)
 | Call of e * arg option list
+| Function of bool (* \x fun? *) * param list option * e
 [@@deriving show]
 and arg =
 | Unnamed of e
@@ -29,6 +30,9 @@ and arg_id =
 | NullId
 | EllipsisId
 | ArgId of string
+and param =
+| NoDefault of arg_id
+| Default of arg_id * e
 
 type t = e list
 [@@deriving show]
@@ -55,6 +59,10 @@ let aux_arg f i arg =
   | Named (_, None) -> failwith "TODO: Named absent arguments"
 let aux_arg f i arg =
   Option.map (aux_arg f i) arg
+let aux_param f p =
+  match p with
+  | NoDefault arg -> Ast.NoDefault (id_of_argid arg)
+  | Default (arg, e) -> Ast.Default (id_of_argid arg, f e)
 
 let aux_const c =
   match c with
@@ -85,6 +93,14 @@ let rec aux_e env (pos,e) =
     let args = List.mapi (aux_arg (aux_e env)) args in
     let args = List.filter_map Fun.id args in
     Ast.Call (e, args)
+  | Function (_,params,e) ->
+    (* TODO: update env *)
+    let params =
+      match params with
+      | None -> []
+      | Some lst -> List.map (aux_param (aux_e env)) lst
+    in
+    Ast.Function (params, aux_e env e)
   in
   eid, e
 

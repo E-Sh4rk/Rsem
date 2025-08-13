@@ -64,6 +64,10 @@ let extract4 tree =
   match tree with
   | Tuple [t1;t2;t3;t4] -> t1,t2,t3,t4
   | _ -> assert false
+let extract5 tree =
+  match tree with
+  | Tuple [t1;t2;t3;t4;t5] -> t1,t2,t3,t4,t5
+  | _ -> assert false
 
 let aux_option f tree =
   match tree with
@@ -114,6 +118,12 @@ and aux_case c tree =
   | "Bin_op" ->
     let op, arg = aux_binary tree in
     A.Binop (op, arg)
+  | "Func_defi" ->
+    let (k,_,params,_,e) = extract5 tree in
+    let k = aux_fkind k in
+    let params = aux_params params in
+    let e = aux_e e in
+    A.Function (k, params, e)
   | _ -> failwith ("TODO: "^c)
 
 and aux_cargs tree =
@@ -151,7 +161,44 @@ and aux_arg_id tree =
 and aux_param tree =
   match tree with
   | Case ("Str", tree) -> A.ArgId (aux_string tree)
-  | Case ("Choice_dots", _) -> A.EllipsisId
+  | Case ("Choice_dots", tree) -> aux_param_name tree
+  | _ -> assert false
+
+and aux_params (* map_parameters *) tree =
+  let (_,params,_) = extract3 tree in
+  match params with
+  | Option (Some p) -> Some (aux_ps p)
+  | Option None -> None
+  | _ -> assert false
+
+and aux_ps tree =
+  let (p1, ps) = extract2 tree in
+  let aux tree =
+    let (_,p) = extract2 tree in
+    aux_p p
+  in
+  let p1 = aux_p p1 in
+  let ps =
+    match ps with
+    | List lst -> List.map aux lst
+    | _ -> assert false
+  in
+  p1::ps
+
+and aux_p (* map_parameter *) tree =
+  match tree with
+  | Case ("Param_with_defa_d9d11f1", tree) ->
+    let (name,_,e) = extract3 tree in
+    A.Default (aux_param_name name, aux_e e)
+  | Case ("Param_with_defa_6e24c8f", tree) ->
+    A.NoDefault (aux_param_name tree)
+  | _ -> assert false
+
+and aux_param_name (* map_parameter_name *) tree =
+  match tree with
+  | Case ("Dots", _) -> EllipsisId
+  | Case ("Dot_dot_i", _) -> failwith "TODO: ..i argument"
+  | Case ("Id", tree) -> ArgId (aux_tok tree)
   | _ -> assert false
 
 and aux_string (* map_string_ *) tree =
@@ -236,6 +283,12 @@ and aux_binary (* map_binary_operator *) tree =
     aux_tok tok, (aux_e a1, aux_e a2)
   | Case ("Exp_BARGT_rep_nl_exp", tree) -> "|>", aux tree
   | Case ("Exp_COLON_rep_nl_exp", tree) -> ":", aux tree
+  | _ -> assert false
+
+and aux_fkind tree =
+  match tree with
+  | Case ("BSLASH", _) -> true
+  | Case ("Func", _) -> false
   | _ -> assert false
 
 and aux_tok tree  =
