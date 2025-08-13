@@ -25,7 +25,7 @@ type e' =
 [@@deriving show]
 and arg = label * e
 [@@deriving show]
-and param = NoDefault of label | Default of label * e
+and param = NoDefault of label * Variable.t | Default of label * Variable.t * e
 [@@deriving show]
 and e = Eid.t * e'
 [@@deriving show]

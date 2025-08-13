@@ -65,8 +65,20 @@ let rec aux_e (eid,e) =
       let a = add_ellipsis a args in
       let e = A.App (aux_e f, a) in
       List.fold_left add_def e args
-    | Function _ -> failwith "TODO"
-    | Braced _ -> failwith "TODO"
+    | Function (ps, _) ->
+      let _ = ps |> List.map (function
+        | Default _ -> failwith "TODO: default parameters"
+        | NoDefault (_, v) -> v
+      ) in
+      failwith "TODO"
+    | Braced lst ->
+      let seq e2 e1 =
+        Eid.dummy, A.Let ([], Variable.create_gen None, aux_e e1, e2)
+      in
+      begin match List.rev lst with
+      | [] -> A.Value (Ty.unit |> GTy.mk)
+      | hd::lst -> List.fold_left seq (aux_e hd) lst |> snd
+      end
   in
   (eid, aux e)
 

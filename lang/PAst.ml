@@ -75,6 +75,11 @@ type env = { id: Variable.t StrMap.t }
 
 let empty_env = { id = StrMap.empty }
 
+let var env str =
+  match StrMap.find_opt str env.id with
+  | None -> Variable.create_let (Some str)
+  | Some v -> v
+
 let id_of_argid aid =
   match aid with
   | NullId -> Args.id_of_null
@@ -92,10 +97,12 @@ let aux_arg f i arg =
   | Named (_, None) -> failwith "TODO: Named absent arguments"
 let aux_arg f i arg =
   Option.map (aux_arg f i) arg
-let aux_param f p =
+let aux_param env f p =
   match p with
-  | NoDefault arg -> Ast.NoDefault (id_of_argid arg)
-  | Default (arg, e) -> Ast.Default (id_of_argid arg, f e)
+  | NoDefault arg ->
+    Ast.NoDefault (id_of_argid arg, var env (id_of_argid arg))
+  | Default (arg, e) ->
+    Ast.Default (id_of_argid arg, var env (id_of_argid arg), f e)
 
 let aux_const c =
   match c with
@@ -103,11 +110,6 @@ let aux_const c =
   | CFloat str -> Ast.CDbl str
   | CBool b -> Ast.CLgl b
   | CNull -> Ast.CNull
-
-let var env str =
-  match StrMap.find_opt str env.id with
-  | None -> Variable.create_let (Some str)
-  | Some v -> v
 
 let add_var ~lambda env str =
   let v =
@@ -154,7 +156,7 @@ let rec aux_e env (pos,e) =
     let params =
       match params with
       | None -> []
-      | Some lst -> List.map (aux_param (aux_e env)) lst
+      | Some lst -> List.map (aux_param env (aux_e env)) lst
     in
     (* Body *)
     let ebvs = bv_e e in
