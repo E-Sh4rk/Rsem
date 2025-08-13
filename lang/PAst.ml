@@ -99,6 +99,14 @@ let add_var ~lambda env str =
   in
   StrMap.add str v env
 
+let add_def pid eid e str =
+  let def =
+    match StrMap.find_opt str pid with
+    | None -> None
+    | Some v -> Some (Eid.dummy, Ast.Id v)
+  in
+  let v = StrMap.find str eid in
+  Eid.dummy, Ast.Declare (v, def, e)
 let rec aux_e env (pos,e) =
   let eid = Eid.unique_with_pos pos in
   let e = match e with
@@ -117,25 +125,25 @@ let rec aux_e env (pos,e) =
     let args = List.filter_map Fun.id args in
     Ast.Call (e, args)
   | Function (_,params,e) ->
+    (* Params *)
     let pbvs =
       match params with
       | None -> StrSet.empty
       | Some lst -> bv_params lst
     in
-    let bvs = StrSet.union pbvs (bv_e e) in
-    (* TODO: declare bvs in body (they need to be references) *)
-    let id = List.fold_left (add_var ~lambda:true) env.id (StrSet.elements bvs) in
-    let env = { id } in
-    let env, params =
+    let pid = List.fold_left (add_var ~lambda:true) env.id (StrSet.elements pbvs) in
+    let env = { id=pid } in
+    let params =
       match params with
-      | None -> env, []
-      | Some lst ->
-        let bvs = bv_params lst in
-        let id = List.fold_left (add_var ~lambda:true) env.id (StrSet.elements bvs) in
-        let env = { id } in
-        env, List.map (aux_param (aux_e env)) lst
+      | None -> []
+      | Some lst -> List.map (aux_param (aux_e env)) lst
     in
-    Ast.Function (params, aux_e env e)
+    (* Body *)
+    let ebvs = bv_e e in
+    let eid = List.fold_left (add_var ~lambda:false) env.id (StrSet.elements ebvs) in
+    let env = { id=eid } in
+    let e = List.fold_left (add_def pid eid) (aux_e env e) (StrSet.elements ebvs) in
+    Ast.Function (params, e)
   | Braced es -> Ast.Braced (List.map (aux_e env) es)
   in
   eid, e
