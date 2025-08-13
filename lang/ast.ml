@@ -14,7 +14,7 @@ type const =
 type e' =
 | Const of const
 | Id of Variable.t
-| Declare of Variable.t * e
+| Declare of Variable.t * e option * e
 | Let of Variable.t * e * e
 | VarAssign of bool (* superassign *) * Variable.t * e
 | Unop of Variable.t * e

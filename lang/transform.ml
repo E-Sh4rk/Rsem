@@ -28,10 +28,15 @@ let rec aux_e (eid,e) =
       | VCst -> A.Var v
       | VRef -> A.App ((Eid.dummy, A.Var Defs.unref), (Eid.dummy, A.Var v))
       end
-    | Declare (v,e) ->
+    | Declare (v,e1,e2) ->
       mark_var v VRef ;
-      let e1 = Eid.dummy, A.Var Defs.uref in
-      A.Let ([], v, e1, aux_e e)
+      let e1 =
+        match e1 with
+        | None -> Eid.dummy, A.Var Defs.uref
+        | Some e1 ->
+          Eid.dummy, A.App ((Eid.dummy, A.Var Defs.cref), (aux_e e1))
+      in
+      A.Let ([], v, e1, aux_e e2)
     | Let (v, e1, e2) ->
       mark_var v VCst ;
       A.Let ([], v, aux_e e1, aux_e e2)

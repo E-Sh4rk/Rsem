@@ -38,6 +38,20 @@ and param =
 type t = e list
 [@@deriving show]
 
+module StrSet = Set.Make(String)
+
+let bv_param p =
+  match p with
+  | NoDefault (ArgId str) -> StrSet.singleton str
+  | Default (ArgId str, _) -> StrSet.singleton str
+  | _ -> StrSet.empty
+let bv_params ps =
+  List.map bv_param ps |> List.fold_left StrSet.union StrSet.empty
+
+let bv_e _ = failwith "TODO"
+let bv_es es =
+  List.map bv_e es |> List.fold_left StrSet.union StrSet.empty
+
 module StrMap = Map.Make(String)
 type env = { id: Variable.t StrMap.t }
 
@@ -76,7 +90,15 @@ let var env str =
   match StrMap.find_opt str env.id with
   | None -> Variable.create_let (Some str)
   | Some v -> v
-  
+
+let add_var ~lambda env str =
+  let v =
+    if lambda
+    then Variable.create_lambda (Some str)
+    else Variable.create_let (Some str)
+  in
+  StrMap.add str v env
+
 let rec aux_e env (pos,e) =
   let eid = Eid.unique_with_pos pos in
   let e = match e with
@@ -95,15 +117,22 @@ let rec aux_e env (pos,e) =
     let args = List.filter_map Fun.id args in
     Ast.Call (e, args)
   | Function (_,params,e) ->
-    (* TODO: update env *)
-    let params =
+    (* TODO: declare bvs in body (they need to be references) *)
+    let env, params =
       match params with
-      | None -> []
-      | Some lst -> List.map (aux_param (aux_e env)) lst
+      | None -> env, []
+      | Some lst ->
+        let bvs = bv_params lst in
+        let id = List.fold_left (add_var ~lambda:true) env.id (StrSet.elements bvs) in
+        let env = { id } in
+        env, List.map (aux_param (aux_e env)) lst
     in
     Ast.Function (params, aux_e env e)
   | Braced es ->
-    (* TODO: update env *)
+    let bvs = bv_es es in
+    let id = List.fold_left (add_var ~lambda:true) env.id (StrSet.elements bvs) in
+    let env = { id } in
+    (* TODO: declare bvs *)
     Ast.Braced (List.map (aux_e env) es)
   in
   eid, e

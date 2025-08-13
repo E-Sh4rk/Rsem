@@ -9,10 +9,10 @@ let unref, unref_t =
   let ty = Arrow.mk (Ref.mk (TVar.typ tv)) (TVar.typ tv) in
   v, ty
 
-(* let cref, cref_t =
+let cref, cref_t =
   let v = Variable.create_let (Some "cref") in
   let ty = Arrow.mk (TVar.typ tv) (Ref.mk (TVar.typ tv)) in
-  v, ty *)
+  v, ty
 
 let setref, setref_t =
   let v = Variable.create_let (Some "setref") in
@@ -24,7 +24,7 @@ let uref, uref_t =
   let ty = Ref.mk (TVar.typ tv) in
   v, ty
 
-let defs = [unref, unref_t ; (*cref, cref_t ;*) setref, setref_t ; uref, uref_t]
+let defs = [unref, unref_t ; cref, cref_t ; setref, setref_t ; uref, uref_t]
 
 let initial_env =
   let add_def env (v,ty) =
