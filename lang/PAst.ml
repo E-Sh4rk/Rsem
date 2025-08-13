@@ -48,7 +48,25 @@ let bv_param p =
 let bv_params ps =
   List.map bv_param ps |> List.fold_left StrSet.union StrSet.empty
 
-let rec bv_e _ = failwith "TODO"
+let rec bv_e (_,e) =
+  match e with
+  | Const _ | Id _ | Function _ -> StrSet.empty
+  | Unop (_,e) -> bv_e e
+  | Binop (str, (e1, e2)) ->
+    let res = match str, e1, e2 with
+    | "<-", (_, Id id), _
+    | "<<-", (_, Id id), _ -> StrSet.singleton id
+    | _, _, _ -> StrSet.empty
+    in
+    StrSet.union res (StrSet.union (bv_e e1) (bv_e e2))
+  | Call (e, args) ->
+    let es = args |> List.concat_map (function
+      | None  | Some (Named (_, None)) -> []
+      | Some (Unnamed e) | Some (Named (_, Some e)) -> [e]
+      )
+    in
+    bv_es (e::es)
+  | Braced es -> bv_es es
 and bv_es es =
   List.map bv_e es |> List.fold_left StrSet.union StrSet.empty
 
