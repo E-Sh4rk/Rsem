@@ -48,8 +48,8 @@ let bv_param p =
 let bv_params ps =
   List.map bv_param ps |> List.fold_left StrSet.union StrSet.empty
 
-let bv_e _ = failwith "TODO"
-let bv_es es =
+let rec bv_e _ = failwith "TODO"
+and bv_es es =
   List.map bv_e es |> List.fold_left StrSet.union StrSet.empty
 
 module StrMap = Map.Make(String)
@@ -117,7 +117,15 @@ let rec aux_e env (pos,e) =
     let args = List.filter_map Fun.id args in
     Ast.Call (e, args)
   | Function (_,params,e) ->
+    let pbvs =
+      match params with
+      | None -> StrSet.empty
+      | Some lst -> bv_params lst
+    in
+    let bvs = StrSet.union pbvs (bv_e e) in
     (* TODO: declare bvs in body (they need to be references) *)
+    let id = List.fold_left (add_var ~lambda:true) env.id (StrSet.elements bvs) in
+    let env = { id } in
     let env, params =
       match params with
       | None -> env, []
@@ -128,12 +136,7 @@ let rec aux_e env (pos,e) =
         env, List.map (aux_param (aux_e env)) lst
     in
     Ast.Function (params, aux_e env e)
-  | Braced es ->
-    let bvs = bv_es es in
-    let id = List.fold_left (add_var ~lambda:true) env.id (StrSet.elements bvs) in
-    let env = { id } in
-    (* TODO: declare bvs *)
-    Ast.Braced (List.map (aux_e env) es)
+  | Braced es -> Ast.Braced (List.map (aux_e env) es)
   in
   eid, e
 
