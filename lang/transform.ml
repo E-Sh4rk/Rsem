@@ -79,7 +79,7 @@ let rec aux_e (eid,e) =
     | Function (ps, _) ->
       let _ = ps |> List.map (function
         | Default _ -> failwith "TODO: default parameters"
-        | NoDefault (_, v) -> v
+        | NoDefault v -> v
         | Ellipsis -> failwith "TODO: ellipsis parameters"
       ) in
       failwith "TODO"

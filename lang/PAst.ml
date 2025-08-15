@@ -79,29 +79,23 @@ let var env str =
   | None -> Variable.create_let (Some str)
   | Some v -> v
 
-let id_of_argid aid =
-  match aid with
-  | NullId -> Args.id_of_null
-  | ArgId str -> str
-  | EllipsisId -> Args.id_of_ellipsis
-let id_of_pos i =
-  Args.id_of_pos i
-
 let aux_arg f i arg =
   match arg with
   | Unnamed e ->
-    id_of_pos i, f e
-  | Named (aid, Some e) ->
-    id_of_argid aid, f e
+    Ast.Positional i, f e
+  | Named (ArgId str, Some e) ->
+    Ast.Named (i, str), f e
   | Named (_, None) -> failwith "TODO: Named absent arguments"
+  | _ -> assert false
 let aux_arg f i arg =
   Option.map (aux_arg f i) arg
 let aux_param env f p =
   match p with
-  | NoDefault arg ->
-    Ast.NoDefault (id_of_argid arg, var env (id_of_argid arg))
-  | Default (arg, e) ->
-    Ast.Default (id_of_argid arg, var env (id_of_argid arg), f e)
+  | NoDefault EllipsisId -> Ast.Ellipsis
+  | Default (EllipsisId, _) -> assert false
+  | NoDefault (ArgId str) -> Ast.NoDefault (var env str)
+  | Default (ArgId str, e) -> Ast.Default (var env str, f e)
+  | NoDefault NullId | Default (NullId, _) -> assert false
 
 let aux_const c =
   match c with
