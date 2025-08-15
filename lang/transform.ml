@@ -76,13 +76,18 @@ let rec aux_e (eid,e) =
       let a = add_ellipsis a (rem_n_first finfo.num args) in
       let e = A.App (aux_e f, a) in
       List.fold_left add_def e args
-    | Function (ps, _) ->
-      let _ = ps |> List.map (function
-        | Default _ -> failwith "TODO: default parameters"
-        | NoDefault v -> v
-        | Ellipsis -> failwith "TODO: ellipsis parameters"
-      ) in
-      failwith "TODO"
+    | Function (ps, e) ->
+      let e = aux_e e in
+      let v = Variable.create_lambda None in
+      let ev = Eid.dummy, A.Var v in
+      let add_def e p = match p with
+      | Default _ -> failwith "TODO: default parameters"
+      | NoDefault (i, v) ->
+        Eid.dummy, A.Let ([], v, (Eid.dummy, A.Projection (A.Field (Args.id_of_pos i), ev)), e)
+      | Ellipsis -> failwith "TODO: ellipsis parameters"
+      in
+      let e = List.fold_left add_def e ps in
+      A.Lambda (TVar.mk TVar.KInfer None |> TVar.typ |> GTy.mk, v, e)
     | Braced lst ->
       let seq e2 e1 =
         Eid.dummy, A.Let ([], Variable.create_gen None, aux_e e1, e2)

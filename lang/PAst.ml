@@ -89,12 +89,12 @@ let aux_arg f i arg =
   | _ -> assert false
 let aux_arg f i arg =
   Option.map (aux_arg f i) arg
-let aux_param env f p =
+let aux_param env f i p =
   match p with
   | NoDefault EllipsisId -> Ast.Ellipsis
   | Default (EllipsisId, _) -> assert false
-  | NoDefault (ArgId str) -> Ast.NoDefault (var env str)
-  | Default (ArgId str, e) -> Ast.Default (var env str, f e)
+  | NoDefault (ArgId str) -> Ast.NoDefault (i, var env str)
+  | Default (ArgId str, e) -> Ast.Default (i, var env str, f e)
   | NoDefault NullId | Default (NullId, _) -> assert false
 
 let aux_const c =
@@ -153,7 +153,7 @@ let rec aux_e env (pos,e) =
     let params =
       match params with
       | None -> []
-      | Some lst -> List.map (aux_param env (aux_e env)) lst
+      | Some lst -> List.mapi (aux_param env (aux_e env)) lst
     in
     (* Body *)
     let ebvs = bv_e e in
