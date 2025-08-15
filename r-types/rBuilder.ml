@@ -36,6 +36,6 @@ end
 include (Types.Builder'.Make(Ext))
 
 type type_def =
-| Sig of string * type_expr
+| Sig of string * type_expr * Sigs.FunInfo.t
 | Aliases of (string * string list * type_expr) list
 type type_defs = type_def list

@@ -2,6 +2,7 @@ open Ast
 open Common
 open R_types
 open Types
+open Sigs
 module A = System.Ast
 module C = System.Const
 
@@ -18,6 +19,12 @@ let mark_var v k =
   Hashtbl.replace varinfo v k
 let var_mark v =
   match Hashtbl.find_opt varinfo v with None -> VCst | Some m -> m
+
+let rec rem_n_first n lst =
+  match n, lst with
+  | 0, lst -> lst
+  | _, [] -> []
+  | n, _::lst -> rem_n_first (n-1) lst
 
 let rec aux_e (eid,e) =
   let rec aux e =
@@ -43,13 +50,17 @@ let rec aux_e (eid,e) =
     | VarAssign (_ (* TODO: superassign *), v, e) ->
       A.App ((Eid.dummy, A.Var Defs.setref),
         (Eid.dummy, A.Constructor (A.Tuple 2, [Eid.dummy, A.Var v; aux_e e])))
-    | Unop (v,e) -> aux (Call ((Eid.dummy, Id v), [(Args.id_of_pos 0, e)]))
+    | Unop (v,e) -> aux (Call ((Eid.dummy, Id v), [(Positional 0, e)], FunInfo.unop))
     | Binop (v,e1,e2) ->
-      aux (Call ((Eid.dummy, Id v), [(Args.id_of_pos 0, e1);(Args.id_of_pos 1, e2)]))
-    | Call (f, args) ->
+      aux (Call ((Eid.dummy, Id v), [(Positional 0, e1);(Positional 1, e2)], FunInfo.binop))
+    | Call (f, args, finfo) ->
       let args = List.map (fun (lbl,e) -> lbl,e,Variable.create_gen None) args in
       let a = Eid.dummy, A.Value (Record.empty_closed |> GTy.mk) in
       let add_arg a (lbl, _, x) =
+        let lbl = match lbl with
+        | Positional i -> Args.id_of_pos i
+        | Named (i,l) -> Args.id_of_pos (FunInfo.pos_of finfo (i,l))
+        in
         let xe = Eid.dummy, A.Var x in
         Eid.dummy, A.Constructor (A.RecUpd lbl, [a; xe])
       in
@@ -62,13 +73,14 @@ let rec aux_e (eid,e) =
         A.Let ([], x, aux_e def, (Eid.dummy, e))
       in
       let a = List.fold_left add_arg a args in
-      let a = add_ellipsis a args in
+      let a = add_ellipsis a (rem_n_first finfo.num args) in
       let e = A.App (aux_e f, a) in
       List.fold_left add_def e args
     | Function (ps, _) ->
       let _ = ps |> List.map (function
         | Default _ -> failwith "TODO: default parameters"
         | NoDefault (_, v) -> v
+        | Ellipsis -> failwith "TODO: ellipsis parameters"
       ) in
       failwith "TODO"
     | Braced lst ->

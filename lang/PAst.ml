@@ -1,5 +1,6 @@
 open R_types
 open Common
+open Sigs
 
 module Position = struct
   type t = Position.t
@@ -71,9 +72,7 @@ and bv_es es =
   List.map bv_e es |> List.fold_left StrSet.union StrSet.empty
 
 module StrMap = Map.Make(String)
-type env = { id: Variable.t StrMap.t }
-
-let empty_env = { id = StrMap.empty }
+type env = { id: Variable.t StrMap.t ; sigs: Sig.t }
 
 let var env str =
   match StrMap.find_opt str env.id with
@@ -83,7 +82,7 @@ let var env str =
 let id_of_argid aid =
   match aid with
   | NullId -> Args.id_of_null
-  | ArgId str -> Args.id_of_name str
+  | ArgId str -> str
   | EllipsisId -> Args.id_of_ellipsis
 let id_of_pos i =
   Args.id_of_pos i
@@ -141,9 +140,13 @@ let rec aux_e env (pos,e) =
     end
   | Call (e,args) ->
     let e = aux_e env e in
+    let finfo = match e with
+    | (_, Id v) -> Sig.get_info env.sigs v
+    | _ -> FunInfo.unk
+    in
     let args = List.mapi (aux_arg (aux_e env)) args in
     let args = List.filter_map Fun.id args in
-    Ast.Call (e, args)
+    Ast.Call (e, args, finfo)
   | Function (_,params,e) ->
     (* Params *)
     let pbvs =
@@ -152,7 +155,7 @@ let rec aux_e env (pos,e) =
       | Some lst -> bv_params lst
     in
     let pid = List.fold_left (add_var ~lambda:true) env.id (StrSet.elements pbvs) in
-    let env = { id=pid } in
+    let env = { env with id=pid } in
     let params =
       match params with
       | None -> []
@@ -161,7 +164,7 @@ let rec aux_e env (pos,e) =
     (* Body *)
     let ebvs = bv_e e in
     let eid = List.fold_left (add_var ~lambda:false) env.id (StrSet.elements ebvs) in
-    let env = { id=eid } in
+    let env = { env with id=eid } in
     let e = List.fold_left (add_def pid eid) (aux_e env e) (StrSet.elements ebvs) in
     Ast.Function (params, e)
   | Braced es -> Ast.Braced (List.map (aux_e env) es)

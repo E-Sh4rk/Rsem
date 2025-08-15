@@ -19,13 +19,15 @@ type e' =
 | VarAssign of bool (* superassign *) * Variable.t * e
 | Unop of Variable.t * e
 | Binop of Variable.t * e * e
-| Call of e * arg list
+| Call of e * arg list * R_types.Sigs.FunInfo.t
 | Function of param list * e
 | Braced of e list
 [@@deriving show]
-and arg = label * e
+and arg = arg_label * e
 [@@deriving show]
-and param = NoDefault of label * Variable.t | Default of label * Variable.t * e
+and arg_label = Positional of int | Named of int * label
+[@@deriving show]
+and param = NoDefault of label * Variable.t | Default of label * Variable.t * e | Ellipsis
 [@@deriving show]
 and e = Eid.t * e'
 [@@deriving show]

@@ -3,6 +3,7 @@
   open Types.TyExpr
   open RBuilder.Ext
   open Defs
+  open Sigs
 
   let builtin_type_or_custom str =
     match str with
@@ -43,17 +44,34 @@
       else
         TCustom str
 
+  module StrMap = Map.Make(String)
+  let fnames = ref StrMap.empty
+  let fnum = ref 0
+  let register_field str i =
+    fnames := StrMap.add str i !fnames
+  let register_num i = fnum := i + 1
+
   type field_name = Ellipis | Named of string | Positional
 
   let record_fields fields =
     fields |> List.mapi (fun i (n,t,b) ->
+      register_num i ;
       let n = match n with
       | Positional -> Args.id_of_pos i
-      | Named n -> Args.id_of_name n
+      | Named name ->
+        register_field name i ;
+        Args.id_of_pos i
       | Ellipis -> Args.id_of_ellipsis
       in
       n,t,b
     )
+
+  let registered_funinfo () =
+    let res = {
+      FunInfo.names = !fnames ;
+      FunInfo.num = !fnum
+    } in
+    fnum := 0 ; fnames := StrMap.empty ; res
 
 %}
 
@@ -92,9 +110,9 @@ defs:
 | defs=def* EOF { defs }
 
 def:
-| VAL id=op_id COLON ty=typ { Sig (id, ty) }
-| VAL UNARY id=op_id COLON ty=typ { Sig (id^"__1", ty) }
-| VAL BINARY id=op_id COLON ty=typ { Sig (id^"__2", ty) }
+| VAL id=op_id COLON ty=typ { Sig (id, ty, registered_funinfo ()) }
+| VAL UNARY id=op_id COLON ty=typ { Sig (id^"__1", ty, registered_funinfo ()) }
+| VAL BINARY id=op_id COLON ty=typ { Sig (id^"__2", ty, registered_funinfo ()) }
 | TYPE defs=separated_nonempty_list(AND_KW, param_type_def) { Aliases defs }
 
 op_id:
