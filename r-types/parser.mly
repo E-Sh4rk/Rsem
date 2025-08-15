@@ -47,31 +47,33 @@
   module StrMap = Map.Make(String)
   let fnames = ref StrMap.empty
   let fnum = ref 0
+  let fdone = ref false
   let register_field str i =
-    fnames := StrMap.add str i !fnames
-  let register_num i = fnum := i + 1
+    if not !fdone then fnames := StrMap.add str i !fnames
+  let incr_num () = if not !fdone then fnum := !fnum + 1
 
   type field_name = Ellipis | Named of string | Positional
 
   let record_fields fields =
-    fields |> List.mapi (fun i (n,t,b) ->
-      register_num i ;
+    let res = fields |> List.mapi (fun i (n,t,b) ->
       let n = match n with
-      | Positional -> Args.id_of_pos i
+      | Positional -> incr_num () ; Args.id_of_pos i
       | Named name ->
-        register_field name i ;
+        incr_num () ; register_field name i ;
         Args.id_of_pos i
       | Ellipis -> Args.id_of_ellipsis
       in
       n,t,b
     )
+    in
+    fdone := true ; res
 
   let registered_funinfo () =
     let res = {
       FunInfo.names = !fnames ;
       FunInfo.num = !fnum
     } in
-    fnum := 0 ; fnames := StrMap.empty ; res
+    fnum := 0 ; fnames := StrMap.empty ; fdone := false ; res
 
 %}
 
