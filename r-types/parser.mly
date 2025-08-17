@@ -57,11 +57,10 @@
   let record_fields fields =
     let res = fields |> List.mapi (fun i (n,t,b) ->
       let n = match n with
-      | Positional -> incr_num () ; Args.id_of_pos i
+      | Positional -> incr_num () ; Args.id i
       | Named name ->
-        incr_num () ; register_field name i ;
-        Args.id_of_pos i
-      | Ellipis -> Args.id_of_ellipsis
+        incr_num () ; register_field name i ; Args.id i
+      | Ellipis -> Ellipsis.id
       in
       n,t,b
     )

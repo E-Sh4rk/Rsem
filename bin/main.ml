@@ -23,14 +23,19 @@ let extend_env mlast env =
     (fun env v -> Env.add v (TyScheme.mk_mono GTy.dyn) env) env
 
 let treat_ast v (idenv, env) ast =
-  let mlast = Transform.to_mlsem ast in
-  Format.printf "%a@.@." System.Ast.pp mlast ;
-  let env = extend_env mlast env in
-  let renvs = System.Refinement.refinement_envs env mlast in
-  let anns = System.Reconstruction.infer env renvs mlast in
-  let typ = System.Checker.typeof_def env anns mlast in
-  Format.printf "%a: %a@.@." Variable.pp v Types.TyScheme.pp typ ;
-  idenv, env
+  try
+    let mlast = Transform.to_mlsem ast in
+    Format.printf "%a@.@." System.Ast.pp mlast ;
+    let env = extend_env mlast env in
+    let renvs = System.Refinement.refinement_envs env mlast in
+    let anns = System.Reconstruction.infer env renvs mlast in
+    let typ = System.Checker.typeof_def env anns mlast in
+    Format.printf "%a: %a@.@." Variable.pp v Types.TyScheme.pp typ ;
+    idenv, env
+  with System.Checker.Untypeable (err) ->
+    Format.printf "Untypeable: %s@." err.title ;
+    err.descr |> Option.iter (Format.printf "%s@.") ;
+    idenv, env
 
 let dummy_var = Variable.create_gen (Some "_")
 let treat_def sigs (idenv, env) past =
@@ -59,6 +64,7 @@ let () =
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
   let _, idenv, env, sigs =
     List.fold_left add_def (RBuilder.empty_tenv, StrMap.empty, Defs.initial_env, Sig.empty) tdefs in
+  Format.printf "%a@.@." Env.pp env ;
   let res = Parse.file "test.r" in
   match res.program with
   | None -> ()

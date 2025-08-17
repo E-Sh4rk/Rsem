@@ -58,8 +58,8 @@ let rec aux_e (eid,e) =
       let a = Eid.dummy, A.Value (Record.empty_closed |> GTy.mk) in
       let add_arg a (lbl, _, x) =
         let lbl = match lbl with
-        | Positional i -> Args.id_of_pos i
-        | Named (i,l) -> Args.id_of_pos (FunInfo.pos_of finfo (i,l))
+        | Positional i -> Args.id i
+        | Named (i,l) -> Args.id (FunInfo.pos_of finfo (i,l))
         in
         let xe = Eid.dummy, A.Var x in
         Eid.dummy, A.Constructor (A.RecUpd lbl, [a; xe])
@@ -67,7 +67,7 @@ let rec aux_e (eid,e) =
       let add_ellipsis a args =
         let xs = args |> List.map (fun (_,_,x) -> Eid.dummy, A.Var x) in
         let ell = Eid.dummy, A.Constructor (A.Choice (List.length xs), xs) in
-        Eid.dummy, A.Constructor (A.RecUpd Args.id_of_ellipsis, [a; ell])
+        Eid.dummy, A.Constructor (A.RecUpd Ellipsis.id, [a; ell])
       in
       let add_def e (_, def, x) =
         A.Let ([], x, aux_e def, (Eid.dummy, e))
@@ -83,7 +83,7 @@ let rec aux_e (eid,e) =
       let add_def e p = match p with
       | Default _ -> failwith "TODO: default parameters"
       | NoDefault (i, v) ->
-        Eid.dummy, A.Let ([], v, (Eid.dummy, A.Projection (A.Field (Args.id_of_pos i), ev)), e)
+        Eid.dummy, A.Let ([], v, (Eid.dummy, A.Projection (A.Field (Args.id i), ev)), e)
       | Ellipsis -> failwith "TODO: ellipsis parameters"
       in
       let e = List.fold_left add_def e ps in
