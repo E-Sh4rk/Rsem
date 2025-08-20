@@ -8,9 +8,9 @@ module C = System.Const
 
 let typeof_const c =
   match c with
-  | CChr _ -> Scalars.chr
-  | CDbl _ -> Scalars.dbl
-  | CLgl _ -> Scalars.lgl
+  | CChr _ -> Vecs.mk_singl Prim.chr
+  | CDbl _ -> Vecs.mk_singl Prim.dbl
+  | CLgl _ -> Vecs.mk_singl Prim.lgl
   | CNull -> Null.null
 
 type varkind = VRef | VCst

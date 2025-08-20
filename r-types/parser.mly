@@ -7,27 +7,13 @@
 
   let builtin_type_or_custom str =
     match str with
-    | "int" -> TExt (Scalar INT)
-    | "lgl" -> TExt (Scalar LGL)
-    | "dbl" -> TExt (Scalar DBL)
-    | "clx" -> TExt (Scalar CLX)
-    | "chr" -> TExt (Scalar CHR)
-    | "raw" -> TExt (Scalar RAW)
-    | "scalar" -> TExt (AnyScalar)
-    | "INT" -> TExt (Vec (false, INT))
-    | "LGL" -> TExt (Vec (false, LGL))
-    | "DBL" -> TExt (Vec (false, DBL))
-    | "CLX" -> TExt (Vec (false, CLX))
-    | "CHR" -> TExt (Vec (false, CHR))
-    | "RAW" -> TExt (Vec (false, RAW))
-    | "VEC" -> TExt (AnyVec false)
-    | "INT?" -> TExt (Vec (true, INT))
-    | "LGL?" -> TExt (Vec (true, LGL))
-    | "DBL?" -> TExt (Vec (true, DBL))
-    | "CLX?" -> TExt (Vec (true, CLX))
-    | "CHR?" -> TExt (Vec (true, CHR))
-    | "RAW?" -> TExt (Vec (true, RAW))
-    | "VEC?" -> TExt (AnyVec true)
+    | "int" -> TExt (Prim INT)
+    | "lgl" -> TExt (Prim LGL)
+    | "dbl" -> TExt (Prim DBL)
+    | "clx" -> TExt (Prim CLX)
+    | "chr" -> TExt (Prim CHR)
+    | "raw" -> TExt (Prim RAW)
+    | "prim" -> TExt (AnyPrim)
     | "empty" -> TBase TEmpty
     | "any" -> TBase TAny
     (* Legacy *)
@@ -83,6 +69,7 @@
 %token VAL UNARY BINARY TYPE EOF
 %token LPAREN RPAREN EQUAL COMMA CONS COLON COLON_OPT
 %token INTERROGATION_MARK EXCLAMATION_MARK
+%token VEC VEC_O
 %token ARROW AND OR NEG DIFF
 %token TIMES PLUS MINUS
 %token LBRACE RBRACE DOUBLEPOINT TRIPLEPOINT
@@ -163,6 +150,8 @@ atomic_typ:
 | s=ID { builtin_type_or_custom s }
 | s=TVAR { TVar (KNoInfer, s) }
 | s=TVAR_WEAK { TVar (KInfer, s) }
+| VEC i=typ RBRACKET LPAREN p=typ RPAREN { TExt (Vec (p,false,i)) }
+| VEC_O i=typ RBRACKET LPAREN p=typ RPAREN { TExt (Vec (p,true,i)) }
 | TRIPLEPOINT LPAREN t=typ RPAREN { TExt (Ell t) }
 | LPAREN RPAREN { TBase TUnit }
 | LPAREN t=typ RPAREN { t }

@@ -21,7 +21,7 @@ let _h =
   printer_params h |> Types.Ty.add_printer_param ;
   h
 
-module Scalars = struct
+(* module Scalars = struct
   let _scalar name =
     let n = new_node _h ~name ~subnodes:[] in
     n, mk _h n
@@ -35,9 +35,9 @@ module Scalars = struct
   let scalar =
     let ty = Ty.disj [ int;lgl;dbl;clx;chr;raw ] in
     Ty.register "scalar" ty ; ty
-end
+end *)
 
-module Vecs = struct  
+(* module Vecs = struct  
   let _vec scalar name =
     let n = new_node _h ~name ~subnodes:[scalar] in
     n, mk _h n
@@ -64,7 +64,9 @@ module Vecs = struct
   let vec_na =
     let ty = Ty.disj [ int_na;lgl_na;dbl_na;clx_na;chr_na;raw_na ] in
     Ty.register "VEC?" ty ; ty
-end
+end *)
+
+include Vectors
 
 module Null = struct
   let null = Enum.define "Null" |> Enum.typ

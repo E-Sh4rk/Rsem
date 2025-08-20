@@ -38,7 +38,9 @@ rule token = parse
 | newline { enter_newline lexbuf |> token }
 | blank   { token lexbuf }
 | "val" { VAL }
-| "unary" { UNARY }
+| "v["  { VEC }
+| "v?["  { VEC_O }
+| "unary"  { UNARY }
 | "binary" { BINARY }
 | "type"  { TYPE }
 | "where" { WHERE }

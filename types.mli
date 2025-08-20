@@ -1,5 +1,5 @@
 
-val print : { 'a ..} -> 'a
+(* val print : { 'a ..} -> 'a
 val unary (-) : { DBL ..} -> DBL
 val unary (+) : { DBL ..} -> DBL
 val binary (+) : { DBL ; DBL ..} -> DBL
@@ -11,4 +11,11 @@ val c :
     ({ ...(CLX?) ..} -> CLX?) &
     ({ ...(CHR?) ..} -> CHR?) &
     ({ ...(RAW?) ..} -> RAW?) &
-    ({ ...(VEC) ..} -> VEC)
+    ({ ...(VEC) ..} -> VEC) *)
+
+val print : { 'a ..} -> 'a
+val unary (-) : { v['n](dbl) ..} -> v['n](dbl)
+val unary (+) : { v['n](dbl) ..} -> v['n](dbl)
+val binary (+) : { v[any](dbl) ; v[any](dbl) ..} -> v[any](dbl)
+val binary (-) : { v[any](dbl) ; v[any](dbl) ..} -> v[any](dbl)
+val c : ({ ...(v?[any]('p)) ..} -> v?[any]('p)) & ({ ...(v[any]('p)) ..} -> v[any]('p))

@@ -1,17 +1,32 @@
 open Defs
 
 module Ext = struct
-  type prim = INT |  LGL | DBL | CLX | CHR | RAW
-  type t =
+  type prim = INT | LGL | DBL | CLX | CHR | RAW
+  (* type t =
     | Vec of bool * prim
     | AnyVec of bool
     | Scalar of prim
     | AnyScalar
-    | Ell of t Types.TyExpr.t
+    | Ell of t Types.TyExpr.t *)
+  type t =
+  | Vec of t Types.TyExpr.t * bool * t Types.TyExpr.t
+  | AnyVec
+  | Prim of prim
+  | AnyPrim
+  | Ell of t Types.TyExpr.t
 
   let to_typ f t =
     match t with
-    | Vec (false, INT) -> Vecs.int
+    | AnyPrim -> Prim.any
+    | Prim INT -> Prim.int
+    | Prim LGL -> Prim.lgl
+    | Prim DBL -> Prim.dbl
+    | Prim CLX -> Prim.clx
+    | Prim CHR -> Prim.chr
+    | Prim RAW -> Prim.raw
+    | AnyVec -> Vecs.any
+    | Vec (p,b,i) -> Vecs.mk (f p) b (f i)
+    (* | Vec (false, INT) -> Vecs.int
     | Vec (false, LGL) -> Vecs.lgl
     | Vec (false, DBL) -> Vecs.dbl
     | Vec (false, CLX) -> Vecs.clx
@@ -31,7 +46,7 @@ module Ext = struct
     | Scalar CLX -> Scalars.clx
     | Scalar CHR -> Scalars.chr
     | Scalar RAW -> Scalars.raw
-    | AnyScalar -> Scalars.scalar
+    | AnyScalar -> Scalars.scalar *)
     | Ell ty -> Ellipsis.pack (f ty)
 end
 
