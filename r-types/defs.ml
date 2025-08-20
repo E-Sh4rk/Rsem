@@ -1,12 +1,18 @@
 open Types
 
 module Args = struct
-  let id pos =
-    Format.asprintf "__%i__" pos
+  let id pos = Format.asprintf "__%i__" pos
 end
 
 module Ellipsis = struct
+  open Lazy
   let id = "..."
+  let pack = EllArg.pack
+  let unpack = EllArg.unpack
+  let cons = function [ty] -> pack ty | _ -> assert false
+  let cdom ty = [[unpack ty]]
+  let any = EllArg.any
+  let () = Types.Ty.add_printer_param EllArg.printer_params
 end
 
 open Sstt.Extensions.Hierarchy

@@ -67,6 +67,7 @@ let rec aux_e (eid,e) =
       let add_ellipsis a args =
         let xs = args |> List.map (fun (_,_,x) -> Eid.dummy, A.Var x) in
         let ell = Eid.dummy, A.Constructor (A.Choice (List.length xs), xs) in
+        let ell = Eid.dummy, A.Constructor (A.CCustom { cons=Ellipsis.cons ; cdom=Ellipsis.cdom }, [ell]) in
         Eid.dummy, A.Constructor (A.RecUpd Ellipsis.id, [a; ell])
       in
       let add_def e (_, def, x) =

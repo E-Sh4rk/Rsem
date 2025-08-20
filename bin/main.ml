@@ -25,12 +25,12 @@ let extend_env mlast env =
 let treat_ast v (idenv, env) ast =
   try
     let mlast = Transform.to_mlsem ast in
-    Format.printf "%a@.@." System.Ast.pp mlast ;
+    (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
     let env = extend_env mlast env in
     let renvs = System.Refinement.refinement_envs env mlast in
     let anns = System.Reconstruction.infer env renvs mlast in
     let typ = System.Checker.typeof_def env anns mlast in
-    Format.printf "%a: %a@.@." Variable.pp v Types.TyScheme.pp typ ;
+    Format.printf "%a: %a@.@." Variable.pp v Types.TyScheme.pp_short typ ;
     idenv, env
   with System.Checker.Untypeable (err) ->
     Format.printf "Untypeable: %s@." err.title ;
@@ -40,7 +40,7 @@ let treat_ast v (idenv, env) ast =
 let dummy_var = Variable.create_gen (Some "_")
 let treat_def sigs (idenv, env) past =
   let (id,ast) = PAst.transform { PAst.sigs = sigs ; PAst.id = idenv } past in
-  Format.printf "%a@.@." Ast.pp_e (id,ast) ;
+  (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
   match ast with
   | VarAssign (false, v, e) -> treat_ast v (idenv, env) e
   | _ -> treat_ast dummy_var (idenv, env) (id, ast)

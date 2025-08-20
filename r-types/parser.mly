@@ -57,7 +57,11 @@
   let record_fields fields =
     let res = fields |> List.mapi (fun i (n,t,b) ->
       let n = match n with
-      | Positional -> incr_num () ; Args.id i
+      | Positional ->
+        begin match t with
+        | TExt (Ell _) -> Ellipsis.id
+        | _ -> incr_num () ; Args.id i
+        end
       | Named name ->
         incr_num () ; register_field name i ; Args.id i
       | Ellipis -> Ellipsis.id
@@ -159,6 +163,7 @@ atomic_typ:
 | s=ID { builtin_type_or_custom s }
 | s=TVAR { TVar (KNoInfer, s) }
 | s=TVAR_WEAK { TVar (KInfer, s) }
+| TRIPLEPOINT LPAREN t=typ RPAREN { TExt (Ell t) }
 | LPAREN RPAREN { TBase TUnit }
 | LPAREN t=typ RPAREN { t }
 | LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE

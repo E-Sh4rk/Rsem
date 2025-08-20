@@ -11,3 +11,5 @@
  (explain true)
  ; (flags --table)
  )
+
+(include_subdirs unqualified)

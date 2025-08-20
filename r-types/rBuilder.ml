@@ -7,8 +7,9 @@ module Ext = struct
     | AnyVec of bool
     | Scalar of prim
     | AnyScalar
+    | Ell of t Types.TyExpr.t
 
-  let to_typ _ t =
+  let to_typ f t =
     match t with
     | Vec (false, INT) -> Vecs.int
     | Vec (false, LGL) -> Vecs.lgl
@@ -31,6 +32,7 @@ module Ext = struct
     | Scalar CHR -> Scalars.chr
     | Scalar RAW -> Scalars.raw
     | AnyScalar -> Scalars.scalar
+    | Ell ty -> Ellipsis.pack (f ty)
 end
 
 include (Types.Builder'.Make(Ext))
