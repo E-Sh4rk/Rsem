@@ -19,7 +19,7 @@ module Prim = struct
     t
 end
 
-module Vecs = struct
+module Vecs = struct (* TODO: do not use abstract types for the encoding but records *)
   let na = Enum.define "?" |> Enum.typ
   let tag = Abstracts.define "v" [Cov;Cov;Cov]
   let mk v n l =
