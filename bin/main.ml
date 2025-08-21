@@ -61,6 +61,7 @@ let add_def (tenv, idenv, env, sigs) def =
 
 
 let () =
+  System.Config.infer_overload := false ;
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
   let _, idenv, env, sigs =
     List.fold_left add_def (RBuilder.empty_tenv, StrMap.empty, Defs.initial_env, Sig.empty) tdefs in

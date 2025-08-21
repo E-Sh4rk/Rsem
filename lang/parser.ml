@@ -131,6 +131,7 @@ and aux_case c tree =
   | "Braced_exp" ->
     let _, es, _ = extract3 tree in
     A.Braced (aux_elts es)
+  | "If_stmt" -> failwith "TODO"
   | _ -> failwith ("TODO: "^c)
 
 and aux_cargs tree =

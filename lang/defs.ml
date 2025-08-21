@@ -24,7 +24,15 @@ let uref, uref_t =
   let ty = Ref.mk (TVar.typ tv) in
   v, ty
 
-let defs = [unref, unref_t ; cref, cref_t ; setref, setref_t ; uref, uref_t]
+let tobool, tobool_t =
+  let v = Variable.create_let (Some "tobool") in
+  let def = Arrow.mk Ty.any Ty.bool in
+  let tt = Arrow.mk (Ty.disj [Prim.tt;Vecs.mk_singl Prim.tt]) Ty.tt in
+  let ff = Arrow.mk (Ty.disj [Prim.ff;Vecs.mk_singl Prim.ff]) Ty.ff in
+  let ty = Ty.conj [def;tt;ff] in
+  v, ty
+
+let defs = [unref, unref_t ; cref, cref_t ; setref, setref_t ; uref, uref_t ; tobool, tobool_t]
 
 let initial_env =
   let add_def env (v,ty) =

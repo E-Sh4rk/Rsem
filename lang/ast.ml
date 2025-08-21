@@ -20,6 +20,7 @@ type e' =
 | Unop of Variable.t * e
 | Binop of Variable.t * e * e
 | Call of e * arg list * R_types.Sigs.FunInfo.t
+| Ite of e * e * e
 | Function of param list * e
 | Braced of e list
 [@@deriving show]

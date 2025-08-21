@@ -21,6 +21,7 @@ type e' =
 | Binop of string * (e * e)
 | Call of e * arg option list
 | Function of bool (* \x fun? *) * param list option * e
+| Ite of e * e * e option
 | Braced of e list
 [@@deriving show]
 and arg =
@@ -67,6 +68,7 @@ let rec bv_e (_,e) =
       )
     in
     bv_es (e::es)
+  | Ite (e, e1, e2) -> bv_es (e::e1::(match e2 with None -> [] | Some e2 -> [e2]))
   | Braced es -> bv_es es
 and bv_es es =
   List.map bv_e es |> List.fold_left StrSet.union StrSet.empty
@@ -141,6 +143,10 @@ let rec aux_e env (pos,e) =
     let args = List.mapi (aux_arg (aux_e env)) args in
     let args = List.filter_map Fun.id args in
     Ast.Call (e, args, finfo)
+  | Ite (e, e1, e2) ->
+    let e, e1 = aux_e env e, aux_e env e1 in
+    let e2 = match e2 with None -> Eid.dummy, Ast.Const Ast.CNull | Some e2 -> aux_e env e2 in
+    Ast.Ite (e, e1, e2)
   | Function (_,params,e) ->
     (* Params *)
     let pbvs =

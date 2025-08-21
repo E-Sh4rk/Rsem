@@ -14,5 +14,10 @@ c(print(42), print(FALSE))
 i <- 42
 
 f <- function(a){
-    a
+    if (a > 0) {
+        a
+    }
+    else {
+        -a
+    }
 }

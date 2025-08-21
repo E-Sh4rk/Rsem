@@ -2,8 +2,13 @@ open Sstt.Extensions
 open Types
 
 module Prim = struct
+  let tt = Enum.define "tt" |> Enum.typ
+  let ff = Enum.define "ff" |> Enum.typ
   let int = Enum.define "int" |> Enum.typ
-  let lgl = Enum.define "lgl" |> Enum.typ
+  let lgl =
+    let t = Ty.disj [tt;ff] in
+    (* Enum.define "lgl" |> Enum.typ *)
+    Ty.register "lgl" t ; t
   let dbl = Enum.define "dbl" |> Enum.typ
   let clx = Enum.define "clx" |> Enum.typ
   let chr = Enum.define "chr" |> Enum.typ

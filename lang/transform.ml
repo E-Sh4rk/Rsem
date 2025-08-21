@@ -10,7 +10,8 @@ let typeof_const c =
   match c with
   | CChr _ -> Vecs.mk_singl Prim.chr
   | CDbl _ -> Vecs.mk_singl Prim.dbl
-  | CLgl _ -> Vecs.mk_singl Prim.lgl
+  | CLgl true -> Vecs.mk_singl Prim.tt
+  | CLgl false -> Vecs.mk_singl Prim.ff
   | CNull -> Null.null
 
 type varkind = VRef | VCst
@@ -77,6 +78,10 @@ let rec aux_e (eid,e) =
       let a = add_ellipsis a (rem_n_first finfo.num args) in
       let e = A.App (aux_e f, a) in
       List.fold_left add_def e args
+    | Ite (e, e1, e2) ->
+      let e = aux_e e in
+      let e = Eid.dummy, (A.App ((Eid.dummy, A.Var Defs.tobool), e)) in
+      A.Ite (e, Ty.tt, aux_e e1, aux_e e2)
     | Function (ps, e) ->
       let e = aux_e e in
       let v = Variable.create_lambda None in
