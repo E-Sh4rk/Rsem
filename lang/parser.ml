@@ -68,6 +68,10 @@ let extract5 tree =
   match tree with
   | Tuple [t1;t2;t3;t4;t5] -> t1,t2,t3,t4,t5
   | _ -> assert false
+let extract8 tree =
+  match tree with
+  | Tuple [t1;t2;t3;t4;t5;t6;t7;t8] -> t1,t2,t3,t4,t5,t6,t7,t8
+  | _ -> assert false
 
 let aux_option f tree =
   match tree with
@@ -131,8 +135,18 @@ and aux_case c tree =
   | "Braced_exp" ->
     let _, es, _ = extract3 tree in
     A.Braced (aux_elts es)
-  | "If_stmt" -> failwith "TODO"
+  | "If_stmt" ->
+    let _,_,_,e,_,_,e1,e2 = extract8 tree in
+    A.Ite (aux_e e, aux_e e1, aux_else e2)
   | _ -> failwith ("TODO: "^c)
+
+and aux_else tree =
+  match tree with
+  | Option None -> None
+  | Option (Some tree) ->
+    let _, _, e = extract3 tree in
+    Some (aux_e e)
+  | _ -> assert false
 
 and aux_cargs tree =
   let _ (* open_paren *),t2,t3,_ (* close_paren *) = extract4 tree in

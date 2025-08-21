@@ -14,8 +14,8 @@ val c :
     ({ ...(VEC) ..} -> VEC) *)
 
 val print : { 'a ..} -> 'a
-val unary (-) : { v['n](dbl) ..} -> v['n](dbl)
-val unary (+) : { v['n](dbl) ..} -> v['n](dbl)
-val binary (+) : { v[any](dbl) ; v[any](dbl) ..} -> v[any](dbl)
-val binary (-) : { v[any](dbl) ; v[any](dbl) ..} -> v[any](dbl)
+val unary (-) : { v<'na>['n](dbl) ..} -> v<'na>['n](dbl)
+val unary (+) : { v<'na>['n](dbl) ..} -> v<'na>['n](dbl)
+val binary (+) : { v<'na>[any](dbl) ; v<'na>[any](dbl) ..} -> v<'na>[any](dbl)
+val binary (-) : { v<'na>[any](dbl) ; v<'na>[any](dbl) ..} -> v<'na>[any](dbl)
 val c : { ...(v<'na>[any]('p)) ..} -> v<'na>[any]('p)
