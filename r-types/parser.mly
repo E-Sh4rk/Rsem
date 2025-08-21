@@ -69,10 +69,10 @@
 %token VAL UNARY BINARY TYPE EOF
 %token LPAREN RPAREN EQUAL COMMA CONS COLON COLON_OPT
 %token INTERROGATION_MARK EXCLAMATION_MARK
-%token VEC VEC_O
+%token VEC_NNA VEC_NA VEC
 %token ARROW AND OR NEG DIFF
 %token TIMES PLUS MINUS
-%token LBRACE RBRACE DOUBLEPOINT TRIPLEPOINT
+%token LBRACE RBRACE LT GT DOUBLEPOINT TRIPLEPOINT
 %token AND_KW OR_KW
 %token WHERE
 %token LBRACKET RBRACKET SEMICOLON
@@ -117,6 +117,8 @@ prefix:
 | NEG { "~" }
 | PLUS { "+" }
 | MINUS { "-" }
+| LT { "<" }
+| GT { ">" }
 
 (* === TYPES === *)
 
@@ -150,14 +152,19 @@ atomic_typ:
 | s=ID { builtin_type_or_custom s }
 | s=TVAR { TVar (KNoInfer, s) }
 | s=TVAR_WEAK { TVar (KInfer, s) }
-| VEC i=typ RBRACKET LPAREN p=typ RPAREN { TExt (Vec (p,false,i)) }
-| VEC_O i=typ RBRACKET LPAREN p=typ RPAREN { TExt (Vec (p,true,i)) }
+| v=vec LBRACKET i=typ RBRACKET LPAREN p=typ RPAREN { TExt (Vec (p,v,i)) }
 | TRIPLEPOINT LPAREN t=typ RPAREN { TExt (Ell t) }
 | LPAREN RPAREN { TBase TUnit }
 | LPAREN t=typ RPAREN { t }
 | LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE
 { TRecord (o, record_fields fs) }
 | LBRACKET re=typ_re RBRACKET { TSList re }
+
+%inline vec:
+  VEC_NNA { TBase TEmpty }
+| VEC_NA { TBase TAny }
+| VEC { TBase TAny }
+| VEC LT t=typ GT { t }
 
 %inline optional_open:
   { false }

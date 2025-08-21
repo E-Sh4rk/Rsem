@@ -15,22 +15,28 @@ module Prim = struct
 end
 
 module Vecs = struct
-  let _na = Enum.define "?" |> Enum.typ
+  let na = Enum.define "?" |> Enum.typ
   let tag = Abstracts.define "v" [Cov;Cov;Cov]
-  let mk v na l =
-    let na = if na then _na else Ty.empty in
-    Abstracts.mk tag [Ty.cap v Prim.any; na; Ty.cap l Ty.int]
-  let mk_singl v = mk v false (Ty.interval (Some Z.one) (Some Z.one))
-  let any = mk Ty.any true Ty.any
+  let mk v n l =
+    Abstracts.mk tag [Ty.cap v Prim.any; Ty.cap n na; Ty.cap l Ty.int]
+  let mk_singl v = mk v Ty.empty (Ty.interval (Some Z.one) (Some Z.one))
+  let any = mk Ty.any Ty.any Ty.any
 
   open Sstt.Prec
   open Sstt
   let print_seq f sep =
     Format.(pp_print_list  ~pp_sep:(fun fmt () -> pp_print_string fmt sep) f)
   let print prec assoc fmt t =
+    let print_na fmt n =
+      if Ty.is_empty n.Printer.ty
+      then Format.fprintf fmt "!"
+      else if Ty.equiv n.Printer.ty na
+      then Format.fprintf fmt "?"
+      else Format.fprintf fmt "<%a>" Printer.print_descr n
+    in
     let print_atom fmt params =
       let p,na,i = match params with [p;na;i] -> p,na,i | _ -> assert false in
-      Format.fprintf fmt "%a%s[%a](%a)" Tag.pp tag (if Ty.is_empty na.Printer.ty then "" else "?")
+      Format.fprintf fmt "%a%a[%a](%a)" Tag.pp tag print_na na
        Printer.print_descr i Printer.print_descr p
     in
     let print_lit prec assoc fmt (pos,params) =

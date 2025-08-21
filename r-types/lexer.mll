@@ -38,8 +38,9 @@ rule token = parse
 | newline { enter_newline lexbuf |> token }
 | blank   { token lexbuf }
 | "val" { VAL }
-| "v["  { VEC }
-| "v?["  { VEC_O }
+| "v!" { VEC_NNA }
+| "v?" { VEC_NA }
+| "v" { VEC }
 | "unary"  { UNARY }
 | "binary" { BINARY }
 | "type"  { TYPE }
@@ -63,6 +64,8 @@ rule token = parse
 | ")"     { RPAREN }
 | "{"     { LBRACE }
 | "}"     { RBRACE }
+| "<"     { LT }
+| ">"     { GT }
 | "["     { LBRACKET }
 | "]"     { RBRACKET }
 | ";"     { SEMICOLON }

@@ -9,7 +9,7 @@ module Ext = struct
     | AnyScalar
     | Ell of t Types.TyExpr.t *)
   type t =
-  | Vec of t Types.TyExpr.t * bool * t Types.TyExpr.t
+  | Vec of t Types.TyExpr.t * t Types.TyExpr.t * t Types.TyExpr.t
   | AnyVec
   | Prim of prim
   | AnyPrim
@@ -25,7 +25,7 @@ module Ext = struct
     | Prim CHR -> Prim.chr
     | Prim RAW -> Prim.raw
     | AnyVec -> Vecs.any
-    | Vec (p,b,i) -> Vecs.mk (f p) b (f i)
+    | Vec (p,n,i) -> Vecs.mk (f p) (f n) (f i)
     (* | Vec (false, INT) -> Vecs.int
     | Vec (false, LGL) -> Vecs.lgl
     | Vec (false, DBL) -> Vecs.dbl
