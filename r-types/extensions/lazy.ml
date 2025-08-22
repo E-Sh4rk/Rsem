@@ -3,7 +3,7 @@ module type LazyTy = sig
   val name : string
 end
 
-module MakeLazy(L:LazyTy) = struct
+module MakeLazy(L:LazyTy) = struct (* TODO: use arrow instead of record? *)
   open Sstt
   let tag = Tag.mk L.name
 
