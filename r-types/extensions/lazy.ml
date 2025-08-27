@@ -16,9 +16,9 @@ module MakeLazy(L:LazyTy) = struct (* TODO: use arrow instead of record? *)
     let bindings = LabelMap.singleton label (ty, true) in
     Descr.mk_record { Records.Atom.opened=true ; bindings } |> Ty.mk_descr |> add_tag
   let any = pack Ty.any
+  let any_p = proj_tag any
 
-  let unpack ty =
-    let pty = proj_tag ty in
+  let unpack_p pty =
     let atom = pty |> Ty.get_descr |> Descr.get_records |> Op.Records.approx in
     let (field_ty, opt) = Records.Atom.find label atom in
     if Ty.vars_toplevel pty |> VarSet.is_empty && atom.opened && opt then
@@ -26,10 +26,13 @@ module MakeLazy(L:LazyTy) = struct (* TODO: use arrow instead of record? *)
     else
       invalid_arg "Malformed lazy type"
 
-  let to_t node ctx ty =
+  let unpack ty = proj_tag ty |> unpack_p
+
+  let to_t node ctx a =
     try
-      if Ty.leq ty any |> not then raise Exit ;
-      Some (unpack ty |> node ctx)
+      let (_, pty) = TagComp.as_atom a in
+      if Ty.leq pty any_p |> not then raise Exit ;
+      Some (unpack_p pty |> node ctx)
     with _ -> None
 
   let print _ _ fmt t =

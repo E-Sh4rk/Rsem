@@ -63,7 +63,7 @@ module Vecs = struct (* TODO: do not use abstract types for the encoding but rec
     fprintf prec assoc opinfo fmt "%a" (print_seq (print_line prec' NoAssoc) sym) t
 
   let printer_builder =
-    Printer.builder ~to_t:(Abstracts.to_t tag) ~map:Abstracts.map ~print:print
+    Printer.builder ~to_t:Abstracts.to_t ~map:Abstracts.map ~print:print
   let printer_params = Printer.{ aliases = []; extensions = [(tag, printer_builder)]}
   let () = Types.Ty.add_printer_param printer_params
 end
