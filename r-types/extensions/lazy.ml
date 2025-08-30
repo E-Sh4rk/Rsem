@@ -9,7 +9,7 @@ module MakeLazy(L:LazyTy) = struct (* TODO: use arrow instead of record? *)
 
   let add_tag ty = (tag, ty) |> Descr.mk_tag |> Ty.mk_descr
   let proj_tag ty = ty |> Ty.get_descr |> Descr.get_tags |> Tags.get tag
-                    |> TagComp.as_atom |> snd
+                    |> Op.TagComp.as_atom |> snd
 
   let label = Label.mk "v"
   let pack ty =
@@ -30,7 +30,7 @@ module MakeLazy(L:LazyTy) = struct (* TODO: use arrow instead of record? *)
 
   let to_t node ctx a =
     try
-      let (_, pty) = TagComp.as_atom a in
+      let (_, pty) = Op.TagComp.as_atom a in
       if Ty.leq pty any_p |> not then raise Exit ;
       Some (unpack_p pty |> node ctx)
     with _ -> None

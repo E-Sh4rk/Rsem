@@ -73,6 +73,6 @@ module Null = struct
 end
 
 module Ref = struct
-  let abs = Abstract.define "ref" [Inv]
+  let abs = Abstract.define "ref" 1
   let mk ty = Abstract.mk abs [ty]
 end
