@@ -7,8 +7,8 @@ end
 module Ellipsis = struct
   open Lazy
   let id = "..."
-  let pack = EllArg.pack
-  let unpack = EllArg.unpack
+  let pack = EllArg.mk
+  let unpack = EllArg.proj
   let cons = function [ty] -> pack ty | _ -> assert false
   let cdom ty = [[unpack ty]]
   let any = EllArg.any
