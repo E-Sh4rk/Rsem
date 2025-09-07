@@ -34,45 +34,45 @@ let rec aux_e (eid,e) =
     | Id v ->
       begin match var_mark v with
       | VCst -> A.Var v
-      | VRef -> A.App ((Eid.dummy, A.Var Defs.unref), (Eid.dummy, A.Var v))
+      | VRef -> A.App ((Eid.unique (), A.Var Defs.unref), (Eid.unique (), A.Var v))
       end
     | Declare (v,e1,e2) ->
       mark_var v VRef ;
       let e1 =
         match e1 with
-        | None -> Eid.dummy, A.Var Defs.uref
+        | None -> Eid.unique (), A.Var Defs.uref
         | Some e1 ->
-          Eid.dummy, A.App ((Eid.dummy, A.Var Defs.cref), (aux_e e1))
+          Eid.unique (), A.App ((Eid.unique (), A.Var Defs.cref), (aux_e e1))
       in
       A.Let ([], v, e1, aux_e e2)
     | Let (v, e1, e2) ->
       mark_var v VCst ;
       A.Let ([], v, aux_e e1, aux_e e2)
     | VarAssign (_ (* TODO: superassign *), v, e) ->
-      A.App ((Eid.dummy, A.Var Defs.setref),
-        (Eid.dummy, A.Constructor (A.Tuple 2, [Eid.dummy, A.Var v; aux_e e])))
-    | Unop (v,e) -> aux (Call ((Eid.dummy, Id v), [(Positional 0, e)], FunInfo.unop))
+      A.App ((Eid.unique (), A.Var Defs.setref),
+        (Eid.unique (), A.Constructor (A.Tuple 2, [Eid.unique (), A.Var v; aux_e e])))
+    | Unop (v,e) -> aux (Call ((Eid.unique (), Id v), [(Positional 0, e)], FunInfo.unop))
     | Binop (v,e1,e2) ->
-      aux (Call ((Eid.dummy, Id v), [(Positional 0, e1);(Positional 1, e2)], FunInfo.binop))
+      aux (Call ((Eid.unique (), Id v), [(Positional 0, e1);(Positional 1, e2)], FunInfo.binop))
     | Call (f, args, finfo) ->
       let args = List.map (fun (lbl,e) -> lbl,e,Variable.create_gen None) args in
-      let a = Eid.dummy, A.Value (Record.empty_closed |> GTy.mk) in
+      let a = Eid.unique (), A.Value (Record.empty_closed |> GTy.mk) in
       let add_arg a (lbl, _, x) =
         let lbl = match lbl with
         | Positional i -> Args.id i
         | Named (i,l) -> Args.id (FunInfo.pos_of finfo (i,l))
         in
-        let xe = Eid.dummy, A.Var x in
-        Eid.dummy, A.Constructor (A.RecUpd lbl, [a; xe])
+        let xe = Eid.unique (), A.Var x in
+        Eid.unique (), A.Constructor (A.RecUpd lbl, [a; xe])
       in
       let add_ellipsis a args =
-        let xs = args |> List.map (fun (_,_,x) -> Eid.dummy, A.Var x) in
-        let ell = Eid.dummy, A.Constructor (A.Choice (List.length xs), xs) in
-        let ell = Eid.dummy, A.Constructor (A.CCustom { cons=Ellipsis.cons ; cdom=Ellipsis.cdom }, [ell]) in
-        Eid.dummy, A.Constructor (A.RecUpd Ellipsis.id, [a; ell])
+        let xs = args |> List.map (fun (_,_,x) -> Eid.unique (), A.Var x) in
+        let ell = Eid.unique (), A.Constructor (A.Choice (List.length xs), xs) in
+        let ell = Eid.unique (), A.Constructor (A.CCustom { cons=Ellipsis.cons ; cdom=Ellipsis.cdom }, [ell]) in
+        Eid.unique (), A.Constructor (A.RecUpd Ellipsis.id, [a; ell])
       in
       let add_def e (_, def, x) =
-        A.Let ([], x, aux_e def, (Eid.dummy, e))
+        A.Let ([], x, aux_e def, (Eid.unique (), e))
       in
       let a = List.fold_left add_arg a args in
       let a = add_ellipsis a (rem_n_first finfo.num args) in
@@ -80,23 +80,23 @@ let rec aux_e (eid,e) =
       List.fold_left add_def e args
     | Ite (e, e1, e2) ->
       let e = aux_e e in
-      let e = Eid.dummy, (A.App ((Eid.dummy, A.Var Defs.tobool), e)) in
+      let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
       A.Ite (e, Ty.tt, aux_e e1, aux_e e2)
     | Function (ps, e) ->
       let e = aux_e e in
       let v = Variable.create_lambda None in
-      let ev = Eid.dummy, A.Var v in
+      let ev = Eid.unique (), A.Var v in
       let add_def e p = match p with
       | Default _ -> failwith "TODO: default parameters"
       | NoDefault (i, v) ->
-        Eid.dummy, A.Let ([], v, (Eid.dummy, A.Projection (A.Field (Args.id i), ev)), e)
+        Eid.unique (), A.Let ([], v, (Eid.unique (), A.Projection (A.Field (Args.id i), ev)), e)
       | Ellipsis -> failwith "TODO: ellipsis parameters"
       in
       let e = List.fold_left add_def e ps in
       A.Lambda (TVar.mk TVar.KInfer None |> TVar.typ |> GTy.mk, v, e)
     | Braced lst ->
       let seq e2 e1 =
-        Eid.dummy, A.Let ([], Variable.create_gen None, aux_e e1, e2)
+        Eid.unique (), A.Let ([], Variable.create_gen None, aux_e e1, e2)
       in
       begin match List.rev lst with
       | [] -> A.Value (Ty.unit |> GTy.mk)
