@@ -76,6 +76,7 @@ and bv_es es =
 module StrMap = Map.Make(String)
 type env = { id: Variable.t StrMap.t ; sigs: Sig.t }
 
+(* TODO: have a distinct call env and val env. *)
 let var env str =
   match StrMap.find_opt str env.id with
   | None -> Variable.create_let (Some str)

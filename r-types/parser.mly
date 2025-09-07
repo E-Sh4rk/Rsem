@@ -7,13 +7,21 @@
 
   let builtin_type_or_custom str =
     match str with
-    | "int" -> TExt (Prim INT)
-    | "lgl" -> TExt (Prim LGL)
-    | "dbl" -> TExt (Prim DBL)
-    | "clx" -> TExt (Prim CLX)
-    | "chr" -> TExt (Prim CHR)
-    | "raw" -> TExt (Prim RAW)
-    | "prim" -> TExt (AnyPrim)
+    | "int" -> TExt (Prim (false, INT))
+    | "lgl" -> TExt (Prim (false, LGL))
+    | "dbl" -> TExt (Prim (false, DBL))
+    | "clx" -> TExt (Prim (false, CLX))
+    | "chr" -> TExt (Prim (false, CHR))
+    | "raw" -> TExt (Prim (false, RAW))
+    | "int?" -> TExt (Prim (true, INT))
+    | "lgl?" -> TExt (Prim (true, LGL))
+    | "dbl?" -> TExt (Prim (true, DBL))
+    | "clx?" -> TExt (Prim (true, CLX))
+    | "chr?" -> TExt (Prim (true, CHR))
+    | "raw?" -> TExt (Prim (true, RAW))
+    | "na" -> TExt Na
+    | "prim" -> TExt (AnyPrim false)
+    | "prim?" -> TExt (AnyPrim true)
     | "empty" -> TBase TEmpty
     | "any" -> TBase TAny
     (* Legacy *)
@@ -69,7 +77,7 @@
 %token VAL UNARY BINARY TYPE EOF
 %token LPAREN RPAREN EQUAL COMMA CONS COLON COLON_OPT
 %token INTERROGATION_MARK EXCLAMATION_MARK
-%token VEC_NNA VEC_NA VEC
+%token VEC
 %token ARROW AND OR NEG DIFF
 %token TIMES PLUS MINUS
 %token LBRACE RBRACE LT GT DOUBLEPOINT TRIPLEPOINT
@@ -152,7 +160,7 @@ atomic_typ:
 | s=ID { builtin_type_or_custom s }
 | s=TVAR { TVar (KNoInfer, s) }
 | s=TVAR_WEAK { TVar (KInfer, s) }
-| v=vec LBRACKET i=typ RBRACKET LPAREN p=typ RPAREN { TExt (Vec (p,v,i)) }
+| VEC i=length p=content { TExt (Vec (p,i)) }
 | TRIPLEPOINT LPAREN t=typ RPAREN { TExt (Ell t) }
 | LPAREN RPAREN { TBase TUnit }
 | LPAREN t=typ RPAREN { t }
@@ -160,11 +168,13 @@ atomic_typ:
 { TRecord (o, record_fields fs) }
 | LBRACKET re=typ_re RBRACKET { TSList re }
 
-%inline vec:
-  VEC_NNA { TBase TEmpty }
-| VEC_NA { TBase TAny }
-| VEC { TBase TAny }
-| VEC LT t=typ GT { t }
+%inline length:
+  { TBase TAny }
+| LBRACKET i=typ RBRACKET { i }
+
+%inline content:
+| LPAREN RPAREN { TBase TAny }
+| LPAREN p=typ RPAREN { p }
 
 %inline optional_open:
   { false }

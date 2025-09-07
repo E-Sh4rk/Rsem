@@ -9,23 +9,32 @@ module Ext = struct
     | AnyScalar
     | Ell of t Types.TyExpr.t *)
   type t =
-  | Vec of t Types.TyExpr.t * t Types.TyExpr.t * t Types.TyExpr.t
+  | Vec of t Types.TyExpr.t * t Types.TyExpr.t
   | AnyVec
-  | Prim of prim
-  | AnyPrim
+  | Na
+  | Prim of bool * prim
+  | AnyPrim of bool
   | Ell of t Types.TyExpr.t
+
+  let prim_to_typ p =
+    match p with
+    | INT -> Prim.int
+    | LGL -> Prim.lgl
+    | DBL -> Prim.dbl
+    | CLX -> Prim.clx
+    | CHR -> Prim.chr
+    | RAW -> Prim.raw
 
   let to_typ f t =
     match t with
-    | AnyPrim -> Prim.any
-    | Prim INT -> Prim.int
-    | Prim LGL -> Prim.lgl
-    | Prim DBL -> Prim.dbl
-    | Prim CLX -> Prim.clx
-    | Prim CHR -> Prim.chr
-    | Prim RAW -> Prim.raw
+    | AnyPrim true -> Prim.any_na
+    | AnyPrim false -> Prim.any
+    | Na -> Prim.na
+    | Prim (b,p) ->
+      let ty = prim_to_typ p in
+      if b then Types.Ty.cup Prim.na ty else ty
     | AnyVec -> Vecs.any
-    | Vec (p,n,i) -> Vecs.mk (f p) (f n) (f i)
+    | Vec (p,i) -> Vecs.mk (f p) (f i)
     (* | Vec (false, INT) -> Vecs.int
     | Vec (false, LGL) -> Vecs.lgl
     | Vec (false, DBL) -> Vecs.dbl
