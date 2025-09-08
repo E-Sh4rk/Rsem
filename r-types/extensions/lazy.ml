@@ -35,3 +35,4 @@ module MakeLazy(L:LazyTy) = struct
 end
 
 module EllArg = MakeLazy(struct let name="..." end)
+module Arg = MakeLazy(struct let name="prom" end)

@@ -15,11 +15,11 @@ module Ellipsis = struct
   let () = Types.Ty.add_printer_param EllArg.printer_params
 end
 
-open Sstt.Extensions.Hierarchy
-let _h =
+(* open Sstt.Extensions.Hierarchy *)
+(* let _h =
   let h = new_hierarchy () in
   printer_params h |> Types.Ty.add_printer_param ;
-  h
+  h *)
 
 (* module Scalars = struct
   let _scalar name =
