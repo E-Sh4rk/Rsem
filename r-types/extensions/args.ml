@@ -105,6 +105,7 @@ let proj_arg (lbl, default) ty =
   match Op.Records.proj (Types.Record.to_label lbl) ty with
   | (ty, true) -> Ty.cup ty default
   | (ty, false) -> ty
+(* TODO: proj Arg, and add a proj_ell function *)
 
 let print_seq f sep =
   Format.(pp_print_list  ~pp_sep:(fun fmt () -> pp_print_string fmt sep) f)
