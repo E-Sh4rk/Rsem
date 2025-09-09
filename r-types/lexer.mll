@@ -60,6 +60,8 @@ rule token = parse
 | "!"     { EXCLAMATION_MARK }
 | "("     { LPAREN }
 | ")"     { RPAREN }
+| "{{"     { LDBRACE }
+| "}}"     { RDBRACE }
 | "{"     { LBRACE }
 | "}"     { RBRACE }
 | "<"     { LT }
@@ -67,6 +69,7 @@ rule token = parse
 | "["     { LBRACKET }
 | "]"     { RBRACKET }
 | ";"     { SEMICOLON }
+| ";;"    { DSEMICOLON }
 | "*"     { TIMES }
 | ".."    { DOUBLEPOINT }
 | "..."   { TRIPLEPOINT }

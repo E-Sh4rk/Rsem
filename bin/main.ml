@@ -3,7 +3,6 @@ open Lang
 open R_types
 open Types
 open Common
-open Sigs
 
 (* let () =
   Tree_sitter_run.Main.run
@@ -38,33 +37,32 @@ let treat_ast v (idenv, env) ast =
     idenv, env
 
 let dummy_var = Variable.create_gen (Some "_")
-let treat_def sigs (idenv, env) past =
-  let (id,ast) = PAst.transform { PAst.sigs = sigs ; PAst.id = idenv } past in
+let treat_def (idenv, env) past =
+  let (id,ast) = PAst.transform { PAst.id = idenv } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
   match ast with
   | VarAssign (false, v, e) -> treat_ast v (idenv, env) e
   | _ -> treat_ast dummy_var (idenv, env) (id, ast)
 
-let add_def (tenv, idenv, env, sigs) def =
+let add_def (tenv, idenv, env) def =
   let open R_types.Types in
   match def with
-  | RBuilder.Sig (str, tye, finfo) ->
+  | RBuilder.Sig (str, tye) ->
     let ty, _ = RBuilder.type_expr_to_typ tenv RBuilder.empty_vtenv tye in
     let v = Variable.create_let (Some str) in
-    let sigs = Sig.add_info sigs v finfo in
     let idenv = StrMap.add str v idenv in
     let env = Env.add v (TyScheme.mk_poly (GTy.mk ty)) env in
-    tenv, idenv, env, sigs
+    tenv, idenv, env
   | RBuilder.Aliases lst ->
     let tenv = RBuilder.define_aliases tenv RBuilder.empty_vtenv lst in
-    tenv, idenv, env, sigs
+    tenv, idenv, env
 
 
 let () =
   System.Config.infer_overload := false ;
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
-  let _, idenv, env, sigs =
-    List.fold_left add_def (RBuilder.empty_tenv, StrMap.empty, Defs.initial_env, Sig.empty) tdefs in
+  let _, idenv, env =
+    List.fold_left add_def (RBuilder.empty_tenv, StrMap.empty, Defs.initial_env) tdefs in
   Format.printf "%a@.@." Env.pp env ;
   let res = Parse.file "test.r" in
   match res.program with
@@ -74,4 +72,4 @@ let () =
     let tree = Boilerplate.map_program () prog in
     let prog = Parser.of_parser tree in
     Format.printf "%a@.@." PAst.pp prog ;
-    List.fold_left (treat_def sigs) (idenv, env) prog |> ignore
+    List.fold_left treat_def (idenv, env) prog |> ignore

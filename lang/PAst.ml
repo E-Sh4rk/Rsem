@@ -1,6 +1,4 @@
-open R_types
 open Common
-open Sigs
 
 module Position = struct
   type t = Position.t
@@ -74,7 +72,7 @@ and bv_es es =
   List.map bv_e es |> List.fold_left StrSet.union StrSet.empty
 
 module StrMap = Map.Make(String)
-type env = { id: Variable.t StrMap.t ; sigs: Sig.t }
+type env = { id: Variable.t StrMap.t }
 
 (* TODO: have a distinct call env and val env. *)
 let var env str =
@@ -82,16 +80,16 @@ let var env str =
   | None -> Variable.create_let (Some str)
   | Some v -> v
 
-let aux_arg f i arg =
+let aux_arg f arg =
   match arg with
   | Unnamed e ->
-    Ast.Positional i, f e
+    Ast.Positional, f e
   | Named (ArgId str, Some e) ->
-    Ast.Named (i, str), f e
+    Ast.Named str, f e
   | Named (_, None) -> failwith "TODO: Named absent arguments"
   | _ -> assert false
-let aux_arg f i arg =
-  Option.map (aux_arg f i) arg
+let aux_arg f arg =
+  Option.map (aux_arg f) arg
 let aux_param env f i p =
   match p with
   | NoDefault EllipsisId -> Ast.Ellipsis
@@ -137,13 +135,8 @@ let rec aux_e env (pos,e) =
     end
   | Call (e,args) ->
     let e = aux_e env e in
-    let finfo = match e with
-    | (_, Id v) -> Sig.get_info env.sigs v
-    | _ -> FunInfo.unk
-    in
-    let args = List.mapi (aux_arg (aux_e env)) args in
-    let args = List.filter_map Fun.id args in
-    Ast.Call (e, args, finfo)
+    let args = List.filter_map (aux_arg (aux_e env)) args in
+    Ast.Call (e, args)
   | Ite (e, e1, e2) ->
     let e, e1 = aux_e env e, aux_e env e1 in
     let e2 = match e2 with None -> Eid.unique (), Ast.Const Ast.CNull | Some e2 -> aux_e env e2 in
@@ -156,7 +149,7 @@ let rec aux_e env (pos,e) =
       | Some lst -> bv_params lst
     in
     let pid = List.fold_left (add_var ~lambda:true) env.id (StrSet.elements pbvs) in
-    let env = { env with id=pid } in
+    let env = { id=pid } in
     let params =
       match params with
       | None -> []
@@ -165,7 +158,7 @@ let rec aux_e env (pos,e) =
     (* Body *)
     let ebvs = bv_e e in
     let eid = List.fold_left (add_var ~lambda:false) env.id (StrSet.elements ebvs) in
-    let env = { env with id=eid } in
+    let env = { id=eid } in
     let e = List.fold_left (add_def pid eid) (aux_e env e) (StrSet.elements ebvs) in
     Ast.Function (params, e)
   | Braced es -> Ast.Braced (List.map (aux_e env) es)

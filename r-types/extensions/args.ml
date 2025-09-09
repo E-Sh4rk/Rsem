@@ -1,6 +1,6 @@
 open Lazy
 
-type 'a cargs = 'a list (* Positionals *) * (string * 'a) list (* Named *)
+type 'a cargs = 'a list (* Positionals *) * (string * 'a) list (* Named *) * 'a list (* Remaining *)
 type 'a args = (bool * 'a) list (* Positionals *) * (string * bool * 'a) list (* Named *)
   * 'a (* Ellipsis *) * bool (* Opened *)
 type 'a t = ('a args) list
@@ -40,24 +40,27 @@ let mk ?(allow_greater_posn=false) (args:Ty.t args) =
   Types.Record.mk o bindings |> add_tag
 
 let mk_concrete (args:Ty.t cargs) =
-  let (pos,named) = args in
-  let ell = pos@(List.map snd named) |> Ty.disj in
+  let (pos,named,rem) = args in
+  let ell = List.concat [pos ; List.map snd named ; rem] |> Ty.disj in
   let pos = pos |> List.map (fun ty -> (false, ty)) in
   let named = named |> List.map (fun (lbl, ty) -> (lbl, false, ty)) in
   mk (pos,named,ell, false)
 
-let mk_from_def defs ell =
-  let rec extract_pos_named acc_pos defs n =
-    if n = 0 then List.rev acc_pos, defs
-    else match defs with
+let split_at_index lst n =
+  let rec aux acc next n =
+    if n = 0 then List.rev acc, next
+    else match next with
     | [] -> assert false
-    | p::defs -> extract_pos_named (p::acc_pos) defs (n-1)
+    | p::defs -> aux (p::acc) defs (n-1)
   in
-  let n = List.length defs in
-  List.init (n + 1) (fun i ->
-    let pos, named = extract_pos_named [] defs i in
-    let pos = pos |> List.map (fun (_,b,ty) -> (b,ty)) in
-    mk ~allow_greater_posn:(i=n) (pos,named,ell,true)
+  aux [] lst n
+
+let mk_from_def (pos,named,ell) =
+  let nn = List.length named in
+  List.init (nn + 1) (fun i ->
+    let pos', named = split_at_index named i in
+    let pos = pos@(pos' |> List.map (fun (_,b,ty) -> (b,ty))) in
+    mk ~allow_greater_posn:(i=nn) (pos,named,ell,true)
   ) |> Ty.disj
 
 
@@ -127,7 +130,7 @@ let print prec assoc fmt t =
     Format.fprintf fmt "%s%s%a" lbl eq Printer.print_descr ty
   in
   let print_line fmt (pos,named,ell,o) =
-    Format.fprintf fmt "{ %a ;; %a ;; %a %s}"
+    Format.fprintf fmt "{{ %a ;; %a ;; %a %s}}"
       (print_seq print_pos " ; ") pos
       (print_seq print_named " ; ") named
       Printer.print_descr ell

@@ -1,18 +1,23 @@
 open Types
 
-module Args = struct
-  let id pos = Format.asprintf "__%i__" pos
-end
-
-module Ellipsis = struct
-  open Lazy
-  let id = "..."
-  let pack = EllArg.mk
-  let unpack = EllArg.proj
-  let cons = function [ty] -> pack ty | _ -> assert false
-  let cdom ty = [[unpack ty]]
-  let any = EllArg.any
-  let () = Types.Ty.add_printer_param EllArg.printer_params
+module CArgs = struct
+  open Args
+  let cons (npos,names,nrem) lst =
+    let definite, rem = split_at_index lst (npos + (List.length names)) in
+    assert (List.length rem = nrem) ;
+    let pos, named = split_at_index definite npos in
+    let named = List.map2 (fun ty lbl -> lbl,ty) named names in
+    mk_concrete (pos,named,rem)
+  let cdom (_,_,nrem) ty =
+    destruct ty
+    |> List.filter_map (fun (pos,named,ell,o) ->
+      let ty' = mk (pos,named,ell,o) in
+      if Ty.leq ty' ty then
+        Some (List.concat [List.map snd pos ;
+              List.map (fun (_,_,ty) -> ty) named ;
+              List.init nrem (fun _ -> ell)])
+      else None
+    )
 end
 
 (* open Sstt.Extensions.Hierarchy *)

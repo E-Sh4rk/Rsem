@@ -2,8 +2,6 @@
 
   open Types.TyExpr
   open RBuilder.Ext
-  open Defs
-  open Sigs
 
   let builtin_type_or_custom str =
     match str with
@@ -38,40 +36,6 @@
       else
         TCustom str
 
-  module StrMap = Map.Make(String)
-  let fnames = ref StrMap.empty
-  let fnum = ref 0
-  let fdone = ref false
-  let register_field str i =
-    if not !fdone then fnames := StrMap.add str i !fnames
-  let incr_num () = if not !fdone then fnum := !fnum + 1
-
-  type field_name = Ellipis | Named of string | Positional
-
-  let record_fields fields =
-    let res = fields |> List.mapi (fun i (n,t,b) ->
-      let n = match n with
-      | Positional ->
-        begin match t with
-        | TExt (Ell _) -> Ellipsis.id
-        | _ -> incr_num () ; Args.id i
-        end
-      | Named name ->
-        incr_num () ; register_field name i ; Args.id i
-      | Ellipis -> Ellipsis.id
-      in
-      n,t,b
-    )
-    in
-    fdone := true ; res
-
-  let registered_funinfo () =
-    let res = {
-      FunInfo.names = !fnames ;
-      FunInfo.num = !fnum
-    } in
-    fnum := 0 ; fnames := StrMap.empty ; fdone := false ; res
-
 %}
 
 %token VAL UNARY BINARY TYPE EOF
@@ -80,10 +44,10 @@
 %token VEC
 %token ARROW AND OR NEG DIFF
 %token TIMES PLUS MINUS
-%token LBRACE RBRACE LT GT DOUBLEPOINT TRIPLEPOINT
+%token LBRACE RBRACE LDBRACE RDBRACE LT GT DOUBLEPOINT TRIPLEPOINT
 %token AND_KW OR_KW
 %token WHERE
-%token LBRACKET RBRACKET SEMICOLON
+%token LBRACKET RBRACKET SEMICOLON DSEMICOLON
 %token<string> ID
 %token<string> TVAR TVAR_WEAK
 %token<float> LFLOAT
@@ -110,9 +74,9 @@ defs:
 | defs=def* EOF { defs }
 
 def:
-| VAL id=op_id COLON ty=typ { Sig (id, ty, registered_funinfo ()) }
-| VAL UNARY id=op_id COLON ty=typ { Sig (id^"__1", ty, registered_funinfo ()) }
-| VAL BINARY id=op_id COLON ty=typ { Sig (id^"__2", ty, registered_funinfo ()) }
+| VAL id=op_id COLON ty=typ { Sig (id, ty) }
+| VAL UNARY id=op_id COLON ty=typ { Sig (id^"__1", ty) }
+| VAL BINARY id=op_id COLON ty=typ { Sig (id^"__2", ty) }
 | TYPE defs=separated_nonempty_list(AND_KW, param_type_def) { Aliases defs }
 
 op_id:
@@ -161,11 +125,10 @@ atomic_typ:
 | s=TVAR { TVar (KNoInfer, s) }
 | s=TVAR_WEAK { TVar (KInfer, s) }
 | VEC i=length p=content { TExt (Vec (p,i)) }
-| TRIPLEPOINT LPAREN t=typ RPAREN { TExt (Ell t) }
 | LPAREN RPAREN { TBase TUnit }
 | LPAREN t=typ RPAREN { t }
 | LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE
-{ TRecord (o, record_fields fs) }
+{ TRecord (o, fs) }
 | LBRACKET re=typ_re RBRACKET { TSList re }
 
 %inline length:
@@ -181,12 +144,8 @@ atomic_typ:
 | DOUBLEPOINT { true }
 
 %inline typ_field:
-  id=ID COLON t=simple_typ { (Named id, t, false) }
-| id=ID COLON_OPT t=simple_typ { (Named id, t, true) }
-| TRIPLEPOINT COLON t=simple_typ { (Ellipis, t, false) }
-| TRIPLEPOINT COLON_OPT t=simple_typ { (Ellipis, t, true) }
-| t=simple_typ { (Positional, t, false) }
-| INTERROGATION_MARK t=simple_typ { (Positional, t, true) }
+  id=ID COLON t=simple_typ { (id, t, false) }
+| id=ID COLON_OPT t=simple_typ { (id, t, true) }
 
 %inline type_constant:
 | i=tint { TInt (Some i, Some i) }
