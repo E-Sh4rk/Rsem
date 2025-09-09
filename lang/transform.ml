@@ -76,17 +76,25 @@ let rec aux_e (eid,e) =
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
       A.Ite (e, Ty.tt, aux_e e1, aux_e e2)
     | Function (ps, e) -> (* TODO: Use Args module *)
+      let named = ps |> List.filter_map (function
+      | Ellipsis -> None
+      | NoDefault v ->
+        Some (Variable.get_name v |> Option.get, false, TVar.mk TVar.KInfer None |> TVar.typ)
+      | Default (v,_) ->
+        Some (Variable.get_name v |> Option.get, true, TVar.mk TVar.KInfer None |> TVar.typ)
+      ) in
+      let ellipsis = TVar.mk TVar.KInfer None |> TVar.typ in
+      let pty = Args.mk_from_def ([],named,ellipsis) in
       let e = aux_e e in
       let v = Variable.create_lambda None in
-      let ev = Eid.unique (), A.Var v in
-      let add_def e p = match p with
+      let _ev = Eid.unique (), A.Var v in
+      let add_def _e p = match p with
       | Default _ -> failwith "TODO: default parameters"
-      | NoDefault (i, v) ->
-        Eid.unique (), A.Let ([], v, (Eid.unique (), A.Projection (A.Field (string_of_int i), ev)), e)
       | Ellipsis -> failwith "TODO: ellipsis parameters"
+      | NoDefault _ -> failwith "TODO: parameters"
       in
       let e = List.fold_left add_def e ps in
-      A.Lambda (TVar.mk TVar.KInfer None |> TVar.typ |> GTy.mk, v, e)
+      A.Lambda (GTy.mk pty, v, e)
     | Braced lst ->
       let seq e2 e1 =
         Eid.unique (), A.Let ([], Variable.create_gen None, aux_e e1, e2)

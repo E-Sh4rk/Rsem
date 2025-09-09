@@ -28,7 +28,7 @@ and arg = arg_label * e
 [@@deriving show]
 and arg_label = Positional | Named of label
 [@@deriving show]
-and param = NoDefault of int * Variable.t | Default of int * Variable.t * e | Ellipsis
+and param = NoDefault of Variable.t | Default of Variable.t * e | Ellipsis
 [@@deriving show]
 and e = Eid.t * e'
 [@@deriving show]
