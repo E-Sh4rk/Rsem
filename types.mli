@@ -13,9 +13,9 @@ val c :
     ({ ...(RAW?) ..} -> RAW?) &
     ({ ...(VEC) ..} -> VEC) *)
 
-val print : { 'a ..} -> 'a
-val unary (-) : { v['n](dbl | 'na&na) ..} -> v['n](dbl | 'na&na)
-val unary (+) : { v['n](dbl | 'na&na) ..} -> v['n](dbl | 'na&na)
-val binary (+) : { v(dbl | 'na&na) ; v(dbl | 'na&na) ..} -> v(dbl | 'na&na)
-val binary (-) : { v(dbl | 'na&na) ; v(dbl | 'na&na) ..} -> v(dbl | 'na&na)
-val c : { ...(v('p)) ..} -> v('p)
+val print : {{ 'a }} -> 'a
+val unary (-) : {{ v['n](dbl | 'na&na) }} -> v['n](dbl | 'na&na)
+val unary (+) : {{ v['n](dbl | 'na&na) }} -> v['n](dbl | 'na&na)
+val binary (+) : {{ v(dbl | 'na&na) ; v(dbl | 'na&na) }} -> v(dbl | 'na&na)
+val binary (-) : {{ v(dbl | 'na&na) ; v(dbl | 'na&na) }} -> v(dbl | 'na&na)
+val c : {{ ;; ;; v('p) }} -> v('p)

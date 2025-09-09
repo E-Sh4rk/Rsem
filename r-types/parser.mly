@@ -128,6 +128,8 @@ atomic_typ:
 | LPAREN RPAREN { TBase TUnit }
 | LPAREN t=typ RPAREN { t }
 | LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE { TRecord (o, fs) }
+| LDBRACE ps=separated_list(SEMICOLON, typ_pos_field) RDBRACE
+{ TExt (ArgsDef (ps,[],TBase TAny)) }
 | LDBRACE ps=separated_list(SEMICOLON, typ_pos_field) DSEMICOLON
           ns=separated_list(SEMICOLON, typ_field) ell=optional_ell RDBRACE
 { TExt (ArgsDef (ps,List.map (fun (l,t,o) -> (l,o,t)) ns,ell)) }
