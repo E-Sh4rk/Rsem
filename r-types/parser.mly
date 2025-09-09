@@ -127,8 +127,10 @@ atomic_typ:
 | VEC i=length p=content { TExt (Vec (p,i)) }
 | LPAREN RPAREN { TBase TUnit }
 | LPAREN t=typ RPAREN { t }
-| LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE
-{ TRecord (o, fs) }
+| LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE { TRecord (o, fs) }
+| LDBRACE ps=separated_list(SEMICOLON, typ_pos_field) DSEMICOLON
+          ns=separated_list(SEMICOLON, typ_field) ell=optional_ell RDBRACE
+{ TExt (ArgsDef (ps,List.map (fun (l,t,o) -> (l,o,t)) ns,ell)) }
 | LBRACKET re=typ_re RBRACKET { TSList re }
 
 %inline length:
@@ -143,9 +145,17 @@ atomic_typ:
   { false }
 | DOUBLEPOINT { true }
 
+%inline optional_ell:
+  { TBase TAny }
+| DSEMICOLON t=simple_typ { t }
+
 %inline typ_field:
   id=ID COLON t=simple_typ { (id, t, false) }
 | id=ID COLON_OPT t=simple_typ { (id, t, true) }
+
+%inline typ_pos_field:
+  t=simple_typ { (false, t) }
+| INTERROGATION_MARK t=simple_typ { (true, t) }
 
 %inline type_constant:
 | i=tint { TInt (Some i, Some i) }

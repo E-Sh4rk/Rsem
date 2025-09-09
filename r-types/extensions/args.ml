@@ -126,7 +126,7 @@ let print prec assoc fmt t =
       Format.fprintf fmt "%a" Printer.print_descr ty
   in
   let print_named fmt (lbl,opt,ty) =
-    let eq = if opt then "=?" else "=" in
+    let eq = if opt then ":?" else ":" in
     Format.fprintf fmt "%s%s%a" lbl eq Printer.print_descr ty
   in
   let print_line fmt (pos,named,ell,o) =
