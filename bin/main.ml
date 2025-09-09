@@ -59,6 +59,7 @@ let add_def (tenv, idenv, env) def =
 
 
 let () =
+  Printexc.record_backtrace true ;
   System.Config.infer_overload := false ;
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
   let _, idenv, env =

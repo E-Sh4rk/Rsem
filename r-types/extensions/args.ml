@@ -22,8 +22,6 @@ let id_of_posn = ":n"
 let lbl_of_posn = Types.Record.to_label id_of_posn
 let is_hidden_field name = String.starts_with ~prefix:":" name
 
-let any = Types.Record.any |> add_tag
-
 let mk ?(allow_greater_posn=false) (args:Ty.t args) =
   let (pos, named, ell, o) = args in
   let ell = [(id_of_ell, (false, EllArg.mk ell))] in
@@ -84,7 +82,8 @@ let map f t =
 let extract ty =
   Ty.get_descr ty |> Descr.get_records |> Op.Records.as_union |> List.map (fun comp ->
     let n = Records.Atom.find lbl_of_posn comp |> fst |> Ty.get_descr |> Descr.get_intervals
-    |> Intervals.destruct |> List.hd |> Intervals.Atom.get |> fst |> Option.get |> Z.to_int in
+    |> Intervals.destruct |> List.hd |> Intervals.Atom.get |> fst in
+    let n = match n with Some n -> Z.to_int n | None -> invalid_arg "Not an arg." in
     let pos = List.init n (fun n ->
       let name = id_of_pos n |> Types.Record.to_label in
       let (ty,o) = Records.Atom.find name comp in
@@ -99,8 +98,10 @@ let extract ty =
     (pos,named,ell,comp.opened)
   )
 let to_t node ctx comp =
-  let ty = Op.TagComp.as_atom comp |> snd in
-  Some (extract ty |> map (node ctx))
+  try
+    let ty = Op.TagComp.as_atom comp |> snd in
+    Some (extract ty |> map (node ctx))
+  with Invalid_argument _ -> None
 
 let destruct ty = ty |> proj_tag |> extract
 

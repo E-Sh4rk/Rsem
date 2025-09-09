@@ -8,16 +8,20 @@ module CArgs = struct
     let pos, named = split_at_index definite npos in
     let named = List.map2 (fun ty lbl -> lbl,ty) named names in
     mk_concrete (pos,named,rem)
-  let cdom (_,_,nrem) ty =
-    destruct ty
-    |> List.filter_map (fun (pos,named,ell,o) ->
-      let ty' = mk (pos,named,ell,o) in
-      if Ty.leq ty' ty then
-        Some (List.concat [List.map snd pos ;
-              List.map (fun (_,_,ty) -> ty) named ;
-              List.init nrem (fun _ -> ell)])
-      else None
-    )
+  let cdom (npos,names,nrem) ty =
+    try
+      destruct ty
+      |> List.filter_map (fun (pos,named,ell,o) ->
+        let ty' = mk (pos,named,ell,o) in
+        if Ty.leq ty' ty then
+          Some (List.concat [List.map snd pos ;
+                List.map (fun (_,_,ty) -> ty) named ;
+                List.init nrem (fun _ -> ell)])
+        else None
+      )
+    with Invalid_argument _ ->
+      let n = npos + (List.length names) + nrem in
+      [List.init n (fun _ -> Ty.any)]
 end
 
 (* open Sstt.Extensions.Hierarchy *)
