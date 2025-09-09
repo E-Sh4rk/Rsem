@@ -21,3 +21,12 @@ f <- function(a){
         -a
     }
 }
+
+f <- function(a=42){
+    if (a > 0) {
+        a
+    }
+    else {
+        -a
+    }
+}

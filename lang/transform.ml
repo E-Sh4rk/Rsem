@@ -96,7 +96,12 @@ let rec aux_e (eid,e) =
       let ev = Eid.unique (), A.Var v in
       let add_def e p =
         let v', def = match p with
-        | Default _ -> failwith "TODO: default parameters"
+        | Default (v',e') ->
+          v', A.Constructor (A.Choice 2, [
+            Eid.unique (), A.Projection
+              (A.PCustom { pdom=PArgs.pdom ; proj=PArgs.proj (Variable.get_name v' |> Option.get, Ty.empty) }, ev) ;
+              aux_e e'
+          ])
         | Ellipsis -> ellipsis_var, A.Projection
           (A.PCustom { pdom=PArgs.pdom ; proj=PArgs.proj_ell }, ev)
         | NoDefault v' -> v', A.Projection
