@@ -87,14 +87,14 @@ let extract ty =
     let pos = List.init n (fun n ->
       let name = id_of_pos n |> Types.Record.to_label in
       let (ty,o) = Records.Atom.find name comp in
-      (o, ty)
+      (o, Arg.proj ty)
     ) in
     let named = LabelMap.bindings comp.bindings |> List.filter_map (fun (lbl, (ty,o)) ->
       if is_hidden_field (Types.Record.from_label lbl)
       then None
-      else Some (Types.Record.from_label lbl,o,ty)
+      else Some (Types.Record.from_label lbl,o,Arg.proj ty)
     ) in
-    let ell = Records.Atom.find (Types.Record.to_label id_of_ell) comp |> fst in
+    let ell = Records.Atom.find (Types.Record.to_label id_of_ell) comp |> fst |> EllArg.proj in
     (pos,named,ell,comp.opened)
   )
 let to_t node ctx comp =
@@ -108,14 +108,14 @@ let destruct ty = ty |> proj_tag |> extract
 let proj_arg (lbl, default) ty =
   let ty = proj_tag ty |> Ty.get_descr |> Descr.get_records in
   match Op.Records.proj (Types.Record.to_label lbl) ty with
-  | (ty, true) -> Arg.proj ty |> Ty.cup default
-  | (ty, false) -> Arg.proj ty
+  | (ty, true) -> Ty.cup default ty
+  | (ty, false) -> ty
 
 let proj_ellipsis ty =
   let ty = proj_tag ty |> Ty.get_descr |> Descr.get_records in
   match Op.Records.proj lbl_of_ell ty with
   | (_, true) -> assert false
-  | (ty, false) -> EllArg.proj ty
+  | (ty, false) -> ty
 
 let print_seq f sep =
   Format.(pp_print_list  ~pp_sep:(fun fmt () -> pp_print_string fmt sep) f)

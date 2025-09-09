@@ -26,6 +26,8 @@ let rec rem_n_first n lst =
   | _, [] -> []
   | n, _::lst -> rem_n_first (n-1) lst
 
+let ellipsis_var = Variable.create_lambda (Some "...")
+
 let rec aux_e (eid,e) =
   let rec aux e =
     match e with
@@ -75,7 +77,7 @@ let rec aux_e (eid,e) =
       let e = aux_e e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
       A.Ite (e, Ty.tt, aux_e e1, aux_e e2)
-    | Function (ps, e) -> (* TODO: Use Args module *)
+    | Function (ps, e) ->
       let named = ps |> List.filter_map (function
       | Ellipsis -> None
       | NoDefault v ->
@@ -84,14 +86,19 @@ let rec aux_e (eid,e) =
         Some (Variable.get_name v |> Option.get, true, TVar.mk TVar.KInfer None |> TVar.typ)
       ) in
       let ellipsis = TVar.mk TVar.KInfer None |> TVar.typ in
-      let pty = Args.mk_from_def ([],named,ellipsis) in
+      let pty = PArgs.mk_from_def ([],named,ellipsis) in
       let e = aux_e e in
       let v = Variable.create_lambda None in
-      let _ev = Eid.unique (), A.Var v in
-      let add_def _e p = match p with
-      | Default _ -> failwith "TODO: default parameters"
-      | Ellipsis -> failwith "TODO: ellipsis parameters"
-      | NoDefault _ -> failwith "TODO: parameters"
+      let ev = Eid.unique (), A.Var v in
+      let add_def e p =
+        let v', def = match p with
+        | Default _ -> failwith "TODO: default parameters"
+        | Ellipsis -> ellipsis_var, A.Projection
+          (A.PCustom { pdom=PArgs.pdom ; proj=PArgs.proj_ell }, ev)
+        | NoDefault v' -> v', A.Projection
+          (A.PCustom { pdom=PArgs.pdom ; proj=PArgs.proj (Variable.get_name v' |> Option.get, Ty.any) }, ev)
+        in
+        Eid.unique (), A.Let ([], v', (Eid.unique (), def), e)
       in
       let e = List.fold_left add_def e ps in
       A.Lambda (GTy.mk pty, v, e)
