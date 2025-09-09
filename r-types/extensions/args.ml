@@ -17,6 +17,7 @@ let proj_tag ty = Ty.get_descr ty |> Descr.get_tags |> Tags.get tag
 let id_of_pos pos = Format.asprintf ":%i" pos
 let id_of_lbl lbl = lbl
 let id_of_ell = ":..."
+let lbl_of_ell = Types.Record.to_label id_of_ell
 let id_of_posn = ":n"
 let lbl_of_posn = Types.Record.to_label id_of_posn
 let is_hidden_field name = String.starts_with ~prefix:":" name
@@ -103,9 +104,14 @@ let destruct ty = ty |> proj_tag |> extract
 let proj_arg (lbl, default) ty =
   let ty = proj_tag ty |> Ty.get_descr |> Descr.get_records in
   match Op.Records.proj (Types.Record.to_label lbl) ty with
-  | (ty, true) -> Ty.cup ty default
-  | (ty, false) -> ty
-(* TODO: proj Arg, and add a proj_ell function *)
+  | (ty, true) -> Arg.proj ty |> Ty.cup default
+  | (ty, false) -> Arg.proj ty
+
+let proj_ellipsis ty =
+  let ty = proj_tag ty |> Ty.get_descr |> Descr.get_records in
+  match Op.Records.proj lbl_of_ell ty with
+  | (_, true) -> assert false
+  | (ty, false) -> EllArg.proj ty
 
 let print_seq f sep =
   Format.(pp_print_list  ~pp_sep:(fun fmt () -> pp_print_string fmt sep) f)
