@@ -129,10 +129,10 @@ atomic_typ:
 | LPAREN t=typ RPAREN { t }
 | LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE { TRecord (o, fs) }
 | LDBRACE ps=separated_list(SEMICOLON, typ_pos_field) RDBRACE
-{ TExt (ArgsDef (ps,[],TBase TAny)) }
+{ TExt (ArgsDef (ps,[],None)) }
 | LDBRACE ps=separated_list(SEMICOLON, typ_pos_field) DSEMICOLON
-          ns=separated_list(SEMICOLON, typ_field) ell=optional_ell RDBRACE
-{ TExt (ArgsDef (ps,List.map (fun (l,t,o) -> (l,o,t)) ns,ell)) }
+          ns=separated_list(SEMICOLON, typ_field) others=optional_others RDBRACE
+{ TExt (ArgsDef (ps,List.map (fun (l,t,o) -> (l,o,t)) ns,others)) }
 | LBRACKET re=typ_re RBRACKET { TSList re }
 
 %inline length:
@@ -147,9 +147,9 @@ atomic_typ:
   { false }
 | DOUBLEPOINT { true }
 
-%inline optional_ell:
-  { TBase TAny }
-| DSEMICOLON t=simple_typ { t }
+%inline optional_others:
+  { None }
+| DSEMICOLON t=simple_typ { Some t }
 
 %inline typ_field:
   id=ID COLON t=simple_typ { (id, t, false) }

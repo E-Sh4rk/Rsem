@@ -85,7 +85,11 @@ let rec aux_e (eid,e) =
       | Default (v,_) ->
         Some (Variable.get_name v |> Option.get, true, TVar.mk TVar.KInfer None |> TVar.typ)
       ) in
-      let ellipsis = TVar.mk TVar.KInfer None |> TVar.typ in
+      let ellipsis =
+        if List.mem Ellipsis ps then
+          Some (TVar.mk TVar.KInfer None |> TVar.typ)
+        else None
+      in
       let pty = PArgs.mk_from_def ([],named,ellipsis) in
       let e = aux_e e in
       let v = Variable.create_lambda None in

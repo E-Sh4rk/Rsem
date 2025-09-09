@@ -16,7 +16,7 @@ module Ext = struct
   | AnyPrim of bool
   | ArgsDef of (bool * t Types.TyExpr.t) list
               * (string * bool * t Types.TyExpr.t) list
-              * t Types.TyExpr.t (* Ellipsis *)
+              * t Types.TyExpr.t option
 
   let prim_to_typ p =
     match p with
@@ -58,11 +58,11 @@ module Ext = struct
     | Scalar CHR -> Scalars.chr
     | Scalar RAW -> Scalars.raw
     | AnyScalar -> Scalars.scalar *)
-    | ArgsDef (pos,named,ell) ->
+    | ArgsDef (pos,named,others) ->
       let pos = pos |> List.map (fun (b,ty) -> b, f ty) in
       let named = named |> List.map (fun (str,b,ty) -> str, b, f ty) in
-      let ell = f ell in
-      Args.mk_from_def (pos,named,ell)
+      let others = Option.map f others in
+      Args.mk_from_def (pos,named,others)
 end
 
 include (Types.Builder'.Make(Ext))

@@ -11,12 +11,12 @@ module CArgs = struct
   let cdom (npos,names,nrem) ty =
     try
       destruct ty
-      |> List.filter_map (fun (pos,named,ell,o) ->
-        let ty' = mk (pos,named,ell,o) in
+      |> List.filter_map (fun (pos,named,others) ->
+        let ty' = mk ~separate_ell:true (pos,named,others) in
         if Ty.leq ty' ty then
           Some (List.concat [List.map snd pos ;
                 List.map (fun (_,_,ty) -> ty) named ;
-                List.init nrem (fun _ -> ell)])
+                List.init nrem (fun _ -> Option.get others)])
         else None
       )
     with Invalid_argument _ ->

@@ -1,8 +1,7 @@
 open Lazy
 
 type 'a cargs = 'a list (* Positionals *) * (string * 'a) list (* Named *) * 'a list (* Remaining *)
-type 'a args = (bool * 'a) list (* Positionals *) * (string * bool * 'a) list (* Named *)
-  * 'a (* Ellipsis *) * bool (* Opened *)
+type 'a args = (bool * 'a) list (* Positionals *) * (string * bool * 'a) list (* Named *) * 'a option (* Others *)
 type 'a t = ('a args) list
 
 open Sstt.Prec
@@ -22,8 +21,16 @@ let id_of_posn = ":n"
 let lbl_of_posn = Types.Record.to_label id_of_posn
 let is_hidden_field name = String.starts_with ~prefix:":" name
 
-let mk ?(allow_greater_posn=false) (args:Ty.t args) =
-  let (pos, named, ell, o) = args in
+let mk ?(allow_greater_posn=false) ~separate_ell (args:Ty.t args) =
+  let (pos, named, others) = args in
+  let ty =
+    [ pos |> List.map snd ; named |> List.map (fun (_,_,ty) -> ty) ]
+    |> List.concat |> Ty.disj in
+  let ell, o = match others with
+  | Some ell when separate_ell -> ell, true
+  | Some ell -> Ty.cup ell ty, true
+  | None -> ty, false
+  in
   let ell = [(id_of_ell, (false, EllArg.mk ell))] in
   let posn = List.length pos |> Z.of_int in
   let posn = if allow_greater_posn then
@@ -39,10 +46,13 @@ let mk ?(allow_greater_posn=false) (args:Ty.t args) =
 
 let mk_concrete (args:Ty.t cargs) =
   let (pos,named,rem) = args in
-  let ell = List.concat [pos ; List.map snd named ; rem] |> Ty.disj in
+  let others = match rem with
+  | [] -> None
+  | tys -> Some (Ty.disj tys)
+  in
   let pos = pos |> List.map (fun ty -> (false, ty)) in
   let named = named |> List.map (fun (lbl, ty) -> (lbl, false, ty)) in
-  mk (pos,named,ell, false)
+  mk ~separate_ell:false (pos,named,others)
 
 let split_at_index lst n =
   let rec aux acc next n =
@@ -53,22 +63,22 @@ let split_at_index lst n =
   in
   aux [] lst n
 
-let mk_from_def (pos,named,ell) =
+let mk_from_def (pos,named,others) =
   let nn = List.length named in
   List.init (nn + 1) (fun i ->
     let pos', named = split_at_index named i in
     let pos = pos@(pos' |> List.map (fun (_,b,ty) -> (b,ty))) in
-    mk ~allow_greater_posn:(i=nn) (pos,named,ell,true)
+    mk ~allow_greater_posn:(i=nn) ~separate_ell:true (pos,named,others)
   ) |> Ty.disj
 
 let map f t =
-  t |> List.map (fun (pos,named,ell,o) ->
+  t |> List.map (fun (pos,named,others) ->
       (List.map (fun (o,ty) -> (o, f ty)) pos,
        List.map (fun (o,lbl,ty) -> (o, lbl, f ty)) named,
-       f ell, o)
+       Option.map f others)
     )
 
-let extract ty =
+let extract ty : Ty.t t =
   Ty.get_descr ty |> Descr.get_records |> Op.Records.as_union |> List.map (fun comp ->
     let n = Records.Atom.find lbl_of_posn comp |> fst |> Ty.get_descr |> Descr.get_intervals
     |> Intervals.destruct |> List.hd |> Intervals.Atom.get |> fst in
@@ -83,8 +93,12 @@ let extract ty =
       then None
       else Some (Types.Record.from_label lbl,o,Arg.proj ty)
     ) in
-    let ell = Records.Atom.find (Types.Record.to_label id_of_ell) comp |> fst |> EllArg.proj in
-    (pos,named,ell,comp.opened)
+    let others =
+      if comp.opened then
+        Some (Records.Atom.find (Types.Record.to_label id_of_ell) comp |> fst |> EllArg.proj)
+      else None
+    in
+    (pos,named,others)
   )
 let to_t node ctx comp =
   try
@@ -129,12 +143,16 @@ let print prec assoc fmt t =
     let eq = if opt then ":?" else ":" in
     Format.fprintf fmt "%s%s%a" lbl eq Printer.print_descr ty
   in
-  let print_line fmt (pos,named,ell,o) =
-    Format.fprintf fmt "{{ %a ;; %a ;; %a %s}}"
+  let print_others fmt others =
+    match others with
+    | None -> ()
+    | Some ty -> Format.fprintf fmt "%a" Printer.print_descr ty
+  in
+  let print_line fmt (pos,named,others) =
+    Format.fprintf fmt "{{ %a ;; %a ;; %a }}"
       (print_seq print_pos " ; ") pos
       (print_seq print_named " ; ") named
-      Printer.print_descr ell
-      (if o then ".." else "")
+      print_others others
   in
   let sym,_,_ as opinfo = varop_info Cup in
   fprintf prec assoc opinfo fmt "%a" (print_seq print_line sym) t
