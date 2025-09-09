@@ -61,17 +61,6 @@ let mk_from_def (pos,named,ell) =
     mk ~allow_greater_posn:(i=nn) (pos,named,ell,true)
   ) |> Ty.disj
 
-
-let assume_posn ty n =
-  let n = Z.of_int n in
-  let n = Types.Ty.interval (Some n) (Some n) in
-  let n = Types.Record.mk false [id_of_posn, (false, n)] in
-  proj_tag ty |> Ty.get_descr |> Descr.get_records
-  |> Op.Records.as_union |> List.filter (fun c ->
-    let ty = Descr.mk_record c |> Ty.mk_descr in
-    Ty.leq n ty
-  ) |> Op.Records.of_union |> Descr.mk_records |> Ty.mk_descr |> add_tag
-
 let map f t =
   t |> List.map (fun (pos,named,ell,o) ->
       (List.map (fun (o,ty) -> (o, f ty)) pos,
@@ -108,14 +97,24 @@ let destruct ty = ty |> proj_tag |> extract
 let proj_arg (lbl, default) ty =
   let ty = proj_tag ty |> Ty.get_descr |> Descr.get_records in
   match Op.Records.proj (Types.Record.to_label lbl) ty with
-  | (ty, true) -> Ty.cup default ty
-  | (ty, false) -> ty
+  | (ty, true) -> Arg.proj ty |> Ty.cup default
+  | (ty, false) -> Arg.proj ty
 
 let proj_ellipsis ty =
   let ty = proj_tag ty |> Ty.get_descr |> Descr.get_records in
   match Op.Records.proj lbl_of_ell ty with
   | (_, true) -> assert false
-  | (ty, false) -> ty
+  | (ty, false) -> EllArg.proj ty
+
+let assume_posn ty n =
+  let n = Z.of_int n in
+  let n = Types.Ty.interval (Some n) (Some n) in
+  let n = Types.Record.mk true [id_of_posn, (false, n)] in
+  proj_tag ty |> Ty.get_descr |> Descr.get_records
+  |> Op.Records.as_union |> List.filter (fun c ->
+    let ty = Descr.mk_record c |> Ty.mk_descr in
+    Ty.disjoint n ty |> not
+  ) |> Op.Records.of_union |> Descr.mk_records |> Ty.mk_descr |> add_tag
 
 let print_seq f sep =
   Format.(pp_print_list  ~pp_sep:(fun fmt () -> pp_print_string fmt sep) f)

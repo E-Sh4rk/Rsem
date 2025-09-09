@@ -27,8 +27,12 @@ end
 module PArgs = struct
   open Args
   let mk_from_def = mk_from_def
-  let proj name ty = proj_arg name ty
-  let proj_ell ty = proj_ellipsis ty
+  let proj name ty =
+    let ty = assume_posn ty 0 in
+    proj_arg name ty
+  let proj_ell ty =
+    let ty = assume_posn ty 0 in
+    proj_ellipsis ty
   let pdom _ = Ty.any (* Should be ok by construction *)
 end
 
