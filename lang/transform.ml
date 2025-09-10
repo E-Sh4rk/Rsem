@@ -8,10 +8,30 @@ module C = System.Const
 (* Tranformations *)
 
 let eliminate_return e =
-  let aux (id,e) cont =
+  let rec aux (id,e) cont =
     match e with
-    | (Const _ | Id _) -> fill_hole cont (id,e)
-    | Declare (_v, _eo, _e) -> failwith "TODO"
+    | Const _ | Id _ -> fill_hole cont (id,e)
+    | Declare (v, None, e2) ->
+      let cont = aux e2 cont in
+      id, Declare (v, None, cont)
+    | Declare (v, Some e1, e2) ->
+      let cont = aux e2 cont in
+      aux e1 (id, Declare (v, Some hole, cont))
+    | Let (v, e1, e2) ->
+      let cont = aux e2 cont in
+      aux e1 (id, Let (v, hole, cont))
+    | VarAssign (b, v, e) ->
+      (id, VarAssign (b, v, hole)) |> fill_hole cont |> aux e
+    | Unop (v, e) ->
+      (id, Unop (v, hole)) |> fill_hole cont |> aux e
+    | Binop (v, e1, e2) ->
+      let cont = aux e2 (id, Binop (v, failwith "TODO", hole)) in
+      aux e1 cont
+    | Seq (e1,e2) ->
+      let cont = aux e2 cont in
+      aux e1 (id, Seq (hole, cont))
+    | Return None -> id, Const CNull
+    | Return (Some e) -> e
     | _ -> failwith "TODO"
   in
   aux e hole
@@ -25,6 +45,7 @@ let typeof_const c =
   | CLgl true -> Vecs.mk_singl Prim.tt
   | CLgl false -> Vecs.mk_singl Prim.ff
   | CNull -> Null.null
+  | CUnit -> Ty.unit
 
 type varkind = VRef | VCst
 let varinfo = Hashtbl.create 100
@@ -119,14 +140,7 @@ let rec aux_e (eid,e) =
       in
       let pty = CArgs.mk_from_def ([],named,ellipsis) in
       A.Lambda (GTy.mk pty, Variable.create_lambda None, e)
-    | Braced lst ->
-      let seq e2 e1 =
-        Eid.unique (), A.Let ([], Variable.create_gen None, aux_e e1, e2)
-      in
-      begin match List.rev lst with
-      | [] -> A.Value (Ty.unit |> GTy.mk)
-      | hd::lst -> List.fold_left seq (aux_e hd) lst |> snd
-      end
+    | Seq (e1, e2) -> A.Let ([], Variable.create_gen None, aux_e e1, aux_e e2)
     | Return _ -> invalid_arg "Unsupported return statement."
     | Hole -> invalid_arg "Unsupported hole."
   in

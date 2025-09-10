@@ -9,6 +9,7 @@ type const =
 | CDbl of string
 | CLgl of bool
 | CNull
+| CUnit
 [@@deriving show]
 
 type e' =
@@ -23,7 +24,7 @@ type e' =
 | Call of e * arg list
 | Ite of e * e * e
 | Function of param list * e
-| Braced of e list
+| Seq of e * e
 | Return of e option
 [@@deriving show]
 and arg = arg_label * e
@@ -53,7 +54,7 @@ let rec map f (id,e) =
       | Ellipsis -> Ellipsis
       in
       Function (List.map aux ps, map f e)
-    | Braced es -> Braced (List.map (map f) es)
+    | Seq (e1,e2) -> Seq (map f e1, map f e2)
     | Return eo -> Return (Option.map (map f) eo)
   in
   f (id,e)
