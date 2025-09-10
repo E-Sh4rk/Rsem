@@ -45,7 +45,6 @@ let typeof_const c =
   | CLgl true -> Vecs.mk_singl Prim.tt
   | CLgl false -> Vecs.mk_singl Prim.ff
   | CNull -> Null.null
-  | CUnit -> Ty.unit
 
 type varkind = VRef | VCst
 let varinfo = Hashtbl.create 100

@@ -9,7 +9,6 @@ type const =
 | CDbl of string
 | CLgl of bool
 | CNull
-| CUnit
 [@@deriving show]
 
 type e' =

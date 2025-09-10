@@ -165,7 +165,7 @@ let rec aux_e env (pos,e) =
     let env = { id=eid } in
     let e = List.fold_left (add_def pid eid) (aux_e env e) (StrSet.elements ebvs) in
     Ast.Function (params, e)
-  | Braced [] -> Ast.Const Ast.CUnit
+  | Braced [] -> Ast.Const Ast.CNull
   | Braced (e::es) ->
     List.fold_left (fun acc e -> Eid.unique (), Ast.Seq (acc, aux_e env e)) (aux_e env e) es |> snd
   in
