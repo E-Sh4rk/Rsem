@@ -5,6 +5,19 @@ open Types
 module A = System.Ast
 module C = System.Const
 
+(* Tranformations *)
+
+let eliminate_return e =
+  let aux (id,e) cont =
+    match e with
+    | (Const _ | Id _) -> fill_hole cont (id,e)
+    | Declare (_v, _eo, _e) -> failwith "TODO"
+    | _ -> failwith "TODO"
+  in
+  aux e hole
+
+(* Conversion to Mlsem AST *)
+
 let typeof_const c =
   match c with
   | CChr _ -> Vecs.mk_singl Prim.chr
@@ -114,7 +127,8 @@ let rec aux_e (eid,e) =
       | [] -> A.Value (Ty.unit |> GTy.mk)
       | hd::lst -> List.fold_left seq (aux_e hd) lst |> snd
       end
-    | Return _ -> failwith "TODO"
+    | Return _ -> invalid_arg "Unsupported return statement."
+    | Hole -> invalid_arg "Unsupported hole."
   in
   (eid, aux e)
 

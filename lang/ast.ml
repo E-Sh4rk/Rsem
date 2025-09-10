@@ -12,6 +12,7 @@ type const =
 [@@deriving show]
 
 type e' =
+| Hole
 | Const of const
 | Id of Variable.t
 | Declare of Variable.t * e option * e
@@ -33,3 +34,31 @@ and param = NoDefault of Variable.t | Default of Variable.t * e | Ellipsis
 [@@deriving show]
 and e = Eid.t * e'
 [@@deriving show]
+
+let rec map f (id,e) =
+  let e =
+    match e with
+    | Hole | Const _ | Id _ -> e
+    | Declare (v, eo, e) -> Declare (v, Option.map (map f) eo, map f e)
+    | Let (v, e1, e2) -> Let (v, map f e1, map f e2)
+    | VarAssign (b, v, e) -> VarAssign (b, v, map f e)
+    | Unop (v, e) -> Unop (v, map f e)
+    | Binop (v, e1, e2) -> Binop (v, map f e1, map f e2)
+    | Call (e, args) -> Call (map f e, List.map (fun (l,e) -> l, map f e) args)
+    | Ite (e,e1,e2) -> Ite (map f e, map f e1, map f e2)
+    | Function (ps, e) ->
+      let aux = function
+      | NoDefault v -> NoDefault v
+      | Default (v,e) -> Default (v, map f e)
+      | Ellipsis -> Ellipsis
+      in
+      Function (List.map aux ps, map f e)
+    | Braced es -> Braced (List.map (map f) es)
+    | Return eo -> Return (Option.map (map f) eo)
+  in
+  f (id,e)
+
+let fill_hole e elt =
+  map (function (_, Hole) -> elt | e -> e) e
+
+let hole = Eid.dummy, Hole
