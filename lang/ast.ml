@@ -12,7 +12,7 @@ type const =
 [@@deriving show]
 
 type e' =
-| Hole
+| Hole of int
 | Const of const
 | Id of Variable.t
 | Declare of Variable.t * e option * e
@@ -38,7 +38,7 @@ and e = Eid.t * e'
 let rec map f (id,e) =
   let e =
     match e with
-    | Hole | Const _ | Id _ -> e
+    | Hole _ | Const _ | Id _ -> e
     | Declare (v, eo, e) -> Declare (v, Option.map (map f) eo, map f e)
     | Let (v, e1, e2) -> Let (v, map f e1, map f e2)
     | VarAssign (b, v, e) -> VarAssign (b, v, map f e)
@@ -58,7 +58,7 @@ let rec map f (id,e) =
   in
   f (id,e)
 
-let fill_hole e elt =
-  map (function (_, Hole) -> elt | e -> e) e
+let fill_hole e n elt =
+  map (function (_, Hole i) when i=n -> elt | e -> e) e
 
-let hole = Eid.dummy, Hole
+let hole n = Eid.dummy, Hole n

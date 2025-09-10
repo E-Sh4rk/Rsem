@@ -8,33 +8,32 @@ module C = System.Const
 (* Tranformations *)
 
 let eliminate_return e =
-  let rec aux (id,e) cont =
+  let rec aux (id,e) n cont =
     match e with
-    | Const _ | Id _ -> fill_hole cont (id,e)
+    | Const _ | Id _ -> fill_hole cont n (id,e)
     | Declare (v, None, e2) ->
-      let cont = aux e2 cont in
-      id, Declare (v, None, cont)
+      (id, Declare (v, None, hole n)) |> fill_hole cont n |> aux e2 n
     | Declare (v, Some e1, e2) ->
-      let cont = aux e2 cont in
-      aux e1 (id, Declare (v, Some hole, cont))
+      (id, Declare (v, Some (hole (n+1)), hole n)) |> fill_hole cont n
+      |> aux e2 n |> aux e1 (n+1)
     | Let (v, e1, e2) ->
-      let cont = aux e2 cont in
-      aux e1 (id, Let (v, hole, cont))
+      (id, Let (v, hole (n+1), hole n)) |> fill_hole cont n
+      |> aux e2 n |> aux e1 (n+1)
     | VarAssign (b, v, e) ->
-      (id, VarAssign (b, v, hole)) |> fill_hole cont |> aux e
+      (id, VarAssign (b, v, hole n)) |> fill_hole cont n |> aux e n
     | Unop (v, e) ->
-      (id, Unop (v, hole)) |> fill_hole cont |> aux e
+      (id, Unop (v, hole n)) |> fill_hole cont n |> aux e n
     | Binop (v, e1, e2) ->
-      let cont = aux e2 (id, Binop (v, failwith "TODO", hole)) in
-      aux e1 cont
+      (id, Binop (v, hole (n+1), hole n)) |> fill_hole cont n
+      |> aux e2 n |> aux e1 (n+1)
     | Seq (e1,e2) ->
-      let cont = aux e2 cont in
-      aux e1 (id, Seq (hole, cont))
+      (id, Seq (hole (n+1), hole n)) |> fill_hole cont n
+      |> aux e2 n |> aux e1 (n+1)
     | Return None -> id, Const CNull
     | Return (Some e) -> e
     | _ -> failwith "TODO"
   in
-  aux e hole
+  aux e 0 (hole 0)
 
 (* Conversion to Mlsem AST *)
 
@@ -141,7 +140,7 @@ let rec aux_e (eid,e) =
       A.Lambda (GTy.mk pty, Variable.create_lambda None, e)
     | Seq (e1, e2) -> A.Let ([], Variable.create_gen None, aux_e e1, aux_e e2)
     | Return _ -> invalid_arg "Unsupported return statement."
-    | Hole -> invalid_arg "Unsupported hole."
+    | Hole _ -> invalid_arg "Unsupported hole."
   in
   (eid, aux e)
 
