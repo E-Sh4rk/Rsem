@@ -21,13 +21,12 @@ let id_of_posn = ":n"
 let lbl_of_posn = Types.Record.to_label id_of_posn
 let is_hidden_field name = String.starts_with ~prefix:":" name
 
-let mk ?(allow_greater_posn=false) ~separate_ell (args:Ty.t args) =
+let mk ?(allow_greater_posn=false) (args:Ty.t args) =
   let (pos, named, others) = args in
   let ty =
     [ pos |> List.map snd ; named |> List.map (fun (_,_,ty) -> ty) ]
     |> List.concat |> Ty.disj in
   let ell, o = match others with
-  | Some ell when separate_ell -> ell, true
   | Some ell -> Ty.cup ell ty, true
   | None -> ty, false
   in
@@ -52,7 +51,7 @@ let mk_concrete (args:Ty.t cargs) =
   in
   let pos = pos |> List.map (fun ty -> (false, ty)) in
   let named = named |> List.map (fun (lbl, ty) -> (lbl, false, ty)) in
-  mk ~separate_ell:false (pos,named,others)
+  mk (pos,named,others)
 
 let split_at_index lst n =
   let rec aux acc next n =
@@ -68,7 +67,7 @@ let mk_from_def (pos,named,others) =
   List.init (nn + 1) (fun i ->
     let pos', named = split_at_index named i in
     let pos = pos@(pos' |> List.map (fun (_,b,ty) -> (b,ty))) in
-    mk ~allow_greater_posn:(i=nn) ~separate_ell:true (pos,named,others)
+    mk ~allow_greater_posn:(i=nn) (pos,named,others)
   ) |> Ty.disj
 
 let map f t =
@@ -108,19 +107,7 @@ let to_t node ctx comp =
 
 let destruct ty = ty |> proj_tag |> extract
 
-let proj_arg (lbl, default) ty =
-  let ty = proj_tag ty |> Ty.get_descr |> Descr.get_records in
-  match Op.Records.proj (Types.Record.to_label lbl) ty with
-  | (ty, true) -> Arg.proj ty |> Ty.cup default
-  | (ty, false) -> Arg.proj ty
-
-let proj_ellipsis ty =
-  let ty = proj_tag ty |> Ty.get_descr |> Descr.get_records in
-  match Op.Records.proj lbl_of_ell ty with
-  | (_, true) -> assert false
-  | (ty, false) -> EllArg.proj ty
-
-let assume_posn ty n =
+(* let assume_posn ty n =
   let n = Z.of_int n in
   let n = Types.Ty.interval (Some n) (Some n) in
   let n = Types.Record.mk true [id_of_posn, (false, n)] in
@@ -128,7 +115,7 @@ let assume_posn ty n =
   |> Op.Records.as_union |> List.filter (fun c ->
     let ty = Descr.mk_record c |> Ty.mk_descr in
     Ty.disjoint n ty |> not
-  ) |> Op.Records.of_union |> Descr.mk_records |> Ty.mk_descr |> add_tag
+  ) |> Op.Records.of_union |> Descr.mk_records |> Ty.mk_descr |> add_tag *)
 
 let print_seq f sep =
   Format.(pp_print_list  ~pp_sep:(fun fmt () -> pp_print_string fmt sep) f)

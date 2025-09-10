@@ -12,7 +12,7 @@ module CArgs = struct
     try
       destruct ty
       |> List.filter_map (fun (pos,named,others) ->
-        let ty' = mk ~separate_ell:true (pos,named,others) in
+        let ty' = mk (pos,named,others) in
         if Ty.leq ty' ty then
           Some (List.concat [List.map snd pos ;
                 List.map (fun (_,_,ty) -> ty) named ;
@@ -22,18 +22,7 @@ module CArgs = struct
     with Invalid_argument _ ->
       let n = npos + (List.length names) + nrem in
       [List.init n (fun _ -> Ty.any)]
-end
-
-module PArgs = struct
-  open Args
   let mk_from_def = mk_from_def
-  let proj name ty =
-    let ty = assume_posn ty 0 in
-    proj_arg name ty
-  let proj_ell ty =
-    let ty = assume_posn ty 0 in
-    proj_ellipsis ty
-  let pdom _ = Ty.any (* Should be ok by construction *)
 end
 
 (* open Sstt.Extensions.Hierarchy *)

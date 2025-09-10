@@ -78,39 +78,34 @@ let rec aux_e (eid,e) =
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
       A.Ite (e, Ty.tt, aux_e e1, aux_e e2)
     | Function (ps, e) ->
-      let named = ps |> List.filter_map (function
+      let has_ell = List.mem Ellipsis ps in
+      let ps = ps |> List.filter_map (function
       | Ellipsis -> None
       | NoDefault v ->
-        Some (Variable.get_name v |> Option.get, false, TVar.mk TVar.KInfer None |> TVar.typ)
-      | Default (v,_) ->
-        Some (Variable.get_name v |> Option.get, true, TVar.mk TVar.KInfer None |> TVar.typ)
+        Some (v, None, TVar.mk TVar.KInfer None |> TVar.typ)
+      | Default (v,e) ->
+        Some (v, Some e, TVar.mk TVar.KInfer None |> TVar.typ)
       ) in
-      let ellipsis =
-        if List.mem Ellipsis ps then
-          Some (TVar.mk TVar.KInfer None |> TVar.typ)
-        else None
+      let named = ps |> List.map (fun (v,o,ty) -> Variable.get_name v |> Option.get, o <> None, ty) in
+      let add_let v def e =
+        Eid.unique (), A.Let ([], v, (Eid.unique (), def), e)
       in
-      let pty = PArgs.mk_from_def ([],named,ellipsis) in
-      let e = aux_e e in
-      let v = Variable.create_lambda None in
-      let ev = Eid.unique (), A.Var v in
-      let add_def e p =
-        let v', def = match p with
-        | Default (v',e') ->
-          v', A.Constructor (A.Choice 2, [
-            Eid.unique (), A.Projection
-              (A.PCustom { pdom=PArgs.pdom ; proj=PArgs.proj (Variable.get_name v' |> Option.get, Ty.empty) }, ev) ;
-              aux_e e'
-          ])
-        | Ellipsis -> ellipsis_var, A.Projection
-          (A.PCustom { pdom=PArgs.pdom ; proj=PArgs.proj_ell }, ev)
-        | NoDefault v' -> v', A.Projection
-          (A.PCustom { pdom=PArgs.pdom ; proj=PArgs.proj (Variable.get_name v' |> Option.get, Ty.any) }, ev)
-        in
-        Eid.unique (), A.Let ([], v', (Eid.unique (), def), e)
+      let add_def e (v,o,ty) =
+        match o with
+        | Some e' ->
+          add_let v (A.Constructor (A.Choice 2,
+            [ Eid.unique (), A.Value (GTy.mk ty) ; aux_e e' ])) e
+        | None -> add_let v (A.Value (GTy.mk ty)) e
       in
-      let e = List.fold_left add_def e ps in
-      A.Lambda (GTy.mk pty, v, e)
+      let e = List.fold_left add_def (aux_e e) ps in
+      let ellipsis, e =
+        if has_ell then
+          let ty = TVar.mk TVar.KInfer None |> TVar.typ in
+          Some ty, add_let ellipsis_var (A.Value (GTy.mk ty)) e
+        else None, e
+      in
+      let pty = CArgs.mk_from_def ([],named,ellipsis) in
+      A.Lambda (GTy.mk pty, Variable.create_lambda None, e)
     | Braced lst ->
       let seq e2 e1 =
         Eid.unique (), A.Let ([], Variable.create_gen None, aux_e e1, e2)
