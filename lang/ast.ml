@@ -23,6 +23,7 @@ type e' =
 | Ite of e * e * e
 | Function of param list * e
 | Braced of e list
+| Return of e option
 [@@deriving show]
 and arg = arg_label * e
 [@@deriving show]

@@ -114,6 +114,7 @@ let rec aux_e (eid,e) =
       | [] -> A.Value (Ty.unit |> GTy.mk)
       | hd::lst -> List.fold_left seq (aux_e hd) lst |> snd
       end
+    | Return _ -> failwith "TODO"
   in
   (eid, aux e)
 

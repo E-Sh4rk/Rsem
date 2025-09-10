@@ -21,6 +21,7 @@ type e' =
 | Function of bool (* \x fun? *) * param list option * e
 | Ite of e * e * e option
 | Braced of e list
+| Return
 [@@deriving show]
 and arg =
 | Unnamed of e
@@ -50,7 +51,7 @@ let bv_params ps =
 
 let rec bv_e (_,e) =
   match e with
-  | Const _ | Id _ | Function _ -> StrSet.empty
+  | Return | Const _ | Id _ | Function _ -> StrSet.empty
   | Unop (_,e) -> bv_e e
   | Binop (str, (e1, e2)) ->
     let res = match str, e1, e2 with
@@ -83,13 +84,13 @@ let var env str =
 let aux_arg f arg =
   match arg with
   | Unnamed e ->
-    Ast.Positional, f e
+    Some (Ast.Positional, f e)
   | Named (ArgId str, Some e) ->
-    Ast.Named str, f e
-  | Named (_, None) -> failwith "TODO: Named absent arguments"
+    Some (Ast.Named str, f e)
+  | Named (_, None) -> None
   | _ -> assert false
 let aux_arg f arg =
-  Option.map (aux_arg f) arg
+  Option.bind arg (aux_arg f)
 let aux_param env f p =
   match p with
   | NoDefault EllipsisId -> Ast.Ellipsis
@@ -124,6 +125,7 @@ let add_def pid eid e str =
 let rec aux_e env (pos,e) =
   let eid = Eid.unique_with_pos pos in
   let e = match e with
+  | Return -> assert false
   | Const c -> Ast.Const (aux_const c)
   | Id str -> Ast.Id (var env str)
   | Unop (str, e) -> Ast.Unop (var env (str^"__1"), aux_e env e)
@@ -133,6 +135,8 @@ let rec aux_e env (pos,e) =
     | "<<-", (_, Id id), e2 -> Ast.VarAssign (true, var env id, aux_e env e2)
     | _, _, _ -> Ast.Binop (var env (str^"__2"), aux_e env e1, aux_e env e2)
     end
+  | Call ((_, Return),[]) -> Ast.Return None
+  | Call ((_, Return),[Some (Unnamed e)]) -> Ast.Return (Some (aux_e env e))
   | Call (e,args) ->
     let e = aux_e env e in
     let args = List.filter_map (aux_arg (aux_e env)) args in

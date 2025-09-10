@@ -30,3 +30,18 @@ f <- function(a=42){
         -a
     }
 }
+
+app <- function(){
+    f <- function(b=12){ b }
+    f(TRUE)
+}
+
+ret <- function(x) {
+    if (x == NULL)
+        return(FALSE)
+    if (x == FALSE)
+        return(FALSE)
+    if (x == 0)
+        return(FALSE)
+    return(TRUE)
+}
