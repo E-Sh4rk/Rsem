@@ -7,7 +7,7 @@ module C = System.Const
 
 (* Tranformations *)
 
-let eliminate_return e =
+let rec eliminate_return e =
   let rec aux (id,e) n ret cont =
     match e with
     | Const _ | Id _ -> fill_hole cont n (id,e)
@@ -44,6 +44,12 @@ let eliminate_return e =
         (fun cont (m,(_,e)) -> aux e m (fill_hole ret n (hole m)) cont)
         cont args in
       aux e n ret cont
+    | Ite (e, e1, e2) ->
+      let cont_e2 = aux e2 n ret cont in
+      let cont_e1 = aux e1 n ret cont in
+      let cont = id, Ite (hole n, cont_e1, cont_e2) in (* TODO: no *)
+      aux e n ret cont
+    | Function (ps, e) -> fill_hole cont n (id, Function (ps, eliminate_return e))
     | Seq (e1,e2) ->
       let m = fresh_hole_id () in
       let ctx2 = id, Seq (hole m, hole n) in
@@ -52,7 +58,7 @@ let eliminate_return e =
       aux e1 m ret cont
     | Return None -> fill_hole ret n (id, Const CNull)
     | Return (Some e) -> fill_hole ret n e
-    | _ -> failwith "TODO"
+    | Hole _ -> invalid_arg "Expression should not contain a hole."
   in
   let m = fresh_hole_id () in
   aux e m (hole m) (hole m)
