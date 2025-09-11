@@ -8,42 +8,54 @@ module C = System.Const
 (* Tranformations *)
 
 let eliminate_return e =
-  let rec aux (id,e) n cont =
+  let rec aux (id,e) n ret cont =
     match e with
     | Const _ | Id _ -> fill_hole cont n (id,e)
     | Declare (v, None, e2) ->
-      (id, Declare (v, None, hole n)) |> fill_hole cont n |> aux e2 n
+      let ctx2 = id, Declare (v, None, hole n) in
+      aux e2 n (fill_hole ret n ctx2) (fill_hole cont n ctx2)
     | Declare (v, Some e1, e2) ->
       let m = fresh_hole_id () in
-      (id, Declare (v, Some (hole m), hole n)) |> fill_hole cont n
-      |> aux e2 n |> aux e1 m
+      let ctx2 = id, Declare (v, Some (hole m), hole n) in
+      let cont = aux e2 n (fill_hole ret n ctx2) (fill_hole cont n ctx2) in
+      let ret = fill_hole ret n (hole m) in
+      aux e1 m ret cont
     | Let (v, e1, e2) ->
       let m = fresh_hole_id () in
-      (id, Let (v, hole m, hole n)) |> fill_hole cont n
-      |> aux e2 n |> aux e1 m
+      let ctx2 = id, Let (v, hole m, hole n) in
+      let cont = aux e2 n (fill_hole ret n ctx2) (fill_hole cont n ctx2) in
+      let ret = fill_hole ret n (hole m) in
+      aux e1 m ret cont
     | VarAssign (b, v, e) ->
-      (id, VarAssign (b, v, hole n)) |> fill_hole cont n |> aux e n
+      aux e n ret (fill_hole cont n (id, VarAssign (b, v, hole n)))
     | Unop (v, e) ->
-      (id, Unop (v, hole n)) |> fill_hole cont n |> aux e n
+      aux e n ret (fill_hole cont n (id, Unop (v, hole n)))
     | Binop (v, e1, e2) ->
       let m = fresh_hole_id () in
-      (id, Binop (v, hole m, hole n)) |> fill_hole cont n
-      |> aux e2 n |> aux e1 m
+      let cont = aux e2 n ret (fill_hole cont n (id, Binop (v, hole m, hole n))) in
+      let ret = fill_hole ret n (hole m) in
+      aux e1 m ret cont
     | Call (e, args) ->
       let args = List.map (fun a -> (fresh_hole_id (),a)) args in
-      let cont = (id, Call (hole n, args |> List.map (fun (m, (name,_)) -> (name, hole m))))
-      |> fill_hole cont n |> aux e n in
-      List.fold_left (fun cont (m,(_,e)) -> aux e m cont) cont args
+      let cont =
+        (id, Call (hole n, args |> List.map (fun (m, (name,_)) -> (name, hole m))))
+        |> fill_hole cont n in
+      let cont = List.fold_left
+        (fun cont (m,(_,e)) -> aux e m (fill_hole ret n (hole m)) cont)
+        cont args in
+      aux e n ret cont
     | Seq (e1,e2) ->
       let m = fresh_hole_id () in
-      (id, Seq (hole m, hole n)) |> fill_hole cont n
-      |> aux e2 n |> aux e1 m
-    | Return None -> id, Const CNull
-    | Return (Some e) -> e
+      let ctx2 = id, Seq (hole m, hole n) in
+      let cont = aux e2 n (fill_hole ret n ctx2) (fill_hole cont n ctx2) in
+      let ret = fill_hole ret n (hole m) in
+      aux e1 m ret cont
+    | Return None -> fill_hole ret n (id, Const CNull)
+    | Return (Some e) -> fill_hole ret n e
     | _ -> failwith "TODO"
   in
   let m = fresh_hole_id () in
-  aux e 0 (hole m)
+  aux e m (hole m) (hole m)
 
 (* Conversion to Mlsem AST *)
 
