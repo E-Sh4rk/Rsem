@@ -62,3 +62,7 @@ let fill_hole e n elt =
   map (function (_, Hole i) when i=n -> elt | e -> e) e
 
 let hole n = Eid.dummy, Hole n
+
+let fresh_hole_id =
+  let n = ref 0 in
+  fun () -> n := !n+1 ; !n
