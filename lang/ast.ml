@@ -37,8 +37,8 @@ and e = Eid.t * e'
 [@@deriving show]
 
 module BuiltinOp = struct
-  let eq = Variable.create_let (Some "==")
-  let neq = Variable.create_let (Some "!=")
+  let eq = Variable.create_let (Some "==__2")
+  let neq = Variable.create_let (Some "!=__2")
   let all = [ eq ; neq ]
   let find_builtin str =
     let f v =
