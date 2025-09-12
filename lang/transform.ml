@@ -23,6 +23,16 @@ let rec eliminate_return e =
     in
     map' f e
   in
+  let has_return e =
+    try
+      let f = function
+      | (id, Function (ps, e)) -> Some (id, Function (ps, e))
+      | (_, Return _) -> raise Exit
+      | _ -> None
+      in
+      map' f e |> ignore ; false
+    with Exit -> true
+  in
   let hole = hole 0 in
   let fill e = fill_hole e 0 in
   let rec aux (id,e) cont =
@@ -45,6 +55,11 @@ let rec eliminate_return e =
       let args = List.map (fun (lbl,e) -> (lbl, eliminate_in_fun e)) args in
       let e = eliminate_in_fun e in
       (id, Call (e, args)) |> cont'
+    | Ite (e, e1, e2) when not (has_return e1) && not (has_return e2) ->
+      (* Do not duplicate the continuation if unnecessary *)
+      let e1 = eliminate_in_fun e1 in
+      let e2 = eliminate_in_fun e2 in
+      (id, Ite (hole, e1, e2)) |> cont' |> aux e
     | Ite (e, e1, e2) ->
       let cont_e2 = aux e2 cont in
       let cont_e1 = aux e1 cont in

@@ -29,6 +29,7 @@ let treat_ast v (idenv, env) ast =
     let renvs = System.Refinement.refinement_envs env mlast in
     let anns = System.Reconstruction.infer env renvs mlast in
     let typ = System.Checker.typeof_def env anns mlast in
+    let typ = Types.TyScheme.norm_and_simpl typ in
     Format.printf "%a: %a@.@." Variable.pp v Types.TyScheme.pp_short typ ;
     idenv, env
   with System.Checker.Untypeable (err) ->
