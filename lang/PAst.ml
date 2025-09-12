@@ -78,7 +78,11 @@ type env = { id: Variable.t StrMap.t }
 (* TODO: have a distinct call env and val env. *)
 let var env str =
   match StrMap.find_opt str env.id with
-  | None -> Variable.create_let (Some str)
+  | None ->
+    begin match Ast.BuiltinOp.find_builtin str with
+    | None -> Variable.create_let (Some str)
+    | Some v -> v
+    end
   | Some v -> v
 
 let aux_arg f arg =

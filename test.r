@@ -45,3 +45,9 @@ ret <- function(x) {
         return(FALSE)
     return(TRUE)
 }
+
+narrowing <- function(x) {
+    if (x == NULL)
+        return(NULL)
+    return(-x)
+}

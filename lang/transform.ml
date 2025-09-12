@@ -5,6 +5,14 @@ open Types
 module A = System.Ast
 module C = System.Const
 
+let typeof_const c =
+  match c with
+  | CChr _ -> Vecs.mk_singl Prim.chr
+  | CDbl _ -> Vecs.mk_singl Prim.dbl
+  | CLgl true -> Vecs.mk_singl Prim.tt
+  | CLgl false -> Vecs.mk_singl Prim.ff
+  | CNull -> Null.null
+
 (* Tranformations *)
 
 let rec eliminate_return e =
@@ -41,6 +49,8 @@ let rec eliminate_return e =
       let cont_e2 = aux e2 cont in
       let cont_e1 = aux e1 cont in
       (id, Ite (hole, cont_e1, cont_e2)) |> aux e
+    | TyCheck (e, ty) ->
+      (id, TyCheck (hole, ty)) |> cont' |> aux e
     | Function (ps, e) -> (id, Function (ps, eliminate_return e)) |> cont'
     | Seq (e1,e2) ->
       (id, Seq (hole, aux e2 cont)) |> aux e1
@@ -50,15 +60,17 @@ let rec eliminate_return e =
   in
   aux e hole
 
-(* Conversion to Mlsem AST *)
+let recognize_const_comparison e =
+  let f = function
+  | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
+    when Variable.equals v BuiltinOp.eq -> id, TyCheck (e, typeof_const c)
+  | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
+    when Variable.equals v BuiltinOp.neq -> id, TyCheck (e, typeof_const c |> Ty.neg)
+  | e -> e
+  in
+  map f e
 
-let typeof_const c =
-  match c with
-  | CChr _ -> Vecs.mk_singl Prim.chr
-  | CDbl _ -> Vecs.mk_singl Prim.dbl
-  | CLgl true -> Vecs.mk_singl Prim.tt
-  | CLgl false -> Vecs.mk_singl Prim.ff
-  | CNull -> Null.null
+(* Conversion to Mlsem AST *)
 
 type varkind = VRef | VCst
 let varinfo = Hashtbl.create 100
@@ -124,6 +136,11 @@ let rec aux_e (eid,e) =
       let e = aux_e e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
       A.Ite (e, Ty.tt, aux_e e1, aux_e e2)
+    | TyCheck (e, ty) ->
+      let e = aux_e e in
+      let tt = Eid.unique (), A.Value (Vecs.mk_singl Prim.tt |> GTy.mk) in
+      let ff = Eid.unique (), A.Value (Vecs.mk_singl Prim.ff |> GTy.mk) in
+      A.Ite (e, ty, tt, ff)
     | Function (ps, e) ->
       let has_ell = List.mem Ellipsis ps in
       let ps = ps |> List.filter_map (function
@@ -160,4 +177,4 @@ let rec aux_e (eid,e) =
   (eid, aux e)
 
 let to_mlsem e =
-  e |> eliminate_return |> aux_e
+  e |> eliminate_return |> recognize_const_comparison |> aux_e

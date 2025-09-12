@@ -22,6 +22,7 @@ type e' =
 | Binop of Variable.t * e * e
 | Call of e * arg list
 | Ite of e * e * e
+| TyCheck of e * Types.Ty.t
 | Function of param list * e
 | Seq of e * e
 | Return of e option
@@ -35,6 +36,19 @@ and param = NoDefault of Variable.t | Default of Variable.t * e | Ellipsis
 and e = Eid.t * e'
 [@@deriving show]
 
+module BuiltinOp = struct
+  let eq = Variable.create_let (Some "==")
+  let neq = Variable.create_let (Some "!=")
+  let all = [ eq ; neq ]
+  let find_builtin str =
+    let f v =
+      match Variable.get_name v with
+      | None -> false
+      | Some name -> String.equal name str
+    in
+    List.find_opt f all
+end
+
 let map f e =
   let rec aux (id,e) =
     let e =
@@ -47,6 +61,7 @@ let map f e =
       | Binop (v, e1, e2) -> Binop (v, aux e1, aux e2)
       | Call (e, args) -> Call (aux e, List.map (fun (l,e) -> l, aux e) args)
       | Ite (e,e1,e2) -> Ite (aux e, aux e1, aux e2)
+      | TyCheck (e, ty) -> TyCheck (aux e, ty)
       | Function (ps, e) ->
         let aux' = function
         | NoDefault v -> NoDefault v
@@ -75,6 +90,7 @@ let map' f e =
       | Binop (v, e1, e2) -> Binop (v, aux e1, aux e2)
       | Call (e, args) -> Call (aux e, List.map (fun (l,e) -> l, aux e) args)
       | Ite (e,e1,e2) -> Ite (aux e, aux e1, aux e2)
+      | TyCheck (e,ty) -> TyCheck (aux e, ty)
       | Function (ps, e) ->
         let aux' = function
         | NoDefault v -> NoDefault v
