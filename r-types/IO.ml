@@ -1,4 +1,4 @@
-open Common
+open Mlsem.Common
 open Lexing
 
 exception LexicalError of Position.t * string

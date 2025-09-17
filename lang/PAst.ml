@@ -1,4 +1,4 @@
-open Common
+open Mlsem.Common
 
 module Position = struct
   type t = Position.t

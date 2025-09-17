@@ -1,4 +1,5 @@
 open Lazy
+open Mlsem.Types
 
 type 'a cargs = 'a list (* Positionals *) * (string * 'a) list (* Named *) * 'a list (* Remaining *)
 type 'a args = (bool * 'a) list (* Positionals *) * (string * bool * 'a) list (* Named *) * 'a option (* Others *)
@@ -16,9 +17,9 @@ let proj_tag ty = Ty.get_descr ty |> Descr.get_tags |> Tags.get tag
 let id_of_pos pos = Format.asprintf ":%i" pos
 let id_of_lbl lbl = lbl
 let id_of_ell = ":..."
-let lbl_of_ell = Types.Record.to_label id_of_ell
+let lbl_of_ell = Record.to_label id_of_ell
 let id_of_posn = ":n"
-let lbl_of_posn = Types.Record.to_label id_of_posn
+let lbl_of_posn = Record.to_label id_of_posn
 let is_hidden_field name = String.starts_with ~prefix:":" name
 
 let mk ?(allow_greater_posn=false) (args:Ty.t args) =
@@ -33,15 +34,15 @@ let mk ?(allow_greater_posn=false) (args:Ty.t args) =
   let ell = [(id_of_ell, (false, EllArg.mk ell))] in
   let posn = List.length pos |> Z.of_int in
   let posn = if allow_greater_posn then
-      Types.Ty.interval (Some posn) None
+      Mlsem.Types.Ty.interval (Some posn) None
     else
-      Types.Ty.interval (Some posn) (Some posn)
+      Mlsem.Types.Ty.interval (Some posn) (Some posn)
   in
   let posn = [(id_of_posn, (false, posn))] in
   let pos = pos |> List.mapi (fun i (opt,ty) -> (id_of_pos i, (opt, Arg.mk ty))) in
   let named = named |> List.map (fun (lbl, opt, ty) -> (id_of_lbl lbl, (opt, Arg.mk ty))) in
   let bindings = List.concat [posn ; pos ; named ; ell] in
-  Types.Record.mk o bindings |> add_tag
+  Record.mk o bindings |> add_tag
 
 let mk_concrete (args:Ty.t cargs) =
   let (pos,named,rem) = args in
@@ -83,18 +84,18 @@ let extract ty : Ty.t t =
     |> Intervals.destruct |> List.hd |> Intervals.Atom.get |> fst in
     let n = match n with Some n -> Z.to_int n | None -> invalid_arg "Not an arg." in
     let pos = List.init n (fun n ->
-      let name = id_of_pos n |> Types.Record.to_label in
+      let name = id_of_pos n |> Record.to_label in
       let (ty,o) = Records.Atom.find name comp in
       (o, Arg.proj ty)
     ) in
     let named = LabelMap.bindings comp.bindings |> List.filter_map (fun (lbl, (ty,o)) ->
-      if is_hidden_field (Types.Record.from_label lbl)
+      if is_hidden_field (Record.from_label lbl)
       then None
-      else Some (Types.Record.from_label lbl,o,Arg.proj ty)
+      else Some (Record.from_label lbl,o,Arg.proj ty)
     ) in
     let others =
       if comp.opened then
-        Some (Records.Atom.find (Types.Record.to_label id_of_ell) comp |> fst |> EllArg.proj)
+        Some (Records.Atom.find (Record.to_label id_of_ell) comp |> fst |> EllArg.proj)
       else None
     in
     (pos,named,others)
@@ -147,4 +148,4 @@ let print prec assoc fmt t =
 let printer_builder =
   Printer.builder ~to_t:to_t ~map:map ~print:print
 let printer_params = Printer.{ aliases = []; extensions = [(tag, printer_builder)]}
-let () = Types.Ty.add_printer_param printer_params
+let () = Mlsem.Types.Ty.add_printer_param printer_params

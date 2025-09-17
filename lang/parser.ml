@@ -1,7 +1,7 @@
 open Tree_sitter_run
 open Raw_tree
 module A = PAst
-open Common
+open Mlsem.Common
 
 let line_length = 0x10000
 let conv_pos tspos =

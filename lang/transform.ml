@@ -1,9 +1,8 @@
 open Ast
-open Common
 open R_types
 open Types
-module A = System.Ast
-module C = System.Const
+open Mlsem.Common
+module A = Mlsem.System.Ast
 
 let typeof_const c =
   match c with
@@ -145,7 +144,7 @@ let rec aux_e (eid,e) =
       let (npos,names,nrem,es) = parse_args args in
       let es = List.map aux_e es in
       let args = Eid.unique (), A.Constructor
-        (CCustom { cdom=CArgs.cdom (npos,names,nrem) ; cons=CArgs.cons (npos,names,nrem) }, es) in
+        (CCustom { cgen=true ; cdom=CArgs.cdom (npos,names,nrem) ; cons=CArgs.cons (npos,names,nrem) }, es) in
       A.App (aux_e f, args)
     | Ite (e, e1, e2) ->
       let e = aux_e e in

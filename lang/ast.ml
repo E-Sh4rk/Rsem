@@ -1,5 +1,6 @@
 
-open Common
+open Mlsem.Common
+open R_types
 
 type label = string
 [@@deriving show]

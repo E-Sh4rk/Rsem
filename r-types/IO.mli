@@ -1,4 +1,4 @@
-open Common
+open Mlsem.Common
 
 exception LexicalError of Position.t * string
 exception SyntaxError of Position.t * string

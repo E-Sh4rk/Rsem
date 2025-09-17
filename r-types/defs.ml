@@ -1,4 +1,4 @@
-open Types
+open Mlsem.Types
 
 module CArgs = struct
   open Args

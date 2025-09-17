@@ -1,6 +1,6 @@
 %{ (* Emacs, use -*- tuareg -*- to open this file. *)
 
-  open Types.TyExpr
+  open Mlsem.Types.TyExpr
   open RBuilder.Ext
 
   let builtin_type_or_custom str =

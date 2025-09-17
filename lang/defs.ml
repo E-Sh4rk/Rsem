@@ -1,6 +1,6 @@
 open R_types
 open Types
-open Common
+open Mlsem.Common
 
 let tv = TVar.mk TVar.KTemporary (Some "'a")
 

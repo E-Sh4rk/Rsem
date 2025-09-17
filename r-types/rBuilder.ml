@@ -1,4 +1,5 @@
 open Defs
+open Mlsem.Types
 
 module Ext = struct
   type prim = INT | LGL | DBL | CLX | CHR | RAW
@@ -7,16 +8,16 @@ module Ext = struct
     | AnyVec of bool
     | Scalar of prim
     | AnyScalar
-    | Ell of t Types.TyExpr.t *)
+    | Ell of t TyExpr.t *)
   type t =
-  | Vec of t Types.TyExpr.t * t Types.TyExpr.t
+  | Vec of t TyExpr.t * t TyExpr.t
   | AnyVec
   | Na
   | Prim of bool * prim
   | AnyPrim of bool
-  | ArgsDef of (bool * t Types.TyExpr.t) list
-              * (string * bool * t Types.TyExpr.t) list
-              * t Types.TyExpr.t option
+  | ArgsDef of (bool * t TyExpr.t) list
+              * (string * bool * t TyExpr.t) list
+              * t TyExpr.t option
 
   let prim_to_typ p =
     match p with
@@ -34,7 +35,7 @@ module Ext = struct
     | Na -> Prim.na
     | Prim (b,p) ->
       let ty = prim_to_typ p in
-      if b then Types.Ty.cup Prim.na ty else ty
+      if b then Ty.cup Prim.na ty else ty
     | AnyVec -> Vecs.any
     | Vec (p,i) -> Vecs.mk (f p) (f i)
     (* | Vec (false, INT) -> Vecs.int
@@ -65,7 +66,7 @@ module Ext = struct
       Args.mk_from_def (pos,named,others)
 end
 
-include (Types.Builder'.Make(Ext))
+include (Builder'.Make(Ext))
 
 type type_def =
 | Sig of string * type_expr

@@ -1,4 +1,4 @@
-open Types
+open Mlsem.Types
 
 module Prim = struct (* TODO: extension (for printing) *)
   let tt = Enum.define "tt" |> Enum.typ
@@ -29,9 +29,9 @@ module Vecs = struct
 
   let tag = Sstt.Tag.mk' "v" (Sstt.Tag.Monotonic {preserves_cap=true; preserves_cup=false})
   let mk v l =
-    let ty = Tuple.mk [Ty.cap v Prim.any_na ; Ty.cap l Types.Ty.int] in
+    let ty = Tuple.mk [Ty.cap v Prim.any_na ; Ty.cap l Mlsem.Types.Ty.int] in
     TagComp.mk (tag, ty) |> Descr.mk_tagcomp |> Ty.mk_descr
-  let mk_singl v = mk v (Types.Ty.interval (Some Z.one) (Some Z.one))
+  let mk_singl v = mk v (Mlsem.Types.Ty.interval (Some Z.one) (Some Z.one))
   let any = mk Ty.any Ty.any
 
   let map f l =
@@ -87,5 +87,5 @@ module Vecs = struct
   let printer_builder =
     Printer.builder ~to_t:to_t ~map:map ~print:print
   let printer_params = Printer.{ aliases = []; extensions = [(tag, printer_builder)]}
-  let () = Types.Ty.add_printer_param printer_params
+  let () = Mlsem.Types.Ty.add_printer_param printer_params
 end
