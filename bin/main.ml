@@ -43,7 +43,7 @@ let treat_def (idenv, env) past =
   let (id,ast) = PAst.transform { PAst.id = idenv } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
   match ast with
-  | VarAssign (false, v, e) -> treat_ast v (idenv, env) e
+  | VarAssign (v, e) -> treat_ast v (idenv, env) e
   | _ -> treat_ast dummy_var (idenv, env) (id, ast)
 
 let add_def (tenv, idenv, env) def =

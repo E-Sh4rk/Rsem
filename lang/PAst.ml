@@ -1,4 +1,5 @@
 open Mlsem.Common
+module MVariable = Mlsem.Lang.MVariable
 
 module Position = struct
   type t = Position.t
@@ -113,19 +114,17 @@ let aux_const c =
 let add_var ~lambda env str =
   let v =
     if lambda
-    then Variable.create_lambda (Some str)
-    else Variable.create_let (Some str)
+    then MVariable.create_lambda MVariable.Mut (Some str)
+    else MVariable.create_let MVariable.Mut (Some str)
   in
   StrMap.add str v env
 
 let add_def pid eid e str =
-  let def =
-    match StrMap.find_opt str pid with
-    | None -> None
-    | Some v -> Some (Eid.unique (), Ast.Id v)
-  in
   let v = StrMap.find str eid in
-  Eid.unique (), Ast.Declare (v, def, e)
+  match StrMap.find_opt str pid with
+  | None -> Eid.unique (), Ast.Declare (v, e)
+  | Some v -> Eid.unique (), Ast.Let (v, (Eid.unique (), Ast.Id v), e)
+
 let rec aux_e env (pos,e) =
   let eid = Eid.unique_with_pos pos in
   let e = match e with
@@ -135,8 +134,8 @@ let rec aux_e env (pos,e) =
   | Unop (str, e) -> Ast.Unop (var env (str^"__1"), aux_e env e)
   | Binop (str, (e1,e2)) ->
     begin match str, e1, e2 with
-    | "<-", (_, Id id), e2 -> Ast.VarAssign (false, var env id, aux_e env e2)
-    | "<<-", (_, Id id), e2 -> Ast.VarAssign (true, var env id, aux_e env e2)
+    | "<-", (_, Id id), e2 -> Ast.VarAssign (var env id, aux_e env e2)
+    | "<<-", (_, Id _), _ -> failwith "TODO"
     | _, _, _ -> Ast.Binop (var env (str^"__2"), aux_e env e1, aux_e env e2)
     end
   | Call ((_, Return),[]) -> Ast.Return None

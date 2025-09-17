@@ -2,7 +2,7 @@ open R_types
 open Types
 open Mlsem.Common
 
-let tv = TVar.mk TVar.KTemporary (Some "'a")
+(* let tv = TVar.mk TVar.KTemporary (Some "'a")
 
 let unref, unref_t =
   let v = Variable.create_let (Some "unref") in
@@ -22,7 +22,7 @@ let setref, setref_t =
 let uref, uref_t =
   let v = Variable.create_let (Some "uref") in
   let ty = Ref.mk (TVar.typ tv) in
-  v, ty
+  v, ty *)
 
 let tobool, tobool_t =
   let v = Variable.create_let (Some "tobool") in
@@ -32,7 +32,7 @@ let tobool, tobool_t =
   let ty = Ty.conj [def;tt;ff] in
   v, ty
 
-let defs = [unref, unref_t ; cref, cref_t ; setref, setref_t ; uref, uref_t ; tobool, tobool_t]
+let defs = [(*unref, unref_t ; cref, cref_t ; setref, setref_t ; uref, uref_t ;*) tobool, tobool_t]
 
 let initial_env =
   let add_def env (v,ty) =
