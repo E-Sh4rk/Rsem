@@ -63,6 +63,7 @@ let add_def (tenv, idenv, env) def =
 let () =
   Printexc.record_backtrace true ;
   System.Config.infer_overload := false ;
+  Mlsem.Lang.Config.void_ty := Null.null ;
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
   let _, idenv, env =
     List.fold_left add_def (RBuilder.empty_tenv, StrMap.empty, Defs.initial_env) tdefs in
