@@ -51,3 +51,13 @@ narrowing <- function(x) {
         return(NULL)
     return(-x)
 }
+
+loop_break <- function(x) {
+    i <- x
+    while (i != NULL) {
+        if (i > 100) break
+        print(i)
+        i <- i + 1
+        next
+    } 
+}

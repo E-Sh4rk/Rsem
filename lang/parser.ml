@@ -68,6 +68,10 @@ let extract5 tree =
   match tree with
   | Tuple [t1;t2;t3;t4;t5] -> t1,t2,t3,t4,t5
   | _ -> assert false
+let extract7 tree =
+  match tree with
+  | Tuple [t1;t2;t3;t4;t5;t6;t7] -> t1,t2,t3,t4,t5,t6,t7
+  | _ -> assert false
 let extract8 tree =
   match tree with
   | Tuple [t1;t2;t3;t4;t5;t6;t7;t8] -> t1,t2,t3,t4,t5,t6,t7,t8
@@ -138,8 +142,10 @@ and aux_case c tree =
   | "If_stmt" ->
     let _,_,_,e,_,_,e1,e2 = extract8 tree in
     A.Ite (aux_e e, aux_e e1, aux_else e2)
-  | "Ret" ->
-    A.Return
+  | "While_stmt" ->
+    let _,_,_,e,_,_,e' = extract7 tree in
+    A.While (aux_e e, aux_e e')
+  | "Ret" -> A.Return | "Brk" -> A.Break | "Next" -> A.Next
   | _ -> failwith ("TODO: "^c)
 
 and aux_else tree =

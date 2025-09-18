@@ -68,6 +68,10 @@ let rec aux_e (eid,e) =
       let e = aux_e e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
       A.Ite (e, Ty.tt, aux_e e1, aux_e e2)
+    | While (e, e') ->
+      let e = aux_e e in
+      let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
+      A.While (e, Ty.tt, aux_e e')
     | TyCheck (e, ty) ->
       let e = aux_e e in
       let tt = Eid.unique (), A.Value (Vecs.mk_singl Prim.tt |> GTy.mk) in
@@ -104,6 +108,7 @@ let rec aux_e (eid,e) =
       A.Lambda ([], GTy.mk pty, Variable.create_lambda None, e)
     | Seq (e1, e2) -> A.Let ([], Variable.create_gen None, aux_e e1, aux_e e2)
     | Return e -> A.Return (match e with Some e -> aux_e e | None -> Eid.unique (), A.Void)
+    | Break -> A.Break | Next -> A.Break
   in
   (eid, aux e)
 

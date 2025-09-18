@@ -22,10 +22,11 @@ type e' =
 | Binop of Variable.t * e * e
 | Call of e * arg list
 | Ite of e * e * e
+| While of e * e
 | TyCheck of e * Types.Ty.t
 | Function of param list * e
 | Seq of e * e
-| Return of e option
+| Return of e option | Break | Next
 [@@deriving show]
 and arg = arg_label * e
 [@@deriving show]
@@ -61,6 +62,7 @@ let map f e =
       | Binop (v, e1, e2) -> Binop (v, aux e1, aux e2)
       | Call (e, args) -> Call (aux e, List.map (fun (l,e) -> l, aux e) args)
       | Ite (e,e1,e2) -> Ite (aux e, aux e1, aux e2)
+      | While (e, e') -> While (aux e, aux e')
       | TyCheck (e, ty) -> TyCheck (aux e, ty)
       | Function (ps, e) ->
         let aux' = function
@@ -70,7 +72,7 @@ let map f e =
         in
         Function (List.map aux' ps, aux e)
       | Seq (e1,e2) -> Seq (aux e1, aux e2)
-      | Return eo -> Return (Option.map aux eo)
+      | Return eo -> Return (Option.map aux eo) | Break -> Break | Next -> Next
     in
     f (id,e)
   in

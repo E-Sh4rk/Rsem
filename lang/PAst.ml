@@ -21,8 +21,9 @@ type e' =
 | Call of e * arg option list
 | Function of bool (* \x fun? *) * param list option * e
 | Ite of e * e * e option
+| While of e * e
 | Braced of e list
-| Return
+| Return | Break | Next
 [@@deriving show]
 and arg =
 | Unnamed of e
@@ -52,7 +53,7 @@ let bv_params ps =
 
 let rec bv_e (_,e) =
   match e with
-  | Return | Const _ | Id _ | Function _ -> StrSet.empty
+  | Return | Break | Next | Const _ | Id _ | Function _ -> StrSet.empty
   | Unop (_,e) -> bv_e e
   | Binop (str, (e1, e2)) ->
     let res = match str, e1, e2 with
@@ -60,7 +61,7 @@ let rec bv_e (_,e) =
     | "<<-", (_, Id id), _ -> StrSet.singleton id
     | _, _, _ -> StrSet.empty
     in
-    StrSet.union res (StrSet.union (bv_e e1) (bv_e e2))
+    StrSet.union res (bv_es [e1;e2])
   | Call (e, args) ->
     let es = args |> List.concat_map (function
       | None  | Some (Named (_, None)) -> []
@@ -69,6 +70,7 @@ let rec bv_e (_,e) =
     in
     bv_es (e::es)
   | Ite (e, e1, e2) -> bv_es (e::e1::(match e2 with None -> [] | Some e2 -> [e2]))
+  | While (e, e') -> bv_es [e;e']
   | Braced es -> bv_es es
 and bv_es es =
   List.map bv_e es |> List.fold_left StrSet.union StrSet.empty
@@ -129,6 +131,7 @@ let rec aux_e env (pos,e) =
   let eid = Eid.unique_with_pos pos in
   let e = match e with
   | Return -> assert false
+  | Break -> Ast.Break | Next -> Ast.Next
   | Const c -> Ast.Const (aux_const c)
   | Id str -> Ast.Id (var env str)
   | Unop (str, e) -> Ast.Unop (var env (str^"__1"), aux_e env e)
@@ -148,6 +151,9 @@ let rec aux_e env (pos,e) =
     let e, e1 = aux_e env e, aux_e env e1 in
     let e2 = match e2 with None -> Eid.unique (), Ast.Const Ast.CNull | Some e2 -> aux_e env e2 in
     Ast.Ite (e, e1, e2)
+  | While (e, e') ->
+    let e, e' = aux_e env e, aux_e env e' in
+    Ast.While (e, e')
   | Function (_,params,e) ->
     (* Params *)
     let pbvs =
