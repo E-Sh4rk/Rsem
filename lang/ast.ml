@@ -1,5 +1,6 @@
 
 open Mlsem.Common
+module MVariable = Mlsem.Lang.MVariable
 open R_types
 
 type label = string
@@ -38,8 +39,8 @@ and e = Eid.t * e'
 [@@deriving show]
 
 module BuiltinOp = struct
-  let eq = Variable.create_let (Some "==__2")
-  let neq = Variable.create_let (Some "!=__2")
+  let eq = MVariable.create Immut (Some "==__2")
+  let neq = MVariable.create Immut (Some "!=__2")
   let all = [ eq ; neq ]
   let find_builtin str =
     let f v =

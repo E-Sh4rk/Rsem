@@ -1,4 +1,5 @@
 open Mlsem.Common
+module MVariable = Mlsem.Lang.MVariable
 open Lang
 open Tree_sitter_r
 open R_types
@@ -38,7 +39,7 @@ let treat_ast v (idenv, env) ast =
     err.descr |> Option.iter (Format.printf "%s@.") ;
     idenv, env
 
-let dummy_var = Variable.create_gen (Some "_")
+let dummy_var = Variable.create (Some "_")
 let treat_def (idenv, env) past =
   let (id,ast) = PAst.transform { PAst.id = idenv } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
@@ -51,7 +52,7 @@ let add_def (tenv, idenv, env) def =
   match def with
   | RBuilder.Sig (str, tye) ->
     let ty, _ = RBuilder.type_expr_to_typ tenv RBuilder.empty_vtenv tye in
-    let v = Variable.create_let (Some str) in
+    let v = MVariable.create Immut (Some str) in
     let idenv = StrMap.add str v idenv in
     let env = Env.add v (TyScheme.mk_poly (GTy.mk ty)) env in
     tenv, idenv, env

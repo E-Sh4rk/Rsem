@@ -83,7 +83,7 @@ let var env str =
   match StrMap.find_opt str env.id with
   | None ->
     begin match Ast.BuiltinOp.find_builtin str with
-    | None -> Variable.create_let (Some str)
+    | None -> MVariable.create Immut (Some str)
     | Some v -> v
     end
   | Some v -> v
@@ -116,8 +116,8 @@ let aux_const c =
 let add_var ~lambda env str =
   let v =
     if lambda
-    then MVariable.create_lambda MVariable.Mut (Some str)
-    else MVariable.create_let MVariable.Mut (Some str)
+    then MVariable.create MVariable.Mut (Some str)
+    else MVariable.create MVariable.Mut (Some str)
   in
   StrMap.add str v env
 

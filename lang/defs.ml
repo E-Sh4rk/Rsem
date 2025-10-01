@@ -1,31 +1,32 @@
 open R_types
 open Types
 open Mlsem.Common
+module MVariable = Mlsem.Lang.MVariable
 
 (* let tv = TVar.mk TVar.KTemporary (Some "'a")
 
 let unref, unref_t =
-  let v = Variable.create_let (Some "unref") in
+  let v = MVariable.create Immut (Some "unref") in
   let ty = Arrow.mk (Ref.mk (TVar.typ tv)) (TVar.typ tv) in
   v, ty
 
 let cref, cref_t =
-  let v = Variable.create_let (Some "cref") in
+  let v = MVariable.create Immut (Some "cref") in
   let ty = Arrow.mk (TVar.typ tv) (Ref.mk (TVar.typ tv)) in
   v, ty
 
 let setref, setref_t =
-  let v = Variable.create_let (Some "setref") in
+  let v = MVariable.create Immut (Some "setref") in
   let ty = Arrow.mk (Tuple.mk [Ref.mk (TVar.typ tv) ; TVar.typ tv]) (TVar.typ tv) in
   v, ty
 
 let uref, uref_t =
-  let v = Variable.create_let (Some "uref") in
+  let v = MVariable.create Immut (Some "uref") in
   let ty = Ref.mk (TVar.typ tv) in
   v, ty *)
 
 let tobool, tobool_t =
-  let v = Variable.create_let (Some "tobool") in
+  let v = MVariable.create Immut (Some "tobool") in
   let def = Arrow.mk Ty.any Ty.bool in
   let tt = Arrow.mk (Ty.disj [Prim.tt;Vecs.mk_singl Prim.tt]) Ty.tt in
   let ff = Arrow.mk (Ty.disj [Prim.ff;Vecs.mk_singl Prim.ff]) Ty.ff in

@@ -2,6 +2,7 @@ open Ast
 open R_types
 open Types
 open Mlsem.Common
+module MVariable = Mlsem.Lang.MVariable
 module A = Mlsem.Lang.Ast
 module SA = Mlsem.System.Ast
 
@@ -33,7 +34,7 @@ let rec rem_n_first n lst =
   | _, [] -> []
   | n, _::lst -> rem_n_first (n-1) lst
 
-let ellipsis_var = Variable.create_lambda (Some "...")
+let ellipsis_var = MVariable.create Immut (Some "...")
 
 let rec aux_e (eid,e) =
   let rec aux e =
@@ -62,7 +63,7 @@ let rec aux_e (eid,e) =
       let (npos,names,nrem,es) = parse_args args in
       let es = List.map aux_e es in
       let args = Eid.unique (), A.Constructor
-        (CCustom { cgen=true ; cdom=CArgs.cdom (npos,names,nrem) ; cons=CArgs.cons (npos,names,nrem) }, es) in
+        (CCustom { cname="cargs" ; cgen=true ; cdom=CArgs.cdom (npos,names,nrem) ; cons=CArgs.cons (npos,names,nrem) }, es) in
       A.App (aux_e f, args)
     | Ite (e, e1, e2) ->
       let e = aux_e e in
@@ -105,8 +106,8 @@ let rec aux_e (eid,e) =
         else None, e
       in
       let pty = CArgs.mk_from_def ([],named,ellipsis) in
-      A.Lambda ([], GTy.mk pty, Variable.create_lambda None, e)
-    | Seq (e1, e2) -> A.Let ([], Variable.create_gen None, aux_e e1, aux_e e2)
+      A.Lambda ([], GTy.mk pty, MVariable.create Immut None, e)
+    | Seq (e1, e2) -> A.Seq (aux_e e1, aux_e e2)
     | Return e -> A.Return (match e with Some e -> aux_e e | None -> Eid.unique (), A.Void)
     | Break -> A.Break | Next -> A.Break
   in
