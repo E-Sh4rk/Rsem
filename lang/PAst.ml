@@ -113,12 +113,8 @@ let aux_const c =
   | CBool b -> Ast.CLgl b
   | CNull -> Ast.CNull
 
-let add_var ~lambda env str =
-  let v =
-    if lambda
-    then MVariable.create MVariable.Mut (Some str)
-    else MVariable.create MVariable.Mut (Some str)
-  in
+let add_var env str =
+  let v = MVariable.create MVariable.Mut (Some str) in
   StrMap.add str v env
 
 let add_def pid eid e str =
@@ -161,7 +157,7 @@ let rec aux_e env (pos,e) =
       | None -> StrSet.empty
       | Some lst -> bv_params lst
     in
-    let pid = List.fold_left (add_var ~lambda:true) env.id (StrSet.elements pbvs) in
+    let pid = List.fold_left add_var env.id (StrSet.elements pbvs) in
     let env = { id=pid } in
     let params =
       match params with
@@ -170,7 +166,7 @@ let rec aux_e env (pos,e) =
     in
     (* Body *)
     let ebvs = bv_e e in
-    let eid = List.fold_left (add_var ~lambda:false) env.id (StrSet.elements ebvs) in
+    let eid = List.fold_left add_var env.id (StrSet.elements ebvs) in
     let env = { id=eid } in
     let e = List.fold_left (add_def pid eid) (aux_e env e) (StrSet.elements ebvs) in
     Ast.Function (params, e)
