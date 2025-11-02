@@ -47,27 +47,25 @@ let treat_def (idenv, env) past =
   | VarAssign (v, e) -> treat_ast v (idenv, env) e
   | _ -> treat_ast dummy_var (idenv, env) (id, ast)
 
-let add_def (tenv, idenv, env) def =
+let add_def (benv, idenv, env) def =
   let open R_types.Types in
   match def with
   | RBuilder.Sig (str, tye) ->
-    let ty, _ = RBuilder.type_expr_to_typ tenv RBuilder.empty_vtenv tye in
+    let ty, benv = RBuilder.type_expr_to_typ benv tye in
     let v = MVariable.create Immut (Some str) in
     let idenv = StrMap.add str v idenv in
     let env = Env.add v (TyScheme.mk_poly (GTy.mk ty)) env in
-    tenv, idenv, env
+    benv, idenv, env
   | RBuilder.Aliases lst ->
-    let tenv = RBuilder.define_aliases tenv RBuilder.empty_vtenv lst in
-    tenv, idenv, env
+    let benv = RBuilder.define_aliases benv lst in
+    benv, idenv, env
 
-
-let () =
-  Printexc.record_backtrace true ;
+let main () =
   System.Config.infer_overload := false ;
   Mlsem.Lang.Config.void_ty := Null.null ;
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
   let _, idenv, env =
-    List.fold_left add_def (RBuilder.empty_tenv, StrMap.empty, Defs.initial_env) tdefs in
+    List.fold_left add_def (RBuilder.empty_benv, StrMap.empty, Defs.initial_env) tdefs in
   Format.printf "%a@.@." Env.pp env ;
   let res = Parse.file "test.r" in
   match res.program with
@@ -78,3 +76,7 @@ let () =
     let prog = Parser.of_parser tree in
     Format.printf "%a@.@." PAst.pp prog ;
     List.fold_left treat_def (idenv, env) prog |> ignore
+
+let () =
+  Printexc.record_backtrace true ;
+  PEnv.sequential_handler PEnv.empty main () |> ignore

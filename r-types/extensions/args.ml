@@ -148,4 +148,4 @@ let print prec assoc fmt t =
 let printer_builder =
   Printer.builder ~to_t:to_t ~map:map ~print:print
 let printer_params = Printer.{ aliases = []; extensions = [(tag, printer_builder)]}
-let () = Mlsem.Types.Ty.add_printer_param printer_params
+let () = PEnv.add_printer_param printer_params
