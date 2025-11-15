@@ -94,7 +94,7 @@ let rec aux_e (eid,e) =
       let add_def e (v,o,ty) =
         match o with
         | Some e' ->
-          add_let v (A.Constructor (SA.Choice 2,
+          add_let v (A.Constructor (SA.Join 2,
             [ Eid.unique (), A.Value (GTy.mk ty) ; aux_e e' ])) e
         | None -> add_let v (A.Value (GTy.mk ty)) e
       in
