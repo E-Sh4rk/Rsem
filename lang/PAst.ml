@@ -121,7 +121,7 @@ let add_def pid eid e str =
   let v = StrMap.find str eid in
   match StrMap.find_opt str pid with
   | None -> Eid.unique (), Ast.Declare (v, e)
-  | Some v -> Eid.unique (), Ast.Let (v, (Eid.unique (), Ast.Id v), e)
+  | Some _ -> e
 
 let rec aux_e env (pos,e) =
   let eid = Eid.unique_with_pos pos in
