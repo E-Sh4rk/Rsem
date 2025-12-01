@@ -39,7 +39,7 @@
 %}
 
 %token VAL UNARY BINARY TYPE EOF
-%token LPAREN RPAREN EQUAL COMMA CONS COLON COLON_OPT
+%token LPAREN RPAREN EQUAL COMMA CONS COLON
 %token INTERROGATION_MARK EXCLAMATION_MARK
 %token VEC
 %token ARROW AND OR NEG DIFF
@@ -127,11 +127,11 @@ atomic_typ:
 | VEC i=length p=content { TExt (Vec (p,i)) }
 | LPAREN RPAREN { TBase TUnit }
 | LPAREN t=typ RPAREN { t }
-| LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE { TRecord (o, fs) }
+| LBRACE fs=separated_list(SEMICOLON, typ_field) o=optional_open RBRACE { TRecord (fs, o) }
 | LDBRACE ps=separated_list(SEMICOLON, typ_pos_field) RDBRACE
 { TExt (ArgsDef (ps,[],None)) }
 | LDBRACE ps=separated_list(SEMICOLON, typ_pos_field) DSEMICOLON
-          ns=separated_list(SEMICOLON, typ_field) others=optional_others RDBRACE
+          ns=separated_list(SEMICOLON, typ_named_field) others=optional_others RDBRACE
 { TExt (ArgsDef (ps,List.map (fun (l,t,o) -> (l,o,t)) ns,others)) }
 | LBRACKET re=typ_re RBRACKET { TSList re }
 
@@ -144,16 +144,20 @@ atomic_typ:
 | LPAREN p=typ RPAREN { p }
 
 %inline optional_open:
-  { false }
-| DOUBLEPOINT { true }
+  { TOption (TBase TEmpty) }
+| DOUBLEPOINT { TOption (TBase TAny) }
 
 %inline optional_others:
   { None }
 | DSEMICOLON t=simple_typ { Some t }
 
 %inline typ_field:
+  id=ID COLON t=simple_typ { (id, t) }
+| id=ID COLON t=atomic_typ INTERROGATION_MARK { (id, TOption t) }
+
+%inline typ_named_field:
   id=ID COLON t=simple_typ { (id, t, false) }
-| id=ID COLON_OPT t=simple_typ { (id, t, true) }
+| id=ID COLON t=atomic_typ INTERROGATION_MARK { (id, t, true) }
 
 %inline typ_pos_field:
   t=simple_typ { (false, t) }

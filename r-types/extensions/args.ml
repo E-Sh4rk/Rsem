@@ -28,19 +28,19 @@ let mk ?(allow_greater_posn=false) (args:Ty.t args) =
     [ pos |> List.map snd ; named |> List.map (fun (_,_,ty) -> ty) ]
     |> List.concat |> Ty.disj in
   let ell, o = match others with
-  | Some ell -> Ty.cup ell ty, true
-  | None -> ty, false
+  | Some ell -> Ty.cup ell ty, (Ty.any, true)
+  | None -> ty, (Ty.empty, true)
   in
-  let ell = [(id_of_ell, (false, EllArg.mk ell))] in
+  let ell = [(id_of_ell, (EllArg.mk ell, false))] in
   let posn = List.length pos |> Z.of_int in
   let posn = if allow_greater_posn then
       Mlsem.Types.Ty.interval (Some posn) None
     else
       Mlsem.Types.Ty.interval (Some posn) (Some posn)
   in
-  let posn = [(id_of_posn, (false, posn))] in
-  let pos = pos |> List.mapi (fun i (opt,ty) -> (id_of_pos i, (opt, Arg.mk ty))) in
-  let named = named |> List.map (fun (lbl, opt, ty) -> (id_of_lbl lbl, (opt, Arg.mk ty))) in
+  let posn = [(id_of_posn, (posn, false))] in
+  let pos = pos |> List.mapi (fun i (opt,ty) -> (id_of_pos i, (Arg.mk ty,opt))) in
+  let named = named |> List.map (fun (lbl, opt, ty) -> (id_of_lbl lbl, (Arg.mk ty,opt))) in
   let bindings = List.concat [posn ; pos ; named ; ell] in
   Record.mk o bindings |> add_tag
 
@@ -80,12 +80,12 @@ let map f t =
 
 let extract ty : Ty.t t =
   Ty.get_descr ty |> Descr.get_records |> Op.Records.as_union |> List.map (fun comp ->
-    let n = Records.Atom.find lbl_of_posn comp |> fst |> Ty.get_descr |> Descr.get_intervals
+    let n = Op.Records.Atom.find lbl_of_posn comp |> fst |> Ty.get_descr |> Descr.get_intervals
     |> Intervals.destruct |> List.hd |> Intervals.Atom.get |> fst in
     let n = match n with Some n -> Z.to_int n | None -> invalid_arg "Not an arg." in
     let pos = List.init n (fun n ->
       let name = id_of_pos n |> Record.to_label in
-      let (ty,o) = Records.Atom.find name comp in
+      let (ty,o) = Op.Records.Atom.find name comp in
       (o, Arg.proj ty)
     ) in
     let named = LabelMap.bindings comp.bindings |> List.filter_map (fun (lbl, (ty,o)) ->
@@ -94,8 +94,8 @@ let extract ty : Ty.t t =
       else Some (Record.from_label lbl,o,Arg.proj ty)
     ) in
     let others =
-      if comp.opened then
-        Some (Records.Atom.find (Record.to_label id_of_ell) comp |> fst |> EllArg.proj)
+      if comp.tail |> snd then
+        Some (Op.Records.Atom.find (Record.to_label id_of_ell) comp |> fst |> EllArg.proj)
       else None
     in
     (pos,named,others)

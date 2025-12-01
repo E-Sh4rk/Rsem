@@ -52,7 +52,6 @@ rule token = parse
 | "\\"    { DIFF }
 | "~"     { NEG  }
 | ":"     { COLON }
-| ":?"    { COLON_OPT }
 | "::"    { CONS }
 | ","     { COMMA }
 | "="     { EQUAL }

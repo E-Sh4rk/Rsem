@@ -68,24 +68,24 @@ let rec aux_e (eid,e) =
     | Ite (e, e1, e2) ->
       let e = aux_e e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
-      A.Ite (e, Ty.tt, aux_e e1, aux_e e2)
+      A.Ite (e, GTy.mk Ty.tt, aux_e e1, aux_e e2)
     | While (e, e') ->
       let e = aux_e e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
-      A.While (e, Ty.tt, aux_e e')
+      A.While (e, GTy.mk Ty.tt, aux_e e')
     | TyCheck (e, ty) ->
       let e = aux_e e in
       let tt = Eid.unique (), A.Value (Vecs.mk_singl Prim.tt |> GTy.mk) in
       let ff = Eid.unique (), A.Value (Vecs.mk_singl Prim.ff |> GTy.mk) in
-      A.Ite (e, ty, tt, ff)
+      A.Ite (e, GTy.mk ty, tt, ff)
     | Function (ps, e) ->
       let has_ell = List.mem Ellipsis ps in
       let ps = ps |> List.filter_map (function
       | Ellipsis -> None
       | NoDefault v ->
-        Some (v, None, TVar.mk TVar.KInfer None |> TVar.typ)
+        Some (v, None, TVar.mk KInfer None |> TVar.typ)
       | Default (v,e) ->
-        Some (v, Some e, TVar.mk TVar.KInfer None |> TVar.typ)
+        Some (v, Some e, TVar.mk KInfer None |> TVar.typ)
       ) in
       let named = ps |> List.map (fun (v,o,ty) -> Variable.get_name v |> Option.get, o <> None, ty) in
       let add_let v def e =
@@ -101,7 +101,7 @@ let rec aux_e (eid,e) =
       let e = List.fold_left add_def (aux_e e) ps in
       let ellipsis, e =
         if has_ell then
-          let ty = TVar.mk TVar.KInfer None |> TVar.typ in
+          let ty = TVar.mk KInfer None |> TVar.typ in
           Some ty, add_let ellipsis_var (A.Value (GTy.mk ty)) e
         else None, e
       in

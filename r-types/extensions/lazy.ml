@@ -5,7 +5,7 @@ end
 
 module MakeLazy(L:LazyTy) = struct
   open Sstt
-  let tag = Tag.mk' L.name (Tag.Monotonic { preserves_cap=true ; preserves_cup=false })
+  let tag = Tag.mk' L.name (Tag.Monotonic { preserves_cap=true ; preserves_cup=false ; preserves_extremum=false })
 
   let mk ty = (tag, ty) |> Descr.mk_tag |> Ty.mk_descr
   let extract_dnf comp = comp |> TagComp.dnf
