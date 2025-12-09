@@ -19,9 +19,9 @@ let typeof_const c =
 let recognize_const_comparison e =
   let f = function
   | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
-    when Variable.equals v BuiltinOp.eq -> id, TyCheck (e, typeof_const c)
+    when Variable.equal v BuiltinOp.eq -> id, TyCheck (e, typeof_const c)
   | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
-    when Variable.equals v BuiltinOp.neq -> id, TyCheck (e, typeof_const c |> Ty.neg)
+    when Variable.equal v BuiltinOp.neq -> id, TyCheck (e, typeof_const c |> Ty.neg)
   | e -> e
   in
   map f e
