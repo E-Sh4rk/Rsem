@@ -88,7 +88,7 @@ let extract ty : Ty.t t =
       let (ty,o) = Op.Records.Atom.find name comp in
       (o, Arg.proj ty)
     ) in
-    let named = LabelMap.bindings comp.bindings |> List.filter_map (fun (lbl, (ty,o)) ->
+    let named = Op.Records.Atom.LabelMap.bindings comp.bindings |> List.filter_map (fun (lbl, (ty,o)) ->
       if is_hidden_field (Record.from_label lbl)
       then None
       else Some (Record.from_label lbl,o,Arg.proj ty)
@@ -100,10 +100,10 @@ let extract ty : Ty.t t =
     in
     (pos,named,others)
   )
-let to_t node ctx comp =
+let to_t ctx comp =
   try
     let ty = Op.TagComp.as_atom comp |> snd in
-    Some (extract ty |> map (node ctx))
+    Some (extract ty |> map ctx.Printer.build)
   with Invalid_argument _ -> None
 
 let destruct ty = ty |> proj_tag |> extract
@@ -119,7 +119,7 @@ let destruct ty = ty |> proj_tag |> extract
   ) |> Op.Records.of_union |> Descr.mk_records |> Ty.mk_descr |> add_tag *)
 
 let print_seq f sep =
-  Format.(pp_print_list  ~pp_sep:(fun fmt () -> pp_print_string fmt sep) f)
+  Format.(pp_print_list  ~pp_sep:(fun fmt () -> Format.fprintf fmt sep) f)
 let print prec assoc fmt t =
   let print_pos fmt (opt,ty) =
     if opt then

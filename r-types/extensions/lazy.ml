@@ -19,10 +19,10 @@ module MakeLazy(L:LazyTy) = struct
   let map f ty = f ty
     (* dnf |> List.map (fun (ps,ns) -> (List.map f ps, List.map f ns)) *)
 
-  let to_t node ctx a =
+  let to_t ctx a =
     try
       let ty = extract_dnf a |> as_ty in
-      Some (ty |> map (node ctx))
+      Some (ty |> map ctx.Printer.build)
     with _ -> None
 
   let print_seq f sep =
