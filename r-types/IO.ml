@@ -1,4 +1,4 @@
-open Mlsem.Common
+open Mlsem_common
 open Lexing
 
 exception LexicalError of Position.t * string
@@ -15,10 +15,7 @@ let parse_with_errors parser buf =
   | Parser.Error ->
     raise (SyntaxError (pos_of_lexbuf buf, "syntax error"))
 
-let parse_type_string str =
-  let buf = from_string str in
-  buf.lex_curr_p <- { buf.lex_curr_p with  pos_fname = "_" };
-  parse_with_errors Parser.unique_typ buf
+let parse_type_string = Rstt_repl.IO.parse_type
 
 let parse_type_defs_file source_filename =
   let cin = open_in source_filename in

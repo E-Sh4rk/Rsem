@@ -1,7 +1,8 @@
-open Mlsem.Common
+open Rstt
+open Mlsem_common
 
 exception LexicalError of Position.t * string
 exception SyntaxError of Position.t * string
 
-val parse_type_defs_file : string -> RBuilder.type_defs
-val parse_type_string : string -> RBuilder.type_expr
+val parse_type_defs_file : string -> Defs.t
+val parse_type_string : string -> (string,string,string) Builder.t

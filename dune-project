@@ -17,5 +17,5 @@
 (package
  (name typed-r)
  (synopsis "A static type-checker for R")
- (depends (ocaml (>= 5.3.0)) dune mlsem rstt sstt)
+ (depends (ocaml (>= 5.3.0)) dune mlsem rstt-repl sstt)
 )

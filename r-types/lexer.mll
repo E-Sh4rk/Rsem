@@ -6,84 +6,30 @@
   let enter_newline lexbuf =
     Lexing.new_line lexbuf;
     lexbuf
-
-  let char_for_backslash = function
-    | 'n' -> '\010'
-    | 'r' -> '\013'
-    | 'b' -> '\008'
-    | 't' -> '\009'
-    | c   -> c
 }
 
 let backslash_escapes = ['\\' '\'' '"' 'n' 't' 'b' 'r' ' ']
 
 let newline = ('\010' | '\013' | "\013\010")
+let escaped_newline = '\\' newline
 
 let blank   = [' ' '\009' '\012']
 
 let id = ['a'-'z''_''A'-'Z']['a'-'z''A'-'Z''0'-'9''_''\'''?''!']*
-
-let decimal = ['0'-'9']+ ('_'+ ['0'-'9']+)*
-
-let int = decimal
-
-let float_e = decimal ['e' 'E'] (['-' '+']? decimal)?
-let float_comma = decimal '.' decimal (['e' 'E'] ['-' '+']? decimal)?
-let float = (float_e | float_comma)
-
-let type_var = '\'' ['a'-'z''A'-'Z''0'-'9']['a'-'z''A'-'Z''0'-'9''_']*
-let weak_type_var = '\'' '_' ['a'-'z''A'-'Z''0'-'9']['a'-'z''A'-'Z''0'-'9''_']*
+let sym = ['+''-']
 
 rule token = parse
 | newline { enter_newline lexbuf |> token }
 | blank   { token lexbuf }
 | "val" { VAL }
-| "v"   { VEC }
 | "unary"  { UNARY }
 | "binary" { BINARY }
 | "type"  { TYPE }
-| "where" { WHERE }
-| "and"   { AND_KW }
-| "or"    { OR_KW }
 | "(*"    { comment 0 lexbuf }
-| "->"    { ARROW }
-| "&"     { AND }
-| "|"     { OR }
-| "\\"    { DIFF }
-| "~"     { NEG  }
-| ":"     { COLON }
-| "::"    { CONS }
-| ","     { COMMA }
-| "="     { EQUAL }
-| "?"     { INTERROGATION_MARK }
-| "!"     { EXCLAMATION_MARK }
-| "("     { LPAREN }
-| ")"     { RPAREN }
-| "{{"     { LDBRACE }
-| "}}"     { RDBRACE }
-| "{"     { LBRACE }
-| "}"     { RBRACE }
-| "<"     { LT }
-| ">"     { GT }
-| "["     { LBRACKET }
-| "]"     { RBRACKET }
-| ";"     { SEMICOLON }
-| ";;"    { DSEMICOLON }
-| "*"     { TIMES }
-| ".."    { DOUBLEPOINT }
-| "..."   { TRIPLEPOINT }
-| "-"     { MINUS }
-| "+"     { PLUS  }
-| int as i { LINT (Z.of_string i) }
-| float as f { LFLOAT (float_of_string f) }
-| "true"  { LBOOL true }
-| "false" { LBOOL false }
-| '"' { read_string (Buffer.create 17) lexbuf }
-| '\'' ([^ '\'' '\\' '\010' '\013'] as c) '\'' { LCHAR c }
-| '\'' '\\' (backslash_escapes as c) '\'' { LCHAR (char_for_backslash c) }
+| '='     { EQUAL }
+| ':'     { read_ty (Buffer.create 17) lexbuf }
 | id as s { ID s }
-| type_var as s { TVAR (String.sub s 1 ((String.length s) - 1)) }
-| weak_type_var as s { TVAR_WEAK (String.sub s 1 ((String.length s) - 1)) }
+| '(' sym as s ')' { SYM s }
 | eof     { EOF }
 | _ { raise (LexerError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
 
@@ -100,13 +46,13 @@ and comment depth = parse
   comment depth lexbuf
 }
 
-and read_string buf = parse
-| newline { enter_newline lexbuf |> read_string buf }
-| '"' { LSTRING (Buffer.contents buf) }
-| '\\' (backslash_escapes as c) { Buffer.add_char buf (char_for_backslash c); read_string buf lexbuf }
-| [^ '"' '\\' '\010' '\013']+
+and read_ty buf = parse
+| escaped_newline {
+  Buffer.add_string buf (Lexing.lexeme lexbuf);
+  enter_newline lexbuf |> read_ty buf }
+| newline { TY (Buffer.contents buf) }
+| eof { TY (Buffer.contents buf) }
+| _
   { Buffer.add_string buf (Lexing.lexeme lexbuf);
-    read_string buf lexbuf
+    read_ty buf lexbuf
   }
-| _ { raise (LexerError ("Illegal string character: " ^ Lexing.lexeme lexbuf)) }
-| eof { raise (LexerError ("String is not terminated")) }

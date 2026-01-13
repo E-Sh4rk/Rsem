@@ -1,7 +1,7 @@
 (library
   (public_name typed-r.r_types)
   (name r_types)
-  (libraries mlsem)
+  (libraries mlsem rstt-repl)
 )
 
 (ocamllex lexer)
