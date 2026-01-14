@@ -8,15 +8,19 @@ module A = Mlsem.Lang.Ast
 module SA = Mlsem.System.Ast
 module TVar = Mlsem.Types.TVar
 
-let typeof_const c =
+let tyexpr_of_const c =
   let open Builder in
-  let b = match c with
+  match c with
   | CChr _ -> TVec (Vec.CstLength (1, PChr))
   | CDbl _ -> TVec (Vec.CstLength (1, PDbl))
   | CLgl b -> TVec (Vec.CstLength (1, PLgl' b))
   | CNull -> TNull
-  in
+let typeof_const c =
+  let open Builder in
+  let b = TAttr { content=tyexpr_of_const c ; classes=CNoClass } in
   Builder.build Builder.TIdMap.empty b
+let typeof_const_anyclass c =
+  tyexpr_of_const c |> Builder.build Builder.TIdMap.empty
 
 (* Arguments builder / Attr projector *)
 
@@ -85,9 +89,9 @@ end
 let recognize_const_comparison e =
   let f = function
   | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
-    when Variable.equal v BuiltinOp.eq -> id, TyCheck (e, typeof_const c)
+    when Variable.equal v BuiltinOp.eq -> id, TyCheck (e, typeof_const_anyclass c)
   | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
-    when Variable.equal v BuiltinOp.neq -> id, TyCheck (e, typeof_const c |> Ty.neg)
+    when Variable.equal v BuiltinOp.neq -> id, TyCheck (e, typeof_const_anyclass c |> Ty.neg)
   | e -> e
   in
   map f e
