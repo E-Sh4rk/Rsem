@@ -56,14 +56,28 @@ module ArgBuilder = struct
         let ty' = cons (npos,names,nrem) args in
         if Ty.leq ty' ty then Some args else None
       )
-    with Invalid_argument _ ->
-      let n = npos + (List.length names) + nrem in
-      [List.init n (fun _ -> Ty.any)]
+    with Invalid_argument _ -> []
 end
 
 module AttrProj = struct
   let pdom ty = Attr.mk_anyclass ty
   let proj ty = Attr.proj_content ty
+end
+
+module AttrConstr = struct
+  let cons classes tys =
+    match tys with
+    | [ty] -> Attr.mk { content=ty ; classes }
+    | _ -> assert false
+  let cdom classes ty =
+    try
+      Attr.destruct ty
+      |> List.filter_map (fun (ps,_) ->
+        let content = ps |> List.map (fun a -> a.Attr.content) |> Ty.conj in
+        let ty' = Attr.mk { content ; classes } in
+        if Ty.leq ty' ty then Some [content] else None
+      )
+    with Invalid_argument _ -> []
 end
 
 (* Transformations *)
@@ -178,7 +192,9 @@ let rec aux_e (eid,e) =
         else Ty.O.absent |> Ty.F.mk_descr, e
       in
       let pty = Arg.mk { pos=[];named;pos_named;tl } in
-      A.Lambda ([], GTy.mk pty, MVariable.create Immut None, e)
+      let lambda = Eid.unique (), A.Lambda ([], GTy.mk pty, MVariable.create Immut None, e) in
+      A.Constructor
+        (CCustom { cname="cattr" ; cgen=true ; cdom=AttrConstr.cdom Classes.noclass ; cons=AttrConstr.cons Classes.noclass }, [lambda])
     | Seq (e1, e2) -> A.Seq (aux_e e1, aux_e e2)
     | Return e -> A.Return (match e with Some e -> aux_e e | None -> Eid.unique (), A.Void)
     | Break -> A.Break | Next -> A.Break
