@@ -59,5 +59,6 @@ loop_break <- function(x) {
         print(i)
         i <- i + 1
         next
-    } 
+    }
+    i
 }
