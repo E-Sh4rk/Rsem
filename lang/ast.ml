@@ -1,7 +1,6 @@
 
 open Mlsem.Common
 module MVariable = Mlsem.Lang.MVariable
-open R_types
 
 type label = string
 [@@deriving show]
@@ -24,14 +23,14 @@ type e' =
 | Call of e * arg list
 | Ite of e * e * e
 | While of e * e
-| TyCheck of e * Types.Ty.t
+| TyCheck of e * Mlsem.Types.Ty.t
 | Function of param list * e
 | Seq of e * e
 | Return of e option | Break | Next
 [@@deriving show]
 and arg = arg_label * e
 [@@deriving show]
-and arg_label = Positional | Named of label
+and arg_label = Positional | Named of label | Ell
 [@@deriving show]
 and param = NoDefault of Variable.t | Default of Variable.t * e | Ellipsis
 [@@deriving show]

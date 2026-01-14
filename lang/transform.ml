@@ -2,17 +2,64 @@ open Ast
 open R_types
 open Types
 open Mlsem.Common
+module GTy = Mlsem.Types.GTy
 module MVariable = Mlsem.Lang.MVariable
 module A = Mlsem.Lang.Ast
 module SA = Mlsem.System.Ast
+module TVar = Mlsem.Types.TVar
 
 let typeof_const c =
-  match c with
-  | CChr _ -> Vecs.mk_singl Prim.chr
-  | CDbl _ -> Vecs.mk_singl Prim.dbl
-  | CLgl true -> Vecs.mk_singl Prim.tt
-  | CLgl false -> Vecs.mk_singl Prim.ff
-  | CNull -> Null.null
+  let open Builder in
+  let b = match c with
+  | CChr _ -> TVec (Vec.CstLength (1, PChr))
+  | CDbl _ -> TVec (Vec.CstLength (1, PDbl))
+  | CLgl b -> TVec (Vec.CstLength (1, PLgl' b))
+  | CNull -> TNull
+  in
+  Builder.build Builder.TIdMap.empty b
+
+(* Arguments builder *)
+
+module ArgBuilder = struct
+  open Arg
+  let split_at_index lst n =
+    let rec aux acc next n =
+      if n = 0 then List.rev acc, next
+      else match next with
+      | [] -> assert false
+      | p::defs -> aux (p::acc) defs (n-1)
+    in
+    aux [] lst n
+  let cons (npos,names,nrem) lst =
+    let definite, rem = split_at_index lst (npos + (List.length names)) in
+    assert (List.length rem = nrem) ;
+    let tl' = Ty.disj rem |> Ty.O.optional |> Ty.F.mk_descr in
+    let pos', named' = split_at_index definite npos in
+    let pos' = List.map (fun ty -> ty |> Ty.O.required |> Ty.F.mk_descr) pos' in
+    let named' = List.map2 (fun ty lbl -> lbl, ty |> Ty.O.required |> Ty.F.mk_descr) named' names in
+    mk' {pos';tl';named'}
+  let cdom (npos,names,nrem) ty =
+    try
+      destruct ty
+      |> List.filter_map (fun a ->
+        let pos, named, tl =
+          match a with
+          | DefSite { pos ; pos_named ; tl ; named } ->
+            pos@(List.map snd pos_named), named@pos_named, tl
+          | CallSite { pos' ; named' ; tl' } -> pos', named', tl'
+        in
+        let args1 = List.init npos (fun i -> if i < List.length pos then List.nth pos i else tl) in
+        let args2 = List.map (fun name -> match List.assoc_opt name named with Some ty -> ty | None -> tl) names in
+        let args3 = List.init nrem (fun _ -> tl) in
+        let args = List.concat [args1 ; args2 ; args3] in
+        let args = List.map (fun fty -> Ty.F.get_descr fty |> Ty.O.get) args in
+        let ty' = cons (npos,names,nrem) args in
+        if Ty.leq ty' ty then Some args else None
+      )
+    with Invalid_argument _ ->
+      let n = npos + (List.length names) + nrem in
+      [List.init n (fun _ -> Ty.any)]
+end
 
 (* Transformations *)
 
@@ -54,32 +101,33 @@ let rec aux_e (eid,e) =
         | (lbl,e)::args ->
           let (npos,named,nrem,es) = parse_args args in
           begin match lbl with
-          | Positional when named=[] -> npos+1,named,nrem,e::es
-          | Positional -> npos,named,nrem+1,e::es
-          | Named lbl when nrem=0 -> npos,lbl::named,nrem,e::es
-          | Named _ -> failwith "Unsupported arguments layout."
+          | Positional -> npos+1,named,nrem,e::es
+          | Named lbl when npos=0 -> 0,lbl::named,nrem,e::es
+          | Named lbl -> 0,[lbl],nrem+npos+List.length named,e::es
+          | Ell -> 0,[],nrem+npos+List.length named+1,e::es
           end
       in
       let (npos,names,nrem,es) = parse_args args in
       let es = List.map aux_e es in
       let args = Eid.unique (), A.Constructor
-        (CCustom { cname="cargs" ; cgen=true ; cdom=CArgs.cdom (npos,names,nrem) ; cons=CArgs.cons (npos,names,nrem) }, es) in
+        (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (npos,names,nrem) ; cons=ArgBuilder.cons (npos,names,nrem) }, es) in
       A.App (aux_e f, args)
     | Ite (e, e1, e2) ->
       let e = aux_e e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
-      A.Ite (e, GTy.mk Ty.tt, aux_e e1, aux_e e2)
+      A.Ite (e, GTy.mk Defs.test_type, aux_e e1, aux_e e2)
     | While (e, e') ->
       let e = aux_e e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
-      A.While (e, GTy.mk Ty.tt, aux_e e')
+      A.While (e, GTy.mk Defs.test_type, aux_e e')
     | TyCheck (e, ty) ->
       let e = aux_e e in
-      let tt = Eid.unique (), A.Value (Vecs.mk_singl Prim.tt |> GTy.mk) in
-      let ff = Eid.unique (), A.Value (Vecs.mk_singl Prim.ff |> GTy.mk) in
+      let tt = Eid.unique (), A.Value (typeof_const (CLgl true) |> GTy.mk) in
+      let ff = Eid.unique (), A.Value (typeof_const (CLgl false) |> GTy.mk) in
       A.Ite (e, GTy.mk ty, tt, ff)
     | Function (ps, e) ->
       let has_ell = List.mem Ellipsis ps in
+      (* TODO: pos, not_pos (both are named) *)
       let ps = ps |> List.filter_map (function
       | Ellipsis -> None
       | NoDefault v ->

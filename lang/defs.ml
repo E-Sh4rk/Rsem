@@ -3,41 +3,26 @@ open Types
 open Mlsem.Common
 module MVariable = Mlsem.Lang.MVariable
 
-(* let tv = TVar.mk TVar.KTemporary (Some "'a")
+let resolve ty = Builder.resolve Builder.empty_env ty |> snd
+let build = Builder.build Builder.TIdMap.empty
+let truthy = IO.parse_type_string("v1(^tt)") |> resolve |> build
+let falsy = IO.parse_type_string("v1(^ff)") |> resolve |> build
 
-let unref, unref_t =
-  let v = MVariable.create Immut (Some "unref") in
-  let ty = Arrow.mk (Ref.mk (TVar.typ tv)) (TVar.typ tv) in
-  v, ty
-
-let cref, cref_t =
-  let v = MVariable.create Immut (Some "cref") in
-  let ty = Arrow.mk (TVar.typ tv) (Ref.mk (TVar.typ tv)) in
-  v, ty
-
-let setref, setref_t =
-  let v = MVariable.create Immut (Some "setref") in
-  let ty = Arrow.mk (Tuple.mk [Ref.mk (TVar.typ tv) ; TVar.typ tv]) (TVar.typ tv) in
-  v, ty
-
-let uref, uref_t =
-  let v = MVariable.create Immut (Some "uref") in
-  let ty = Ref.mk (TVar.typ tv) in
-  v, ty *)
-
+let test_type = Mlsem.Types.Ty.tt
 let tobool, tobool_t =
+  let open Mlsem.Types in
   let v = MVariable.create Immut (Some "tobool") in
   let def = Arrow.mk Ty.any Ty.bool in
-  let tt = Arrow.mk (Ty.disj [Prim.tt;Vecs.mk_singl Prim.tt]) Ty.tt in
-  let ff = Arrow.mk (Ty.disj [Prim.ff;Vecs.mk_singl Prim.ff]) Ty.ff in
+  let tt = Arrow.mk truthy Ty.tt in
+  let ff = Arrow.mk falsy Ty.ff in
   let ty = Ty.conj [def;tt;ff] in
   v, ty
 
-let defs = [(*unref, unref_t ; cref, cref_t ; setref, setref_t ; uref, uref_t ;*) tobool, tobool_t]
+let defs = [tobool, tobool_t]
 
 let initial_env =
+  let open Mlsem.Types in
   let add_def env (v,ty) =
     Env.add v (GTy.mk ty |> TyScheme.mk_poly) env
   in
   List.fold_left add_def Env.empty defs
-  
