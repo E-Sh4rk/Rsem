@@ -78,4 +78,6 @@ let main () =
 
 let () =
   Printexc.record_backtrace true ;
+  Mlsem_types.PEnv.add_printer_param (Rstt.Pp.printer_params ()) ;
+  Mlsem_system.Config.normalization_fun := Rstt.Simplify.partition_vecs ;
   PEnv.sequential_handler PEnv.empty main () |> ignore
