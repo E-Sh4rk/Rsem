@@ -47,12 +47,20 @@ let treat_def (idenv, env) past =
   | VarAssign (v, e) -> treat_ast v (idenv, env) e
   | _ -> treat_ast dummy_var (idenv, env) (id, ast)
 
+let add_struct_guards t =
+  let open Rstt.Builder in
+  let aux t =
+    match t with
+    | TArrow (l,r) -> TArrow (TStruct l,r)
+    | t -> t
+  in
+  map aux Fun.id Fun.id t
 let add_def (benv, idenv, env) def =
   let open R_types.Types in
   match def with
   | Sigs.Sig (str, tye) ->
     let benv, ty = Builder.resolve benv tye in
-    let ty = Builder.build Builder.TIdMap.empty ty in
+    let ty = ty |> add_struct_guards |> Builder.build Builder.TIdMap.empty in
     let v = MVariable.create Immut (Some str) in
     let idenv = StrMap.add str v idenv in
     let env = Env.add v (TyScheme.mk_poly (GTy.mk ty)) env in
