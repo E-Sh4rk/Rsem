@@ -18,7 +18,7 @@ let typeof_const c =
   in
   Builder.build Builder.TIdMap.empty b
 
-(* Arguments builder *)
+(* Arguments builder / Attr projector *)
 
 module ArgBuilder = struct
   open Arg
@@ -59,6 +59,11 @@ module ArgBuilder = struct
     with Invalid_argument _ ->
       let n = npos + (List.length names) + nrem in
       [List.init n (fun _ -> Ty.any)]
+end
+
+module AttrProj = struct
+  let pdom ty = Attr.mk_anyclass ty
+  let proj ty = Attr.proj_content ty
 end
 
 (* Transformations *)
@@ -111,8 +116,9 @@ let rec aux_e (eid,e) =
       let es = List.map aux_e es in
       let args = Eid.unique (), A.Constructor
         (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (npos,names,nrem) ; cons=ArgBuilder.cons (npos,names,nrem) }, es) in
-      (* TODO: unwrap f (remove attributes) *)
-      A.App (aux_e f, args)
+      let f = Eid.unique (), A.Projection
+        (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux_e f) in
+      A.App (f, args)
     | Ite (e, e1, e2) ->
       let e = aux_e e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
