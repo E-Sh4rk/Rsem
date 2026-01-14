@@ -73,7 +73,7 @@ let main () =
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
   let _, idenv, env =
     List.fold_left add_def (Rstt.Builder.empty_env, StrMap.empty, Defs.initial_env) tdefs in
-  Format.printf "%a@.@." Env.pp env ;
+  (* Format.printf "%a@.@." Env.pp env ; *)
   let res = Parse.file "test.r" in
   match res.program with
   | None -> ()
@@ -81,7 +81,7 @@ let main () =
     Boilerplate.dump_extras res.extras ;
     let tree = Boilerplate.map_program () prog in
     let prog = Parser.of_parser tree in
-    Format.printf "%a@.@." PAst.pp prog ;
+    (* Format.printf "%a@.@." PAst.pp prog ; *)
     List.fold_left treat_def (idenv, env) prog |> ignore
 
 let () =

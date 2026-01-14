@@ -29,7 +29,7 @@ rule token = parse
 | '='     { EQUAL }
 | ':'     { read_ty (Buffer.create 17) lexbuf }
 | id as s { ID s }
-| '(' sym as s ')' { SYM s }
+| '(' (sym as s) ')' { SYM (String.make 1 s) }
 | eof     { EOF }
 | _ { raise (LexerError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
 
