@@ -3,8 +3,8 @@ module MVariable = Mlsem.Lang.MVariable
 open Lang
 open Tree_sitter_r
 open R_types
-open Types
 module System = Mlsem.System
+open Mlsem.Types
 
 (* let () =
   Tree_sitter_run.Main.run
@@ -31,8 +31,8 @@ let treat_ast v (idenv, env) ast =
     let renvs = System.Refinement.refinement_envs env mlast in
     let anns = System.Reconstruction.infer env renvs mlast in
     let typ = System.Checker.typeof_def env anns mlast in
-    let typ = Types.TyScheme.norm_and_simpl typ in
-    Format.printf "%a: %a@.@." Variable.pp v Types.TyScheme.pp_short typ ;
+    let typ = TyScheme.norm_and_simpl typ in
+    Format.printf "%a: %a@.@." Variable.pp v TyScheme.pp_short typ ;
     idenv, env
   with System.Checker.Untypeable (err) ->
     Format.printf "Untypeable: %s@." err.title ;
@@ -50,22 +50,21 @@ let treat_def (idenv, env) past =
 let add_def (benv, idenv, env) def =
   let open R_types.Types in
   match def with
-  | RBuilder.Sig (str, tye) ->
-    let ty, benv = RBuilder.type_expr_to_typ benv tye in
+  | Sigs.Sig (str, tye) ->
+    let benv, ty = Builder.resolve benv tye in
+    let ty = Builder.build Builder.TIdMap.empty ty in
     let v = MVariable.create Immut (Some str) in
     let idenv = StrMap.add str v idenv in
     let env = Env.add v (TyScheme.mk_poly (GTy.mk ty)) env in
     benv, idenv, env
-  | RBuilder.Aliases lst ->
-    let benv = RBuilder.define_aliases benv lst in
-    benv, idenv, env
+  | Sigs.Alias _ -> failwith "TODO"
 
 let main () =
   System.Config.infer_overload := false ;
-  Mlsem.Lang.Config.void_ty := Null.null ;
+  Mlsem.Lang.Config.void_ty := Transform.typeof_const CNull ;
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
   let _, idenv, env =
-    List.fold_left add_def (RBuilder.empty_benv, StrMap.empty, Defs.initial_env) tdefs in
+    List.fold_left add_def (Rstt.Builder.empty_env, StrMap.empty, Defs.initial_env) tdefs in
   Format.printf "%a@.@." Env.pp env ;
   let res = Parse.file "test.r" in
   match res.program with

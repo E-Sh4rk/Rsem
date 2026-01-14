@@ -4,7 +4,7 @@
 
 %token VAL UNARY BINARY TYPE EQUAL EOF
 %token<string> ID SYM TY
-%start<Defs.t> defs
+%start<Sigs.t> defs
 
 %%
 

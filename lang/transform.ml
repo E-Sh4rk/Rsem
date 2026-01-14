@@ -111,6 +111,7 @@ let rec aux_e (eid,e) =
       let es = List.map aux_e es in
       let args = Eid.unique (), A.Constructor
         (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (npos,names,nrem) ; cons=ArgBuilder.cons (npos,names,nrem) }, es) in
+      (* TODO: unwrap f (remove attributes) *)
       A.App (aux_e f, args)
     | Ite (e, e1, e2) ->
       let e = aux_e e in
@@ -127,15 +128,30 @@ let rec aux_e (eid,e) =
       A.Ite (e, GTy.mk ty, tt, ff)
     | Function (ps, e) ->
       let has_ell = List.mem Ellipsis ps in
-      (* TODO: pos, not_pos (both are named) *)
-      let ps = ps |> List.filter_map (function
-      | Ellipsis -> None
-      | NoDefault v ->
-        Some (v, None, TVar.mk KInfer None |> TVar.typ)
-      | Default (v,e) ->
-        Some (v, Some e, TVar.mk KInfer None |> TVar.typ)
-      ) in
-      let named = ps |> List.map (fun (v,o,ty) -> Variable.get_name v |> Option.get, o <> None, ty) in
+      let rec treat_params ps =
+        match ps with
+        | [] -> [], []
+        | Ellipsis::ps -> [], treat_params_nopos ps
+        | (NoDefault v)::ps ->
+          let pos, nopos = treat_params ps in
+          (v, None, TVar.mk KInfer None |> TVar.typ)::pos, nopos
+        | (Default (v,e))::ps ->
+          let pos, nopos = treat_params ps in
+          (v, Some e, TVar.mk KInfer None |> TVar.typ)::pos, nopos
+      and treat_params_nopos ps =
+        match ps with
+        | [] -> []
+        | Ellipsis::_ -> failwith "Invalid parameter layout"
+        | (NoDefault v)::ps ->
+          (v, None, TVar.mk KInfer None |> TVar.typ)::(treat_params_nopos ps)
+        | (Default (v,e))::ps ->
+          (v, Some e, TVar.mk KInfer None |> TVar.typ)::(treat_params_nopos ps)
+      in
+      let pos, nopos = treat_params ps in
+      let pos_named = pos |> List.map (fun (v,o,ty) -> Variable.get_name v |> Option.get,
+        (if Option.is_none o then Ty.O.required ty else Ty.O.optional ty) |> Ty.F.mk_descr) in
+      let named = nopos |> List.map (fun (v,o,ty) -> Variable.get_name v |> Option.get,
+        (if Option.is_none o then Ty.O.required ty else Ty.O.optional ty) |> Ty.F.mk_descr) in
       let add_let v def e =
         Eid.unique (), A.Let ([], v, (Eid.unique (), def), e)
       in
@@ -146,14 +162,16 @@ let rec aux_e (eid,e) =
             [ Eid.unique (), A.Value (GTy.mk ty) ; aux_e e' ])) e
         | None -> add_let v (A.Value (GTy.mk ty)) e
       in
-      let e = List.fold_left add_def (aux_e e) ps in
-      let ellipsis, e =
-        if has_ell then
-          let ty = TVar.mk KInfer None |> TVar.typ in
-          Some ty, add_let ellipsis_var (A.Value (GTy.mk ty)) e
-        else None, e
+      let e = List.fold_left add_def (aux_e e) (pos@nopos) in
+      let tl, e =
+        if has_ell
+        then
+          let ty = TVar.mk KInfer None |> TVar.typ |> Ty.O.optional |> Ty.F.mk_descr in
+          let ellty = Lst.mk ([],[],ty) |> Attr.mk_noclass in
+          ty, add_let ellipsis_var (A.Value (GTy.mk ellty)) e
+        else Ty.O.absent |> Ty.F.mk_descr, e
       in
-      let pty = CArgs.mk_from_def ([],named,ellipsis) in
+      let pty = Arg.mk { pos=[];named;pos_named;tl } in
       A.Lambda ([], GTy.mk pty, MVariable.create Immut None, e)
     | Seq (e1, e2) -> A.Seq (aux_e e1, aux_e e2)
     | Return e -> A.Return (match e with Some e -> aux_e e | None -> Eid.unique (), A.Void)
