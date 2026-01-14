@@ -77,7 +77,9 @@ let main () =
     List.fold_left treat_def (idenv, env) prog |> ignore
 
 let () =
+  Mlsem.Types.Recording.start_recording () ;
   Printexc.record_backtrace true ;
   Mlsem_types.PEnv.add_printer_param (Rstt.Pp.printer_params ()) ;
   Mlsem_system.Config.normalization_fun := Rstt.Simplify.partition_vecs ;
-  PEnv.sequential_handler PEnv.empty main () |> ignore
+  PEnv.sequential_handler PEnv.empty main () |> ignore ;
+  Mlsem.Types.Recording.save_to_file "instances.json" (Mlsem.Types.Recording.tally_calls ())

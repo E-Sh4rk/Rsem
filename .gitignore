@@ -6,3 +6,5 @@ _build
 
 # Dune-generated files
 *.install
+
+instances.json
