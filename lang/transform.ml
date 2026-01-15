@@ -11,9 +11,9 @@ module TVar = Mlsem.Types.TVar
 let tyexpr_of_const c =
   let open Builder in
   match c with
-  | CChr _ -> TVec (Vec.CstLength (1, PChr))
-  | CDbl _ -> TVec (Vec.CstLength (1, PDbl))
-  | CLgl b -> TVec (Vec.CstLength (1, PLgl' b))
+  | CChr _ -> TVec (Vec.CstLength (1, PHat PChr))
+  | CDbl _ -> TVec (Vec.CstLength (1, PHat PDbl))
+  | CLgl b -> TVec (Vec.CstLength (1, PHat (PLgl' b)))
   | CNull -> TNull
 let typeof_const c =
   let open Builder in

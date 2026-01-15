@@ -29,6 +29,7 @@ let treat_ast v (idenv, env) ast =
     (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
     let env = extend_env mlast env in
     let renvs = System.Refinement.refinement_envs env mlast in
+    (* REnvSet.elements renvs |> List.iter (fun renv -> Format.printf "Renv: %a@." REnv.pp renv) ; *)
     let anns = System.Reconstruction.infer env renvs mlast in
     let typ = System.Checker.typeof_def env anns mlast in
     let typ = TyScheme.norm_and_simpl typ in
