@@ -48,7 +48,6 @@ and comment depth = parse
 
 and read_ty buf = parse
 | escaped_newline {
-  Buffer.add_string buf (Lexing.lexeme lexbuf);
   enter_newline lexbuf |> read_ty buf }
 | newline { TY (Buffer.contents buf) }
 | eof { TY (Buffer.contents buf) }
