@@ -48,6 +48,7 @@ let treat_def (idenv, env) past =
   | VarAssign (v, e) -> treat_ast v (idenv, env) e
   | _ -> treat_ast dummy_var (idenv, env) (id, ast)
 
+(* TODO: should not be needed anymore *)
 let add_struct_guards t =
   let open Rstt.Builder in
   let aux t =
