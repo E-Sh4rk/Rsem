@@ -28,7 +28,7 @@ let treat_ast v (idenv, env) ast =
     let mlast = Transform.to_mlsem ast in
     (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
     let env = extend_env mlast env in
-    let renvs = System.Refinement.refinement_envs env mlast in
+    let renvs = System.Refinement.refinements env mlast in
     (* REnvSet.elements renvs |> List.iter (fun renv -> Format.printf "Renv: %a@." REnv.pp renv) ; *)
     let anns = System.Reconstruction.infer env renvs mlast in
     let typ = System.Checker.typeof_def env anns mlast in
@@ -48,24 +48,15 @@ let treat_def (idenv, env) past =
   | VarAssign (v, e) -> treat_ast v (idenv, env) e
   | _ -> treat_ast dummy_var (idenv, env) (id, ast)
 
-(* TODO: should not be needed anymore *)
-let add_struct_guards t =
-  let open Rstt.Builder in
-  let aux t =
-    match t with
-    | TArrow (l,r) -> TArrow (TStruct l,r)
-    | t -> t
-  in
-  map aux Fun.id Fun.id t
 let add_def (benv, idenv, env) def =
   let open R_types.Types in
   match def with
   | Sigs.Sig (str, tye) ->
     let benv, ty = Builder.resolve benv tye in
-    let ty = ty |> add_struct_guards |> Builder.build Builder.TIdMap.empty in
+    let ty = ty |> Builder.build Builder.TIdMap.empty in
     let v = MVariable.create Immut (Some str) in
     let idenv = StrMap.add str v idenv in
-    let env = Env.add v (TyScheme.mk_poly (GTy.mk ty)) env in
+    let env = Mlsem.Common.Env.add v (TyScheme.mk_poly (GTy.mk ty)) env in
     benv, idenv, env
   | Sigs.Alias _ -> failwith "TODO"
 
