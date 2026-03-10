@@ -22,6 +22,11 @@ let typeof_const c =
 let typeof_const_anyclass c =
   tyexpr_of_const c |> Builder.build Builder.TIdMap.empty
 
+let typeof_expr env (_,e) =
+  match e with
+  | Id v when Env.mem v env -> Some (Env.find v env)
+  | _ -> None
+
 (* Arguments builder / Attr projector *)
 
 module ArgBuilder = struct
@@ -106,7 +111,9 @@ let rec rem_n_first n lst =
 
 let ellipsis_var = MVariable.create Immut (Some "...")
 
-let rec aux_e (eid,e) =
+type cfg = { env : Mlsem.Common.Env.t }
+
+let to_mlsem cfg e =
   let rec aux e =
     match e with
     | Const c -> A.Value (typeof_const c |> GTy.mk)
@@ -134,9 +141,16 @@ let rec aux_e (eid,e) =
       let es = List.map aux_e es in
       let args = Eid.unique (), A.Constructor
         (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (npos,names,nrem) ; cons=ArgBuilder.cons (npos,names,nrem) }, es) in
+      let doms = typeof_expr cfg.env f |> Option.map TyUtils.proj_content |> Option.map TyUtils.decompose_fun_arg in
       let f = Eid.unique (), A.Projection
         (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux_e f) in
-      A.App (f, args)
+      begin match doms with
+      | None | Some [] | Some [_] -> A.App (f, args)
+      | Some doms ->
+        let v = Mlsem.Common.Variable.create None in
+        let body = Eid.unique (), A.App (f, (Eid.unique (), A.Var v)) in
+        A.Let (doms, v, args, body)
+      end
     | Ite (e, e1, e2) ->
       let e = aux_e e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
@@ -202,8 +216,8 @@ let rec aux_e (eid,e) =
     | Seq (e1, e2) -> A.Seq (aux_e e1, aux_e e2)
     | Return e -> A.Return (match e with Some e -> aux_e e | None -> Eid.unique (), A.Void)
     | Break -> A.Break | Next -> A.Break
-  in
-  (eid, aux e)
+  and aux_e (eid,e) = (eid, aux e) in
+  aux_e e
 
-let to_mlsem e =
-  e |> recognize_const_comparison |> aux_e |> Mlsem.Lang.Transform.transform
+let to_mlsem cfg e =
+  e |> recognize_const_comparison |> to_mlsem cfg |> Mlsem.Lang.Transform.transform

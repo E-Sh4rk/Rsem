@@ -63,12 +63,13 @@ loop_break <- function(x) {
     i
 }
 
-# cases <- function(x) {
-#     t <- typeof(x)
-#     if (x == "double") {
-#         return(0)
-#     }
-#     else {
-#         fail("invalid input")
-#     }
-# }
+# TODO: fix
+cases <- function(x) {
+    t <- typeof(x)
+    if (x == "double") {
+        return(0)
+    }
+    else {
+        fail("invalid input")
+    }
+}
