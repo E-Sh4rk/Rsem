@@ -1,3 +1,8 @@
+(*
+TODO:
+- Lists
+- Attributes
+*)
 
 open Mlsem.Common
 module MVariable = Mlsem.Lang.MVariable
