@@ -61,7 +61,7 @@ let add_def (benv, idenv, env) def =
   | Sigs.Alias _ -> failwith "TODO"
 
 let main () =
-  System.Config.infer_overload := false ;
+  (* System.Config.infer_overload := false ; *)
   Mlsem.Lang.Config.void_ty := Transform.typeof_const CNull ;
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
   let _, idenv, env =

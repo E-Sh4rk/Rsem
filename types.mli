@@ -14,8 +14,8 @@ val binary (+) : ( arg1:dbl['n], arg2:dbl['n] ) -> dbl['n]
 val binary (-) : ( arg1:dbl['n], arg2:dbl['n] ) -> dbl['n]
 val c : ( ; v('p) ) -> v('p)<>
 
-val typeof : (( arg: dbl ) -> v(^"double")) & (( arg: chr ) -> v(^"character")) \
-           & (( arg: lgl ) -> v(^"logical")) & (( arg: int ) -> v(^"integer")) \
-           & (( arg: clx ) -> v(^"complex")) & (( arg: raw ) -> v(^"raw")) \
-           & (( arg: list ) -> v(^"list")) & (( arg: null ) -> v(^"NULL"))
+val typeof : (( arg: dbl ) -> v1(^"double")) & (( arg: chr ) -> v1(^"character")) \
+           & (( arg: lgl ) -> v1(^"logical")) & (( arg: int ) -> v1(^"integer")) \
+           & (( arg: clx ) -> v1(^"complex")) & (( arg: raw ) -> v1(^"raw")) \
+           & (( arg: list ) -> v1(^"list")) & (( arg: null ) -> v1(^"NULL"))
 val fail : empty -> any

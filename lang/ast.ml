@@ -2,6 +2,7 @@
 TODO:
 - Lists
 - Attributes
+- Type annotations
 *)
 
 open Mlsem.Common

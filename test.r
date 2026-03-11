@@ -63,10 +63,9 @@ loop_break <- function(x) {
     i
 }
 
-# TODO: fix
 cases <- function(x) {
     t <- typeof(x)
-    if (x == "double") {
+    if (t == "double") {
         return(0)
     }
     else {
