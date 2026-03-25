@@ -17,7 +17,7 @@ let decompose_fun ty =
   let (poly,ty) = TyScheme.get ty in
   let lb, ub = GTy.lb ty, GTy.ub ty in
   let aux ps =
-    ps |> List.map (fun (a,b) -> Arrow.mk a b)
+    ps |> List.map (fun a -> [a]) |> Arrow.of_dnf
   in
-  let lbs = Arrow.dnf lb |> cartesian_prod |> List.concat_map aux in
+  let lbs = Arrow.dnf lb |> cartesian_prod |> List.map aux in
   lbs |> List.map (fun lb -> GTy.mk_gradual lb (Ty.cup lb ub) |> TyScheme.mk poly) 

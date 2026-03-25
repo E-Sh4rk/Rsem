@@ -69,7 +69,7 @@ cases <- function(x) {
         return(0)
     }
     else {
-        fail("invalid input")
+        return(FALSE)
     }
     # return(t)
 }
