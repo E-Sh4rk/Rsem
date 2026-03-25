@@ -242,7 +242,7 @@ and aux_string (* map_string_ *) tree =
 
 and aux_quoted_string tree =
   match tree with
-  | Option None -> failwith "TODO: none strings"
+  | Option None -> ""
   | Option (Some tree) -> aux_quoted_string' tree
   | _ -> assert false
 

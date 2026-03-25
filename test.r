@@ -69,6 +69,6 @@ cases <- function(x) {
         return(0)
     }
     else {
-        fail("test")
+        fail("")
     }
 }
