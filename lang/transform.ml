@@ -8,19 +8,25 @@ module A = Mlsem.Lang.Ast
 module SA = Mlsem.System.Ast
 module TVar = Mlsem.Types.TVar
 
-let tyexpr_of_const c =
+let typeof_const c =
   let open Builder in
-  match c with
+  let e = match c with
   | CChr _ -> TVec (Vec.CstLength (1, PHat PChr))
   | CDbl _ -> TVec (Vec.CstLength (1, PHat PDbl))
   | CLgl b -> TVec (Vec.CstLength (1, PHat (PLgl' b)))
   | CNull -> TNull
-let typeof_const c =
-  let open Builder in
-  let b = TAttr { content=tyexpr_of_const c ; classes=CNoClass } in
+  in
+  let b = TAttr { content=e ; classes=CNoClass } in
   Builder.build Builder.TIdMap.empty b
-let typeof_const_anyclass c =
-  tyexpr_of_const c |> Builder.build Builder.TIdMap.empty
+let typeof_const_atomic c =
+  let open Builder in
+  let ty = match c with
+  | CChr chr -> TVec (Vec.CstLength (1, PHat (PChr' chr)))
+  | CDbl _ -> invalid_arg "Non atomic constant type."
+  | CLgl b -> TVec (Vec.CstLength (1, PHat (PLgl' b)))
+  | CNull -> TNull
+  in
+  Builder.build Builder.TIdMap.empty ty
 
 let typeof_expr env (_,e) =
   match e with
@@ -92,12 +98,14 @@ end
 (* Transformations *)
 
 let recognize_const_comparison e =
-  let f = function
-  | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
-    when Variable.equal v BuiltinOp.eq -> id, TyCheck (e, typeof_const_anyclass c)
-  | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
-    when Variable.equal v BuiltinOp.neq -> id, TyCheck (e, typeof_const_anyclass c |> Ty.neg)
-  | e -> e
+  let f e =
+    try match e with
+    | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
+      when Variable.equal v BuiltinOp.eq -> id, TyCheck (e, typeof_const_atomic c)
+    | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
+      when Variable.equal v BuiltinOp.neq -> id, TyCheck (e, typeof_const_atomic c |> Ty.neg)
+    | e -> e
+    with Invalid_argument _ -> e
   in
   map f e
 
@@ -147,7 +155,8 @@ let to_mlsem (cfg:cfg) e =
           (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux f) in
         eid, A.App (f, args)
       | Some ty when cfg.infer_mode ->
-        let tys = TyUtils.proj_content ty |> TyUtils.decompose_fun in
+        let ty = TyUtils.proj_content ty in
+        let tys = ty |> TyUtils.decompose_fun in
         (* tys |> List.iter (fun ty -> Format.printf "Alt: %a@." Mlsem_types.TyScheme.pp ty) ; *)
         let alts = tys |> List.map (fun ty ->
           Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, args)
