@@ -33,7 +33,7 @@ let treat_ast v (idenv, env) ast =
     let anns = System.Reconstruction.infer ~direct_narrowing:true env renvs mlast in
     let typ = System.Checker.typeof_def env anns mlast in
     let typ = TyScheme.norm_and_simpl typ in
-    Format.printf "%a: @[%a@]@.@." Variable.pp v TyScheme.pp_short typ ;
+    Format.printf "%a:@? @[%a@]@.@." Variable.pp v TyScheme.pp_short typ ;
     idenv, env
   with System.Checker.Untypeable (err) ->
     Format.printf "Untypeable: %s@." err.title ;

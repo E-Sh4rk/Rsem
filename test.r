@@ -69,7 +69,6 @@ cases <- function(x) {
         return(0)
     }
     else {
-        return(FALSE)
+        fail("test")
     }
-    # return(t)
 }
