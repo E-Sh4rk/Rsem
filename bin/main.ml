@@ -25,7 +25,7 @@ let extend_env mlast env =
 
 let treat_ast v (idenv, env) ast =
   try
-    let mlast = Transform.to_mlsem { env } ast in
+    let mlast = Transform.to_mlsem { env ; infer_mode=true } ast in
     (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
     let env = extend_env mlast env in
     let renvs = System.Refinement.refinements env mlast in

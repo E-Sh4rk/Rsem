@@ -111,19 +111,19 @@ let rec rem_n_first n lst =
 
 let ellipsis_var = MVariable.create Immut (Some "...")
 
-type cfg = { env : Mlsem.Common.Env.t }
+type cfg = { env : Mlsem.Common.Env.t ; infer_mode : bool }
 
-let to_mlsem cfg e =
-  let rec aux e =
+let to_mlsem (cfg:cfg) e =
+  let rec aux (eid,e) =
     match e with
-    | Const c -> A.Value (typeof_const c |> GTy.mk)
-    | Id v -> A.Var v
-    | Declare (v,e) -> A.Declare (v, aux_e e)
-    | Let (v, e1, e2) -> A.Let ([], v, aux_e e1, aux_e e2)
-    | VarAssign (v, e) -> A.VarAssign (v, aux_e e)
-    | Unop (v,e) -> aux (Call ((Eid.unique (), Id v), [(Positional, e)]))
+    | Const c -> eid, A.Value (typeof_const c |> GTy.mk)
+    | Id v -> eid, A.Var v
+    | Declare (v,e) -> eid, A.Declare (v, aux e)
+    | Let (v, e1, e2) -> eid, A.Let ([], v, aux e1, aux e2)
+    | VarAssign (v, e) -> eid, A.VarAssign (v, aux e)
+    | Unop (v,e) -> aux (eid, Call ((Eid.unique (), Id v), [(Positional, e)]))
     | Binop (v,e1,e2) ->
-      aux (Call ((Eid.unique (), Id v), [(Positional, e1);(Positional, e2)]))
+      aux (eid, Call ((Eid.unique (), Id v), [(Positional, e1);(Positional, e2)]))
     | Call (f, args) ->
       let rec parse_args args =
         match args with
@@ -138,32 +138,41 @@ let to_mlsem cfg e =
           end
       in
       let (npos,names,nrem,es) = parse_args args in
-      let es = List.map aux_e es in
+      let es = List.map aux es in
       let args = Eid.unique (), A.Constructor
         (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (npos,names,nrem) ; cons=ArgBuilder.cons (npos,names,nrem) }, es) in
-      let doms = typeof_expr cfg.env f |> Option.map TyUtils.proj_content |> Option.map TyUtils.decompose_fun_arg in
-      let f = Eid.unique (), A.Projection
-        (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux_e f) in
-      begin match doms with
-      | None | Some [] | Some [_] -> A.App (f, args)
-      | Some doms ->
-        let v = Mlsem.Common.Variable.create None in
-        let body = Eid.unique (), A.App (f, (Eid.unique (), A.Var v)) in
-        A.Let (doms, v, args, body)
+      begin match typeof_expr cfg.env f with
+      | None ->
+        let f = Eid.unique (), A.Projection
+          (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux f) in
+        eid, A.App (f, args)
+      | Some ty when cfg.infer_mode ->
+        let tys = TyUtils.proj_content ty |> TyUtils.decompose_fun in
+        (* tys |> List.iter (fun ty -> Format.printf "Alt: %a@." Mlsem_types.TyScheme.pp ty) ; *)
+        let alts = tys |> List.map (fun ty ->
+          Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, args)
+          ) in
+        begin match alts with
+        | [] -> eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, args)
+        | a::alts -> List.fold_left (fun acc a -> Eid.unique (), A.Alt (a, acc)) a alts
+        end
+      | Some ty ->
+        let ty = TyUtils.proj_content ty in
+        eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, args)
       end
     | Ite (e, e1, e2) ->
-      let e = aux_e e in
+      let e = aux e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
-      A.Ite (e, GTy.mk Defs.test_type, aux_e e1, aux_e e2)
+      eid, A.Ite (e, GTy.mk Defs.test_type, aux e1, aux e2)
     | While (e, e') ->
-      let e = aux_e e in
+      let e = aux e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
-      A.While (e, GTy.mk Defs.test_type, aux_e e')
+      eid, A.While (e, GTy.mk Defs.test_type, aux e')
     | TyCheck (e, ty) ->
-      let e = aux_e e in
+      let e = aux e in
       let tt = Eid.unique (), A.Value (typeof_const (CLgl true) |> GTy.mk) in
       let ff = Eid.unique (), A.Value (typeof_const (CLgl false) |> GTy.mk) in
-      A.Ite (e, GTy.mk ty, tt, ff)
+      eid, A.Ite (e, GTy.mk ty, tt, ff)
     | Function (ps, e) ->
       let has_ell = List.mem Ellipsis ps in
       let rec treat_params ps =
@@ -197,10 +206,10 @@ let to_mlsem cfg e =
         match o with
         | Some e' ->
           add_let v (A.Constructor (SA.Join 2,
-            [ Eid.unique (), A.Value (GTy.mk ty) ; aux_e e' ])) e
+            [ Eid.unique (), A.Value (GTy.mk ty) ; aux e' ])) e
         | None -> add_let v (A.Value (GTy.mk ty)) e
       in
-      let e = List.fold_left add_def (aux_e e) (pos@nopos) in
+      let e = List.fold_left add_def (aux e) (pos@nopos) in
       let tl, e =
         if has_ell
         then
@@ -211,13 +220,13 @@ let to_mlsem cfg e =
       in
       let pty = Arg.mk { pos=[];named;pos_named;tl } in
       let lambda = Eid.unique (), A.Lambda ([], GTy.mk pty, MVariable.create Immut None, e) in
-      A.Constructor
+      eid, A.Constructor
         (CCustom { cname="cattr" ; cgen=true ; cdom=AttrConstr.cdom Classes.noclass ; cons=AttrConstr.cons Classes.noclass }, [lambda])
-    | Seq (e1, e2) -> A.Seq (aux_e e1, aux_e e2)
-    | Return e -> A.Return (match e with Some e -> aux_e e | None -> Eid.unique (), A.Void)
-    | Break -> A.Break | Next -> A.Break
-  and aux_e (eid,e) = (eid, aux e) in
-  aux_e e
+    | Seq (e1, e2) -> eid, A.Seq (aux e1, aux e2)
+    | Return e -> eid, A.Return (match e with Some e -> aux e | None -> Eid.unique (), A.Void)
+    | Break -> eid, A.Break | Next -> eid, A.Break
+  in
+  aux e
 
 let to_mlsem cfg e =
   e |> recognize_const_comparison |> to_mlsem cfg |> Mlsem.Lang.Transform.transform

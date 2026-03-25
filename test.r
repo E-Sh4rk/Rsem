@@ -71,4 +71,5 @@ cases <- function(x) {
     else {
         fail("invalid input")
     }
+    # return(t)
 }
