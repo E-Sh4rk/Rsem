@@ -17,7 +17,7 @@ open Mlsem.Types
 module StrMap = Map.Make(String)
 
 let simplify_tl ty = ty |> TyScheme.bot_instance |> TyScheme.norm_and_simpl
-(* let sigs_of_ty mono ty =
+let sigs_of_ty mono ty =
   let rec aux ty =
     match Arrow.dnf ty with
     | [arrs] ->
@@ -28,17 +28,16 @@ let simplify_tl ty = ty |> TyScheme.bot_instance |> TyScheme.norm_and_simpl
       then arrs else [ty]
     | _ -> [ty]
   in
-  if TVOp.vars ty
-    |> MVarSet.filter
-      (fun tv -> TVar.has_kind KNoInfer tv |> not)
-      (fun rv -> RVar.has_kind KNoInfer rv |> not)
-    |> MVarSet.is_empty
-  then Some (aux ty, GTy.mk ty |> TyScheme.mk_poly_except mono |> simplify_tl)
-  else None *)
-
-type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: Env.t ; benv: Types.Builder.env }
-let initial_ctx = { benv=Rstt.Builder.empty_env ; idenv=StrMap.empty ; tenv=Defs.initial_env }
-
+  (* Refresh type variables with MLsem ones (KNoInfer) *)
+  let vars = TVOp.vars ty in
+  let s1 = MVarSet.elements1 vars
+  |> List.map (fun tv -> tv, TVar.mk KNoInfer (Some (Sstt.Var.name tv)) |> TVar.typ) in
+  let s2 = MVarSet.elements2 vars
+  |> List.map (fun rv -> rv, RVar.mk KNoInfer (Some (Sstt.RowVar.name rv)) |> Row.id_for) in
+  let s = Subst.of_list s1 s2 in
+  let ty = Subst.apply s ty in
+  (* Return signatures and type *)
+  (aux ty, GTy.mk ty |> TyScheme.mk_poly_except mono |> simplify_tl)
 let extend_env mlast env =
   let fv = System.Ast.fv mlast in
   let dom = Env.domain env |> VarSet.of_list in
@@ -46,15 +45,27 @@ let extend_env mlast env =
   missing |> VarSet.elements |> List.fold_left
     (fun env v -> Env.add v (TyScheme.mk_mono GTy.dyn) env) env
 
+type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: Env.t ; benv: Types.Builder.env ; senv: Ty.t list VarMap.t }
+let initial_ctx = { benv=Rstt.Builder.empty_env ; idenv=StrMap.empty ; tenv=Defs.initial_env ; senv=VarMap.empty }
+
+let infer ctx mlast =
+  let env = extend_env mlast ctx.tenv in
+  let renvs = System.Refinement.refinements env mlast in
+  (* REnvSet.elements renvs |> List.iter (fun renv -> Format.printf "Renv: %a@." REnv.pp renv) ; *)
+  let anns = System.Reconstruction.infer ~direct_narrowing:true env renvs mlast in
+  System.Checker.typeof_def env anns mlast |> simplify_tl
+
 let treat_ast v ctx ast =
   try
     let mlast = Transform.to_mlsem { env=ctx.tenv ; infer_mode=true } ast in
     (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
-    let env = extend_env mlast ctx.tenv in
-    let renvs = System.Refinement.refinements env mlast in
-    (* REnvSet.elements renvs |> List.iter (fun renv -> Format.printf "Renv: %a@." REnv.pp renv) ; *)
-    let anns = System.Reconstruction.infer ~direct_narrowing:true env renvs mlast in
-    let typ = System.Checker.typeof_def env anns mlast |> simplify_tl in
+    let typ = match VarMap.find_opt v ctx.senv with
+    | None -> infer ctx mlast
+    | Some sigs ->
+      let asts = List.map (fun s -> Mlsem_system.Ast.coerce CheckStatic (GTy.mk s) mlast) sigs in
+      let _ = List.map (infer ctx) asts in
+      Env.find v ctx.tenv
+    in
     Format.printf "%a:@? @[%a@]@.@." Variable.pp v TyScheme.pp_short typ ;
     ctx
   with System.Checker.Untypeable (err) ->
@@ -66,21 +77,23 @@ let dummy_var = Variable.create (Some "_")
 let treat_def ctx past =
   let (eid,ast) = PAst.transform { PAst.id = ctx.idenv } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
-  (* TODO: if def has already a signature, check it *)
   match ast with
   | VarAssign (v, e) -> treat_ast v ctx e
   | _ -> treat_ast dummy_var ctx (eid, ast)
 
 let add_def ctx def =
   let open R_types.Types in
+  let open Mlsem_common in
   match def with
   | Sigs.Sig (str, tye) ->
     let benv, ty = Builder.resolve ctx.benv tye in
     let ty = ty |> Builder.build Builder.TIdMap.empty in
     let v = MVariable.create Immut (Some str) in
     let idenv = StrMap.add str v ctx.idenv in
-    let tenv = Mlsem.Common.Env.add v (TyScheme.mk_poly (GTy.mk ty)) ctx.tenv in
-    { benv ; idenv ; tenv }
+    let (s,ty) = sigs_of_ty (Mlsem.Common.Env.tvars ctx.tenv) ty in
+    let tenv = Mlsem.Common.Env.add v ty ctx.tenv in
+    let senv = VarMap.add v s ctx.senv in
+    { benv ; idenv ; tenv ; senv }
   | Sigs.Alias _ -> failwith "TODO"
 
 let main () =
