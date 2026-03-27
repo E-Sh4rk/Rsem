@@ -44,6 +44,7 @@ let dummy_var = Variable.create (Some "_")
 let treat_def (idenv, env) past =
   let (id,ast) = PAst.transform { PAst.id = idenv } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
+  (* TODO: if def has already a signature, check it *)
   match ast with
   | VarAssign (v, e) -> treat_ast v (idenv, env) e
   | _ -> treat_ast dummy_var (idenv, env) (id, ast)
@@ -71,7 +72,8 @@ let main () =
   match res.program with
   | None -> ()
   | Some prog ->
-    Boilerplate.dump_extras res.extras ;
+    (* Boilerplate.dump_extras res.extras ; *)
+    (* TODO: add extra signatures to the list *)
     let tree = Boilerplate.map_program () prog in
     let prog = Parser.of_parser tree in
     (* Format.printf "%a@.@." PAst.pp prog ; *)

@@ -327,5 +327,5 @@ and aux_tok tree  =
   | _ -> assert false
 
 let of_parser tree =
-  Raw_tree.to_channel stdout tree ;
+  (* Raw_tree.to_channel stdout tree ; *)
   aux_prog tree
