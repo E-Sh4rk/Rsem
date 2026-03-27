@@ -81,24 +81,37 @@ let treat_def ctx past =
   | VarAssign (v, e) -> treat_ast v ctx e
   | _ -> treat_ast dummy_var ctx (eid, ast)
 
-let add_def ctx def =
+let add_sig ctx str tye =
+  (* TODO: allow defining several signatures for the same var *)
   let open R_types.Types in
   let open Mlsem_common in
+  let benv, ty = Builder.resolve ctx.benv tye in
+  let ty = ty |> Builder.build Builder.TIdMap.empty in
+  let v = MVariable.create Immut (Some str) in
+  let idenv = StrMap.add str v ctx.idenv in
+  let (s,ty) = sigs_of_ty (Mlsem.Common.Env.tvars ctx.tenv) ty in
+  let tenv = Mlsem.Common.Env.add v ty ctx.tenv in
+  let senv = VarMap.add v s ctx.senv in
+  { benv ; idenv ; tenv ; senv }
+
+let add_def ctx def =
   match def with
-  | Sigs.Sig (str, tye) ->
-    let benv, ty = Builder.resolve ctx.benv tye in
-    let ty = ty |> Builder.build Builder.TIdMap.empty in
-    let v = MVariable.create Immut (Some str) in
-    let idenv = StrMap.add str v ctx.idenv in
-    let (s,ty) = sigs_of_ty (Mlsem.Common.Env.tvars ctx.tenv) ty in
-    let tenv = Mlsem.Common.Env.add v ty ctx.tenv in
-    let senv = VarMap.add v s ctx.senv in
-    { benv ; idenv ; tenv ; senv }
+  | Sigs.Sig (str, tye) -> add_sig ctx str tye
   | Sigs.Alias _ -> failwith "TODO"
+
+let treat_extra ctx extra =
+  match extra with
+  | `Comment (_loc, (_, str)) ->
+    if String.starts_with ~prefix:"##" str then
+      let str = String.sub str 2 ((String.length str) - 2) in
+      let (str, tye) = IO.parse_sig_def str in
+      add_sig ctx str tye
+    else ctx
 
 let main () =
   (* System.Config.infer_overload := false ; *)
   Mlsem.Lang.Config.void_ty := Transform.typeof_const CNull ;
+  (* TODO: use a regular r file with only type annotations instead of a special mli file *)
   let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
   let ctx = List.fold_left add_def initial_ctx tdefs in
   (* Format.printf "%a@.@." Env.pp env ; *)
@@ -107,7 +120,7 @@ let main () =
   | None -> ()
   | Some prog ->
     (* Boilerplate.dump_extras res.extras ; *)
-    (* TODO: add extra signatures to the list *)
+    let ctx = List.fold_left treat_extra ctx res.extras in
     let tree = Boilerplate.map_program () prog in
     let prog = Parser.of_parser tree in
     (* Format.printf "%a@.@." PAst.pp prog ; *)
