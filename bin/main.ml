@@ -18,6 +18,7 @@ module StrMap = Map.Make(String)
 
 let simplify_tl ty = ty |> TyScheme.bot_instance |> TyScheme.norm_and_simpl
 let sigs_of_ty mono ty =
+  (* TODO: unpack and repack attributes *)
   let rec aux ty =
     match Arrow.dnf ty with
     | [arrs] ->
@@ -29,11 +30,12 @@ let sigs_of_ty mono ty =
     | _ -> [ty]
   in
   (* Refresh type variables with MLsem ones (KNoInfer) *)
+  let drop1 str = String.sub str 1 (String.length str - 1) in
   let vars = TVOp.vars ty in
   let s1 = MVarSet.elements1 vars
-  |> List.map (fun tv -> tv, TVar.mk KNoInfer (Some (Sstt.Var.name tv)) |> TVar.typ) in
+  |> List.map (fun tv -> tv, TVar.mk KNoInfer (Some (Sstt.Var.name tv |> drop1)) |> TVar.typ) in
   let s2 = MVarSet.elements2 vars
-  |> List.map (fun rv -> rv, RVar.mk KNoInfer (Some (Sstt.RowVar.name rv)) |> Row.id_for) in
+  |> List.map (fun rv -> rv, RVar.mk KNoInfer (Some (Sstt.RowVar.name rv |> drop1)) |> Row.id_for) in
   let s = Subst.of_list s1 s2 in
   let ty = Subst.apply s ty in
   (* Return signatures and type *)
@@ -71,7 +73,7 @@ let treat_ast v ctx ast =
   with System.Checker.Untypeable (err) ->
     Format.printf "Untypeable: %s@." err.title ;
     err.descr |> Option.iter (Format.printf "%s@.") ;
-    ctx
+    Format.printf "@." ; ctx
 
 let dummy_var = Variable.create (Some "_")
 let treat_def ctx past =
@@ -90,6 +92,7 @@ let add_sig ctx str tye =
   let v = MVariable.create Immut (Some str) in
   let idenv = StrMap.add str v ctx.idenv in
   let (s,ty) = sigs_of_ty (Mlsem.Common.Env.tvars ctx.tenv) ty in
+  (* Format.printf "Adding %s: @[%a@]@." str TyScheme.pp ty ; *)
   let tenv = Mlsem.Common.Env.add v ty ctx.tenv in
   let senv = VarMap.add v s ctx.senv in
   { benv ; idenv ; tenv ; senv }
