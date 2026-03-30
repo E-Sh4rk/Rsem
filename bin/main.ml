@@ -18,6 +18,7 @@ module StrMap = Map.Make(String)
 
 let simplify_tl ty = ty |> TyScheme.bot_instance |> TyScheme.norm_and_simpl
 let sigs_of_ty mono ty =
+  (* TODO: the signature AND the expression should use the same arg ID *)
   (* TODO: unpack and repack attributes *)
   let rec aux ty =
     match Arrow.dnf ty with
