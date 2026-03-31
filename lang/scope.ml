@@ -32,11 +32,17 @@ let add_local_binding str kind t =
     let env = StrMap.add str (kind,v) env in
     env::t
 
+let unresolved str =
+  begin match Ast.BuiltinOp.find_builtin str with
+  | None -> MVariable.create Immut (Some str)
+  | Some v -> v
+  end
+
 let rec resolve_call str t =
   match t with
   | [] -> assert false
   | [tl] when StrMap.mem str tl -> StrMap.find str tl |> snd
-  | [_] -> MVariable.create Immut (Some str)
+  | [_] -> unresolved str
   | env::t when StrMap.mem str env ->
     begin match StrMap.find str env with
     | KFun, v -> v
@@ -49,7 +55,7 @@ let rec resolve str t =
   match t with
   | [] -> assert false
   | [tl] when StrMap.mem str tl -> StrMap.find str tl |> snd
-  | [_] -> MVariable.create Immut (Some str)
+  | [_] -> unresolved str
   | env::_ when StrMap.mem str env ->
     begin match StrMap.find str env with
     | KFun, v | KVal, v | KAny, v -> v
