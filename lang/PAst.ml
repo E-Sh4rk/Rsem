@@ -58,7 +58,7 @@ let rec bv_e (_,e) =
   | Binop (str, (e1, e2)) ->
     let res = match str, e1, e2 with
     | "<-", (_, Id id), _
-    | "<<-", (_, Id id), _ -> StrSet.singleton id
+    | "<<-", (_, Id id), _ -> StrSet.singleton id (* TODO: <<- *)
     | _, _, _ -> StrSet.empty
     in
     StrSet.union res (bv_es [e1;e2])
@@ -76,17 +76,7 @@ and bv_es es =
   List.map bv_e es |> List.fold_left StrSet.union StrSet.empty
 
 module StrMap = Map.Make(String)
-type env = { id: Variable.t StrMap.t }
-
-(* TODO: have a distinct call env and val env. *)
-let var env str =
-  match StrMap.find_opt str env.id with
-  | None ->
-    begin match Ast.BuiltinOp.find_builtin str with
-    | None -> MVariable.create Immut (Some str)
-    | Some v -> v
-    end
-  | Some v -> v
+type env = { id: Scope.t }
 
 let aux_arg f arg =
   match arg with
@@ -102,8 +92,8 @@ let aux_param env f p =
   match p with
   | NoDefault EllipsisId -> Ast.Ellipsis
   | Default (EllipsisId, _) -> assert false
-  | NoDefault (ArgId str) -> Ast.NoDefault (var env str)
-  | Default (ArgId str, e) -> Ast.Default (var env str, f e)
+  | NoDefault (ArgId str) -> Ast.NoDefault (Scope.resolve str env.id)
+  | Default (ArgId str, e) -> Ast.Default (Scope.resolve str env.id, f e)
   | NoDefault NullId | Default (NullId, _) -> assert false
 
 let aux_const c =
@@ -113,15 +103,9 @@ let aux_const c =
   | CBool b -> Ast.CLgl b
   | CNull -> Ast.CNull
 
-let add_var env str =
-  let v = MVariable.create MVariable.Mut (Some str) in
-  StrMap.add str v env
-
-let add_def pid eid e str =
-  let v = StrMap.find str eid in
-  match StrMap.find_opt str pid with
-  | None -> Eid.unique (), Ast.Declare (v, e)
-  | Some _ -> e
+let add_def env e str =
+  let v = Scope.resolve str env.id in
+  Eid.unique (), Ast.Declare (v, e)
 
 let rec aux_e env (pos,e) =
   let eid = Eid.unique_with_pos pos in
@@ -129,13 +113,13 @@ let rec aux_e env (pos,e) =
   | Return -> assert false
   | Break -> Ast.Break | Next -> Ast.Next
   | Const c -> Ast.Const (aux_const c)
-  | Id str -> Ast.Id (var env str)
-  | Unop (str, e) -> Ast.Unop (var env (str^"__1"), aux_e env e)
+  | Id str -> Ast.Id (Scope.resolve str env.id)
+  | Unop (str, e) -> Ast.Unop (Scope.resolve (str^"__1") env.id, aux_e env e)
   | Binop (str, (e1,e2)) ->
     begin match str, e1, e2 with
-    | "<-", (_, Id id), e2 -> Ast.VarAssign (var env id, aux_e env e2)
-    | "<<-", (_, Id _), _ -> failwith "TODO"
-    | _, _, _ -> Ast.Binop (var env (str^"__2"), aux_e env e1, aux_e env e2)
+    | "<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve id env.id, aux_e env e2)
+    | "<<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve_parent id env.id, aux_e env e2)
+    | _, _, _ -> Ast.Binop (Scope.resolve (str^"__2") env.id, aux_e env e1, aux_e env e2)
     end
   | Call ((_, Return),[]) -> Ast.Return None
   | Call ((_, Return),[Some (Unnamed e)]) -> Ast.Return (Some (aux_e env e))
@@ -152,13 +136,14 @@ let rec aux_e env (pos,e) =
     Ast.While (e, e')
   | Function (_,params,e) ->
     (* Params *)
+    let env = { id=Scope.new_scope env.id } in
     let pbvs =
       match params with
       | None -> StrSet.empty
       | Some lst -> bv_params lst
     in
-    let pid = List.fold_left add_var env.id (StrSet.elements pbvs) in
-    let env = { id=pid } in
+    let env = { id=List.fold_left
+      (fun acc str -> Scope.add_local_binding str Scope.KAny acc) env.id (StrSet.elements pbvs) } in
     let params =
       match params with
       | None -> []
@@ -166,9 +151,10 @@ let rec aux_e env (pos,e) =
     in
     (* Body *)
     let ebvs = bv_e e in
-    let eid = List.fold_left add_var env.id (StrSet.elements ebvs) in
-    let env = { id=eid } in
-    let e = List.fold_left (add_def pid eid) (aux_e env e) (StrSet.elements ebvs) in
+    let env = { id=List.fold_left
+      (fun acc str -> Scope.add_local_binding str Scope.KAny acc) env.id (StrSet.elements ebvs) } in
+    let undeclared = StrSet.diff ebvs pbvs in
+    let e = List.fold_left (add_def env) (aux_e env e) (StrSet.elements undeclared) in
     Ast.Function (params, e)
   | Braced [] -> Ast.Const Ast.CNull
   | Braced (e::es) ->

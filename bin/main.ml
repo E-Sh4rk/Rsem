@@ -94,7 +94,7 @@ let treat_ast v ctx ast =
 
 let dummy_var = Variable.create (Some "_")
 let treat_def ctx past =
-  let (eid,ast) = PAst.transform { PAst.id = ctx.idenv } past in
+  let (eid,ast) = PAst.transform { PAst.id = Scope.from_toplevel ctx.tenv ctx.idenv } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
   match ast with
   | VarAssign (v, e) -> treat_ast v ctx e

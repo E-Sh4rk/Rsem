@@ -26,7 +26,10 @@ let new_scope t = StrMap.empty::t
 let add_local_binding str kind t =
   match t with
   | [] -> assert false
-  | env::_ when StrMap.mem str env -> raise (ScopeError ("Symbol "^str^" already defined"))
+  | env::t when StrMap.mem str env ->
+    if (StrMap.find str env |> fst) <> kind
+    then raise (ScopeError ("Symbol "^str^" already defined with different kind"))
+    else env::t
   | env::t ->
     let v = MVariable.create Mut (Some str) in
     let env = StrMap.add str (kind,v) env in
