@@ -33,13 +33,13 @@ let refresh_vars kind ty =
   let s = Subst.of_list s1 s2 in
   Subst.apply s ty
 let sigs_of_ty mono ty =
-  let rec aux ty =
+  let aux ty =
     match Arrow.dnf ty with
     | [arrs] ->
-      arrs |> List.concat_map
+      arrs |> List.map
         (fun (a,b) ->
           let a = Rstt.Arg.reidentify ~id:(TVar.mk KInfer None |> TVar.typ) a in
-          aux b |> List.map (fun b -> Arrow.mk a b)
+          Arrow.mk a b
         )
     | _ -> [ty]
   in
