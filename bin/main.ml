@@ -17,29 +17,42 @@ open Mlsem.Types
 module StrMap = Map.Make(String)
 
 let simplify_tl ty = ty |> TyScheme.bot_instance |> TyScheme.norm_and_simpl
+let refresh_vars kind ty =
+  let drop1 str = String.sub str 1 (String.length str - 1) in
+  let vars = TVOp.vars ty in
+  let s1 = MVarSet.elements1 vars
+  |> List.map (fun tv -> tv, TVar.mk kind (Some (Sstt.Var.name tv |> drop1)) |> TVar.typ) in
+  let s2 = MVarSet.elements2 vars
+  |> List.map (fun rv -> rv, RVar.mk kind (Some (Sstt.RowVar.name rv |> drop1)) |> Row.id_for) in
+  let s = Subst.of_list s1 s2 in
+  Subst.apply s ty
 let sigs_of_ty mono ty =
-  (* TODO: the signature AND the expression should use the same arg ID *)
-  (* TODO: unpack and repack attributes *)
   let rec aux ty =
     match Arrow.dnf ty with
     | [arrs] ->
       let arrs = arrs |> List.concat_map
-        (fun (a,b) -> aux b |> List.map (fun b -> Arrow.mk a b))
+        (fun (a,b) ->
+          let a = Rstt.Arg.reidentify ~id:(TVar.mk KInfer None |> TVar.typ) a in
+          aux b |> List.map (fun b -> Arrow.mk a b)
+        )
       in
       if Ty.equiv ty (Ty.conj arrs)
       then arrs else [ty]
     | _ -> [ty]
   in
-  (* Refresh type variables with MLsem ones (KNoInfer) *)
-  let drop1 str = String.sub str 1 (String.length str - 1) in
-  let vars = TVOp.vars ty in
-  let s1 = MVarSet.elements1 vars
-  |> List.map (fun tv -> tv, TVar.mk KNoInfer (Some (Sstt.Var.name tv |> drop1)) |> TVar.typ) in
-  let s2 = MVarSet.elements2 vars
-  |> List.map (fun rv -> rv, RVar.mk KNoInfer (Some (Sstt.RowVar.name rv |> drop1)) |> Row.id_for) in
-  let s = Subst.of_list s1 s2 in
-  let ty = Subst.apply s ty in
-  (* Return signatures and type *)
+  let aux_p { Rstt.Attr.content ; classes } =
+    aux content |> List.map (fun content -> Rstt.Attr.mk {Rstt.Attr.content ; classes})
+  in
+  let aux_n a = [Rstt.Attr.mk a |> Ty.neg] in
+  let aux (ps, ns) =
+    (List.concat_map aux_n ns)@(List.concat_map aux_p ps)
+  in
+  let aux ty =
+    match Rstt.Attr.destruct ty with
+    | [line] -> aux line
+    | _ -> [ty]
+  in
+  let ty = refresh_vars KNoInfer ty in
   (aux ty, GTy.mk ty |> TyScheme.mk_poly_except mono |> simplify_tl)
 let extend_env mlast env =
   let fv = System.Ast.fv mlast in
