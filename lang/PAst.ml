@@ -57,8 +57,8 @@ let rec bv_e (_,e) =
   | Unop (_,e) -> bv_e e
   | Binop (str, (e1, e2)) ->
     let res = match str, e1, e2 with
-    | "<-", (_, Id id), _
-    | "<<-", (_, Id id), _ -> StrSet.singleton id (* TODO: <<- *)
+    | "<-", (_, Id id), _ -> StrSet.singleton id
+    | "<<-", (_, Id _), _ -> StrSet.empty
     | _, _, _ -> StrSet.empty
     in
     StrSet.union res (bv_es [e1;e2])
