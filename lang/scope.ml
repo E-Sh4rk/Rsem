@@ -32,53 +32,32 @@ let add_local_binding str kind t =
     let env = StrMap.add str (kind,v) env in
     env::t
 
-let add str kind v t =
-  match t with
-  | [] -> assert false
-  | env::t ->
-    let env = StrMap.add str (kind,v) env in
-    env::t
-
 let rec resolve_call str t =
   match t with
   | [] -> assert false
-  | [tl] when StrMap.mem str tl -> StrMap.find str tl |> snd, [tl]
-  | [tl] ->
-    let v = MVariable.create Immut (Some str) in
-    let tl = StrMap.add str (KAny, v) tl in
-    v, [tl]
+  | [tl] when StrMap.mem str tl -> StrMap.find str tl |> snd
+  | [_] -> MVariable.create Immut (Some str)
   | env::t when StrMap.mem str env ->
     begin match StrMap.find str env with
-    | KFun, v -> v, env::t
-    | KVal, _ ->
-      let v, t = resolve_call str t in
-      v, env::t
+    | KFun, v -> v
+    | KVal, _ -> resolve_call str t
     | KAny, _ | KAnyOpt, _ -> raise (ScopeError ("Cannot resolve symbol "^str))
     end
-  | env::t ->
-    let v, t = resolve_call str t in
-    v, env::t
-  
+  | _::t -> resolve_call str t
+
 let rec resolve str t =
   match t with
   | [] -> assert false
-  | [tl] when StrMap.mem str tl -> StrMap.find str tl |> snd, [tl]
-  | [tl] ->
-    let v = MVariable.create Immut (Some str) in
-    let tl = StrMap.add str (KAny, v) tl in
-    v, [tl]
-  | env::t when StrMap.mem str env ->
+  | [tl] when StrMap.mem str tl -> StrMap.find str tl |> snd
+  | [_] -> MVariable.create Immut (Some str)
+  | env::_ when StrMap.mem str env ->
     begin match StrMap.find str env with
-    | KFun, v | KVal, v | KAny, v -> v, env::t
+    | KFun, v | KVal, v | KAny, v -> v
     | KAnyOpt, _ -> raise (ScopeError ("Cannot resolve symbol "^str))
     end
-  | env::t ->
-    let v, t = resolve str t in
-    v, env::t
+  | _::t -> resolve str t
 
 let resolve_parent str t =
   match t with
   | [] -> assert false
-  | env::t ->
-    let v,t = resolve str t in
-    v, env::t
+  | _::t -> resolve str t
