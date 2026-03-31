@@ -30,14 +30,11 @@ let sigs_of_ty mono ty =
   let rec aux ty =
     match Arrow.dnf ty with
     | [arrs] ->
-      let arrs = arrs |> List.concat_map
+      arrs |> List.concat_map
         (fun (a,b) ->
           let a = Rstt.Arg.reidentify ~id:(TVar.mk KInfer None |> TVar.typ) a in
           aux b |> List.map (fun b -> Arrow.mk a b)
         )
-      in
-      if Ty.equiv ty (Ty.conj arrs)
-      then arrs else [ty]
     | _ -> [ty]
   in
   let aux_p { Rstt.Attr.content ; classes } =

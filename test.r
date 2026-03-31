@@ -44,6 +44,17 @@ ret <- function(x) {
     return(TRUE)
 }
 
+## ret_ann : (x:any) -> lgl1
+ret_ann <- function(x) {
+    if (x == NULL)
+        return(FALSE)
+    if (x == FALSE)
+        return(FALSE)
+    if (x == 0)
+        return(FALSE)
+    return(TRUE)
+}
+
 narrowing <- function(x) {
     if (x == NULL)
         return(NULL)
