@@ -17,6 +17,12 @@ open Mlsem.Types
 module StrMap = Map.Make(String)
 
 let simplify_tl ty = ty |> TyScheme.bot_instance |> TyScheme.norm_and_simpl
+let merge_tl tys =
+  let tscap t1 t2 =
+    let (tvs1, t1), (tvs2, t2) = TyScheme.get t1, TyScheme.get t2 in
+    TyScheme.mk (MVarSet.union tvs1 tvs2) (GTy.cap t1 t2)
+  in
+  List.fold_left tscap (TyScheme.mk_mono GTy.any) tys |> simplify_tl
 let refresh_vars kind ty =
   let drop1 str = String.sub str 1 (String.length str - 1) in
   let vars = TVOp.vars ty in
@@ -95,16 +101,32 @@ let treat_def ctx past =
   | _ -> treat_ast dummy_var ctx (eid, ast)
 
 let add_sig ctx str tye =
-  (* TODO: allow defining several signatures for the same var *)
   let open R_types.Types in
   let open Mlsem_common in
   let benv, ty = Builder.resolve ctx.benv tye in
   let ty = ty |> Builder.build Builder.TIdMap.empty in
-  let v = MVariable.create Immut (Some str) in
-  let idenv = StrMap.add str v ctx.idenv in
   let (s,ty) = sigs_of_ty (Mlsem.Common.Env.tvars ctx.tenv) ty in
+  let v,s,ty =
+    match StrMap.find_opt str ctx.idenv with
+    | None ->
+        let v = MVariable.create Immut (Some str) in
+        v,s,ty
+    | Some v ->
+      let ty =
+        if Env.mem v ctx.tenv
+        then merge_tl [ty ; (Env.find v ctx.tenv)]
+        else ty
+      in
+      let s =
+        if VarMap.mem v ctx.senv
+        then (VarMap.find v ctx.senv)@s
+        else s
+      in
+      v,s,ty
+  in
+  let idenv = StrMap.add str v ctx.idenv in
   (* Format.printf "Adding %s: @[%a@]@." str TyScheme.pp ty ; *)
-  let tenv = Mlsem.Common.Env.add v ty ctx.tenv in
+  let tenv = Mlsem.Common.Env.replace v ty ctx.tenv in
   let senv = VarMap.add v s ctx.senv in
   { benv ; idenv ; tenv ; senv }
 
