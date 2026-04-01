@@ -13,6 +13,8 @@ let typeof_const c =
   let e = match c with
   | CChr _ -> TVec (Vec.CstLength (1, PHat PChr))
   | CDbl _ -> TVec (Vec.CstLength (1, PHat PDbl))
+  | CInt _ -> TVec (Vec.CstLength (1, PHat PInt))
+  | CClx _ -> TVec (Vec.CstLength (1, PHat PClx))
   | CLgl b -> TVec (Vec.CstLength (1, PHat (PLgl' b)))
   | CNull -> TNull
   in
@@ -23,6 +25,8 @@ let typeof_const_atomic c =
   let ty = match c with
   | CChr chr -> TVec (Vec.CstLength (1, PHat (PChr' chr)))
   | CDbl _ -> invalid_arg "Non atomic constant type."
+  | CInt i -> TVec (Vec.CstLength (1, PHat (PInt' (Some i, Some i))))
+  | CClx _ -> invalid_arg "Non atomic constant type."
   | CLgl b -> TVec (Vec.CstLength (1, PHat (PLgl' b)))
   | CNull -> TNull
   in

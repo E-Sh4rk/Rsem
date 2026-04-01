@@ -13,6 +13,8 @@ type label = string
 type const =
 | CChr of string
 | CDbl of string
+| CInt of int
+| CClx of string
 | CLgl of bool
 | CNull
 [@@deriving show]

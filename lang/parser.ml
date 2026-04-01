@@ -120,6 +120,12 @@ and aux_case c tree =
   | "Id" -> A.Id (aux_tok tree)
   | "Str" -> A.Const (A.CStr (aux_string tree))
   | "Float" -> A.Const (A.CFloat (aux_float tree))
+  | "Int" ->
+    let i, _ = extract2 tree in
+    A.Const (A.CInt (aux_float i |> int_of_string))
+  | "Comp" ->
+    let c, _ = extract2 tree in
+    A.Const (A.CClx (aux_float c))
   | "Inf" -> A.Const (A.CFloat "Inf")
   | "True" -> A.Const (A.CBool true)
   | "False" -> A.Const (A.CBool false)

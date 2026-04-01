@@ -9,7 +9,9 @@ print(TRUE)
 
 c(print(42), print(FALSE))
 
-i <- 42
+int <- 42L
+dbl <- 42
+clx <- 42i
 
 f <- function(a){
   if (a > 0) {

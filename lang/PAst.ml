@@ -9,6 +9,8 @@ end
 type const =
 | CStr of string
 | CFloat of string
+| CInt of int
+| CClx of string
 | CBool of bool
 | CNull
 [@@deriving show]
@@ -100,6 +102,8 @@ let aux_const c =
   match c with
   | CStr str -> Ast.CChr str
   | CFloat str -> Ast.CDbl str
+  | CInt i -> Ast.CInt i
+  | CClx str -> Ast.CClx str
   | CBool b -> Ast.CLgl b
   | CNull -> Ast.CNull
 
