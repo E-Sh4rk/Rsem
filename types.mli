@@ -22,3 +22,8 @@ val typeof : (( arg: dbl ) -> v1(^"double")) & (( arg: chr ) -> v1(^"character")
            & (( arg: clx ) -> v1(^"complex")) & (( arg: raw ) -> v1(^"raw")) \
            & (( arg: list ) -> v1(^"list")) & (( arg: null ) -> v1(^"NULL"))
 val fail : empty -> any
+
+
+(* ===== Lists ===== *)
+
+val list : ( ; `r ) -> { ; `r }

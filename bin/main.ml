@@ -131,6 +131,8 @@ let add_sig ctx str tye =
   in
   let idenv = StrMap.add str v ctx.idenv in
   (* Format.printf "Adding %s: @[%a@]@." str TyScheme.pp ty ; *)
+  (* Format.printf "Adding %s: @[%a@]@." str Sstt.Printer.print_ty'
+    (TyScheme.get ty |> snd |> GTy.ub) ; *)
   let tenv = Mlsem.Common.Env.replace v ty ctx.tenv in
   let senv = VarMap.add v s ctx.senv in
   { benv ; idenv ; tenv ; senv ; tidenv=ctx.tidenv }

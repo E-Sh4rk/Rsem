@@ -102,3 +102,7 @@ superassign <- function(x) {
   g()
   x
 }
+
+list()
+list(42)
+list(aa = 42)
