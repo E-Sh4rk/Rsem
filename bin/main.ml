@@ -76,11 +76,14 @@ let infer ctx mlast =
 
 let treat_ast v ctx ast =
   try
-    let mlast = Transform.to_mlsem { env=ctx.tenv ; infer_mode=true } ast in
-    (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
     let typ = match VarMap.find_opt v ctx.senv with
-    | None -> infer ctx mlast
+    | None ->
+      let mlast = Transform.to_mlsem { env=ctx.tenv ; infer_mode=true } ast in
+      (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
+      infer ctx mlast
     | Some sigs ->
+      let mlast = Transform.to_mlsem { env=ctx.tenv ; infer_mode=false } ast in
+      (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
       let asts = List.map (fun s -> Mlsem_system.Ast.coerce CheckStatic (GTy.mk s) mlast) sigs in
       let _ = List.map (infer ctx) asts in
       Env.find v ctx.tenv
