@@ -64,8 +64,10 @@ let extend_env mlast env =
   missing |> VarSet.elements |> List.fold_left
     (fun env v -> Env.add v (TyScheme.mk_mono GTy.dyn) env) env
 
-type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: Env.t ; benv: Types.Builder.env ; senv: Ty.t list VarMap.t }
-let initial_ctx = { benv=Rstt.Builder.empty_env ; idenv=StrMap.empty ; tenv=Defs.initial_env ; senv=VarMap.empty }
+type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: Env.t ; senv: Ty.t list VarMap.t ;
+                    benv: Rstt.Builder.env ; tidenv: Ty.t Rstt.Builder.TIdMap.t }
+let initial_ctx = { benv=Rstt.Builder.empty_env ; tidenv=Rstt.Builder.TIdMap.empty ;
+                    idenv=StrMap.empty ; tenv=Defs.initial_env ; senv=VarMap.empty }
 
 let infer ctx mlast =
   let env = extend_env mlast ctx.tenv in
@@ -107,7 +109,7 @@ let add_sig ctx str tye =
   let open R_types.Types in
   let open Mlsem_common in
   let benv, ty = Builder.resolve ctx.benv tye in
-  let ty = ty |> Builder.build Builder.TIdMap.empty in
+  let ty = ty |> Builder.build ctx.tidenv in
   let (s,ty) = sigs_of_ty (Mlsem.Common.Env.tvars ctx.tenv) ty in
   let v,s,ty =
     match StrMap.find_opt str ctx.idenv with
@@ -131,12 +133,22 @@ let add_sig ctx str tye =
   (* Format.printf "Adding %s: @[%a@]@." str TyScheme.pp ty ; *)
   let tenv = Mlsem.Common.Env.replace v ty ctx.tenv in
   let senv = VarMap.add v s ctx.senv in
-  { benv ; idenv ; tenv ; senv }
+  { benv ; idenv ; tenv ; senv ; tidenv=ctx.tidenv }
+
+let add_alias ctx str tye =
+  let open R_types.Types in
+  let benv, ty = Builder.resolve ctx.benv tye in
+  let tid = Builder.TId.create () in
+  let benv = { benv with tids=Builder.StrMap.add str tid benv.tids } in
+  let ctx = { ctx with benv } in
+  let ty = ty |> Builder.build ctx.tidenv in
+  let ctx = { ctx with tidenv=Builder.TIdMap.add tid ty ctx.tidenv } in
+  PEnv.register str ty ; ctx
 
 let add_def ctx def =
   match def with
   | Sigs.Sig (str, tye) -> add_sig ctx str tye
-  | Sigs.Alias _ -> failwith "TODO"
+  | Sigs.Alias (str, tye) -> add_alias ctx str tye
 
 let treat_extra ctx extra =
   match extra with

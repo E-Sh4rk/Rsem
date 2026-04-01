@@ -13,6 +13,9 @@ int <- 42L
 dbl <- 42
 clx <- 42i
 
+## num1 : num1
+num1 <- 42
+
 f <- function(a){
   if (a > 0) {
     a

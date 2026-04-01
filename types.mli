@@ -1,4 +1,7 @@
 
+type num1 = int1 | dbl1
+type num = int | dbl
+
 val print : ( arg:'a ) -> 'a
 (* val unary (-) : ( arg:v['n](^dbl | 'x & dbl) ) -> v['n](^dbl | 'x & dbl)
 val unary (+) : ( arg:v['n](^dbl | 'x & dbl) ) -> v['n](^dbl | 'x & dbl)

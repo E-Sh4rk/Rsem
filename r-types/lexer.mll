@@ -26,8 +26,8 @@ rule token = parse
 | "binary" { BINARY }
 | "type"  { TYPE }
 | "(*"    { comment 0 lexbuf }
-| '='     { EQUAL }
-| ':'     { read_ty (Buffer.create 17) lexbuf }
+| ':'     { TY (read_ty (Buffer.create 17) lexbuf) }
+| '='     { TYEQ (read_ty (Buffer.create 17) lexbuf) }
 | id as s { ID s }
 | '(' (sym as s) ')' { SYM (String.make 1 s) }
 | eof     { EOF }
@@ -49,8 +49,8 @@ and comment depth = parse
 and read_ty buf = parse
 | escaped_newline {
   enter_newline lexbuf |> read_ty buf }
-| newline { TY (Buffer.contents buf) }
-| eof { TY (Buffer.contents buf) }
+| newline { Buffer.contents buf }
+| eof { Buffer.contents buf }
 | _
   { Buffer.add_string buf (Lexing.lexeme lexbuf);
     read_ty buf lexbuf
