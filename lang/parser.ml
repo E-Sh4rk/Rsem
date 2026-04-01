@@ -117,6 +117,16 @@ and aux_case c tree =
     let e1 = aux_e t1 in
     let e2 = aux_cargs t2 in
     A.Call (e1, e2)
+  | "Subset" ->
+    let t1,t2 = extract2 tree in
+    let e1 = aux_e t1 in
+    let e2 = aux_subset t2 in
+    A.Subset (e1, e2)
+  | "Subset2" ->
+    let t1,t2 = extract2 tree in
+    let e1 = aux_e t1 in
+    let e2 = aux_subset t2 in
+    A.Subset2 (e1, e2)
   | "Id" -> A.Id (aux_tok tree)
   | "Str" -> A.Const (A.CStr (aux_string tree))
   | "Float" -> A.Const (A.CFloat (aux_float tree))
@@ -162,14 +172,18 @@ and aux_else tree =
     Some (aux_e e)
   | _ -> assert false
 
-and aux_cargs tree =
+and aux_subset (* map_subset_arguments map_subset2_arguments *) tree =
+  let _ (* open_bracket *),t2,t3,_ (* close_bracket *) = extract4 tree in
+  (aux_carg t2)::(aux_cargs' t3)
+
+and aux_cargs (* map_call_arguments *) tree =
   let _ (* open_paren *),t2,t3,_ (* close_paren *) = extract4 tree in
   (aux_carg t2)::(aux_cargs' t3)
 
 and aux_carg tree =
   aux_option aux_arg tree
 
-and aux_carg' tree =
+and aux_carg' (* map_anon_rep_comma_opt_arg_59635e2 *) tree =
   match tree with
   | Tuple [_ (* comma *) ; tree] -> aux_carg tree
   | _ -> assert false

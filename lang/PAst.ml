@@ -21,6 +21,8 @@ type e' =
 | Unop of string * e
 | Binop of string * (e * e)
 | Call of e * arg option list
+| Subset of e * arg option list
+| Subset2 of e * arg option list
 | Function of bool (* \x fun? *) * param list option * e
 | Ite of e * e * e option
 | While of e * e
@@ -64,7 +66,7 @@ let rec bv_e (_,e) =
     | _, _, _ -> StrSet.empty
     in
     StrSet.union res (bv_es [e1;e2])
-  | Call (e, args) ->
+  | Call (e, args) | Subset (e, args) | Subset2 (e, args) ->
     let es = args |> List.concat_map (function
       | None  | Some (Named (_, None)) -> []
       | Some (Unnamed e) | Some (Named (_, Some e)) -> [e]
@@ -125,6 +127,8 @@ let rec aux_e env (pos,e) =
     | "<<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve_parent id env.id, aux_e env e2)
     | _, _, _ -> Ast.Binop (Scope.resolve (str^"__2") env.id, aux_e env e1, aux_e env e2)
     end
+  | Subset _ -> failwith "TODO"
+  | Subset2 _ -> failwith "TODO"
   | Call ((_, Return),[]) -> Ast.Return None
   | Call ((_, Return),[Some (Unnamed e)]) -> Ast.Return (Some (aux_e env e))
   | Call (e,args) ->

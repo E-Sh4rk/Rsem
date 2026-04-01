@@ -106,3 +106,8 @@ superassign <- function(x) {
 list()
 list(42)
 list(aa = 42)
+
+test_lists <- function() {
+  l <- list(42)
+  l[[1]]
+}
