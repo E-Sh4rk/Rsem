@@ -30,7 +30,7 @@ type e' =
 | Call of e * arg list
 | Ite of e * e * e
 | While of e * e
-| TyCheck of e * Mlsem.Types.Ty.t
+| TyCheck of { e:e ; ty:Mlsem.Types.Ty.t; necessary:bool; sufficient:bool }
 | Function of param list * e
 | Seq of e * e
 | Return of e option | Break | Next
@@ -70,7 +70,7 @@ let map f e =
       | Call (e, args) -> Call (aux e, List.map (fun (l,e) -> l, aux e) args)
       | Ite (e,e1,e2) -> Ite (aux e, aux e1, aux e2)
       | While (e, e') -> While (aux e, aux e')
-      | TyCheck (e, ty) -> TyCheck (aux e, ty)
+      | TyCheck {e;ty;necessary;sufficient} -> TyCheck {e=aux e ; ty ; necessary ; sufficient}
       | Function (ps, e) ->
         let aux' = function
         | NoDefault v -> NoDefault v

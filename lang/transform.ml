@@ -11,26 +11,26 @@ module TVar = Mlsem.Types.TVar
 let typeof_const c =
   let open Builder in
   let e = match c with
-  | CChr _ -> TVec (Vec.CstLength (1, PHat PChr))
+  | CChr chr -> TVec (Vec.CstLength (1, PHat (PChr' chr)))
   | CDbl _ -> TVec (Vec.CstLength (1, PHat PDbl))
-  | CInt _ -> TVec (Vec.CstLength (1, PHat PInt))
+  | CInt i -> TVec (Vec.CstLength (1, PHat (PInt' (Some i, Some i))))
   | CClx _ -> TVec (Vec.CstLength (1, PHat PClx))
   | CLgl b -> TVec (Vec.CstLength (1, PHat (PLgl' b)))
   | CNull -> TNull
   in
   let b = TAttr { content=e ; classes=CNoClass } in
   Builder.build Builder.TIdMap.empty b
-let typeof_const_atomic c =
+let typeof_const_comp c =
   let open Builder in
-  let ty = match c with
-  | CChr chr -> TVec (Vec.CstLength (1, PHat (PChr' chr)))
-  | CDbl _ -> invalid_arg "Non atomic constant type."
-  | CInt i -> TVec (Vec.CstLength (1, PHat (PInt' (Some i, Some i))))
-  | CClx _ -> invalid_arg "Non atomic constant type."
-  | CLgl b -> TVec (Vec.CstLength (1, PHat (PLgl' b)))
-  | CNull -> TNull
+  let exact, ty = match c with
+  | CChr chr -> true, TVec (Vec.CstLength (1, PHat (PChr' chr)))
+  | CDbl _ -> false, TVec (Vec.CstLength (1, PHat PDbl))
+  | CInt i -> true, TVec (Vec.CstLength (1, PHat (PInt' (Some i, Some i))))
+  | CClx _ -> false, TVec (Vec.CstLength (1, PHat PClx))
+  | CLgl b -> true, TVec (Vec.CstLength (1, PHat (PLgl' b)))
+  | CNull -> true, TNull
   in
-  Builder.build Builder.TIdMap.empty ty
+  exact, Builder.build Builder.TIdMap.empty ty
 
 let typeof_expr env (_,e) =
   match e with
@@ -103,13 +103,16 @@ end
 
 let recognize_const_comparison e =
   let f e =
-    try match e with
+    match e with
     | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
-      when Variable.equal v BuiltinOp.eq -> id, TyCheck (e, typeof_const_atomic c)
+      when Variable.equal v BuiltinOp.eq ->
+        let exact, ty = typeof_const_comp c in
+        id, TyCheck { e ; ty ; sufficient=exact ; necessary=true }
     | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
-      when Variable.equal v BuiltinOp.neq -> id, TyCheck (e, typeof_const_atomic c |> Ty.neg)
+      when Variable.equal v BuiltinOp.neq ->
+        let exact, ty = typeof_const_comp c in
+        id, TyCheck { e ; ty=Ty.neg ty ; sufficient=true ; necessary=exact }
     | e -> e
-    with Invalid_argument _ -> e
   in
   map f e
 
@@ -181,11 +184,13 @@ let to_mlsem (cfg:cfg) e =
       let e = aux e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
       eid, A.While (e, GTy.mk Defs.test_type, aux e')
-    | TyCheck (e, ty) ->
+    | TyCheck {e;ty;necessary;sufficient} ->
       let e = aux e in
-      let tt = Eid.unique (), A.Value (typeof_const (CLgl true) |> GTy.mk) in
-      let ff = Eid.unique (), A.Value (typeof_const (CLgl false) |> GTy.mk) in
-      eid, A.Ite (e, GTy.mk ty, tt, ff)
+      let tt, ff = typeof_const (CLgl true) |> GTy.mk, typeof_const (CLgl false) |> GTy.mk in
+      let bb = Eid.unique (), A.Value (GTy.cup tt ff) in
+      let tt = Eid.unique (), A.Value (tt) in
+      let ff = Eid.unique (), A.Value (ff) in
+      eid, A.Ite (e, GTy.mk ty, (if sufficient then tt else bb), (if necessary then ff else bb))
     | Function (ps, e) ->
       let has_ell = List.mem Ellipsis ps in
       let rec treat_params ps =

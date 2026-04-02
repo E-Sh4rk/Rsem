@@ -44,7 +44,7 @@ ret <- function(x) {
     return(FALSE)
   if (x == FALSE)
     return(FALSE)
-  if (x == 0L)
+  if (x == 0)
     return(FALSE)
   return(TRUE)
 }
@@ -56,7 +56,7 @@ ret_ann <- function(x) {
     return(FALSE)
   if (x == FALSE)
     return(FALSE)
-  if (x == 0L)
+  if (x == 0)
     return(FALSE)
   return(TRUE)
 }
