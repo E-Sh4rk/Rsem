@@ -232,7 +232,7 @@ let to_mlsem (cfg:cfg) e =
         if has_ell
         then
           let ty = TVar.mk KInfer None |> TVar.typ |> Ty.O.optional |> Ty.F.mk_descr in
-          let ellty = Lst.mk ([],[],ty) |> Attr.mk_noclass in
+          let ellty = Lst.mk {pos=[];named=[];sym=[];tl=ty} |> Attr.mk_noclass in
           ty, add_let ellipsis_var (A.Value (GTy.mk ellty)) e
         else Ty.O.absent |> Ty.F.mk_descr, e
       in
