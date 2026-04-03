@@ -16,13 +16,6 @@ open Mlsem.Types
 
 module StrMap = Map.Make(String)
 
-let simplify_tl ty = ty |> TyScheme.bot_instance |> TyScheme.norm_and_simpl
-let merge_tl tys =
-  let tscap t1 t2 =
-    let (tvs1, t1), (tvs2, t2) = TyScheme.get t1, TyScheme.get t2 in
-    TyScheme.mk (MVarSet.union tvs1 tvs2) (GTy.cap t1 t2)
-  in
-  List.fold_left tscap (TyScheme.mk_mono GTy.any) tys |> simplify_tl
 let refresh_vars kind ty =
   let drop1 str = String.sub str 1 (String.length str - 1) in
   let vars = TVOp.vars ty in
@@ -32,7 +25,7 @@ let refresh_vars kind ty =
   |> List.map (fun rv -> rv, RVar.mk kind (Some (Sstt.RowVar.name rv |> drop1)) |> Row.id_for) in
   let s = Subst.of_list s1 s2 in
   Subst.apply s ty
-let sigs_of_ty mono ty =
+let sigs_of_ty ty =
   let aux ty =
     match Arrow.dnf ty with
     | [arrs] ->
@@ -56,7 +49,7 @@ let sigs_of_ty mono ty =
     | _ -> [ty]
   in
   let ty = refresh_vars KNoInfer ty in
-  (aux ty, GTy.mk ty |> TyScheme.mk_poly_except mono |> simplify_tl)
+  (aux ty, GTy.mk ty |> TyScheme.mk_poly)
 let extend_env mlast env =
   let fv = System.Ast.fv mlast in
   let dom = Env.domain env |> VarSet.of_list in
@@ -64,33 +57,35 @@ let extend_env mlast env =
   missing |> VarSet.elements |> List.fold_left
     (fun env v -> Env.add v (TyScheme.mk_mono GTy.dyn) env) env
 
-type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: Env.t ; senv: Ty.t list VarMap.t ;
+type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: MetaEnv.t ; senv: Ty.t list VarMap.t ;
                     benv: Rstt.Builder.env ; tidenv: Ty.t Rstt.Builder.TIdMap.t }
 let initial_ctx = { benv=Rstt.Builder.empty_env ; tidenv=Rstt.Builder.TIdMap.empty ;
-                    idenv=StrMap.empty ; tenv=Defs.initial_env ; senv=VarMap.empty }
+                    idenv=StrMap.empty ; tenv=MetaEnv.initial ; senv=VarMap.empty }
 
 let infer ctx mlast =
-  let env = extend_env mlast ctx.tenv in
+  let env = MetaEnv.env ctx.tenv |> extend_env mlast in
   let renvs = System.Refinement.refinements env mlast in
   (* REnvSet.elements renvs |> List.iter (fun renv -> Format.printf "Renv: %a@." REnv.pp renv) ; *)
   let anns = System.Reconstruction.infer ~direct_narrowing:true env renvs mlast in
-  System.Checker.typeof_def env anns mlast |> simplify_tl
+  System.Checker.typeof_def env anns mlast
 
 let treat_ast v ctx ast =
   try
-    let typ = match VarMap.find_opt v ctx.senv with
+    let ctx = match VarMap.find_opt v ctx.senv with
     | None ->
-      let mlast = Transform.to_mlsem { env=ctx.tenv ; infer_mode=true } ast in
+      let mlast = Transform.to_mlsem { env=MetaEnv.env ctx.tenv ; infer_mode=true } ast in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
-      infer ctx mlast
+      let ty = infer ctx mlast in
+      { ctx with tenv=MetaEnv.replace_signature v ty ctx.tenv }
     | Some sigs ->
-      let mlast = Transform.to_mlsem { env=ctx.tenv ; infer_mode=false } ast in
+      let mlast = Transform.to_mlsem { env=MetaEnv.env ctx.tenv ; infer_mode=false } ast in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
       let asts = List.map (fun s -> Mlsem_system.Ast.coerce CheckStatic (GTy.mk s) mlast) sigs in
       let _ = List.map (infer ctx) asts in
-      Env.find v ctx.tenv
+      ctx
     in
-    Format.printf "%a:@? @[%a@]@.@." Variable.pp v TyScheme.pp_short typ ;
+    let ty = MetaEnv.get_sym_signature v ctx.tenv in
+    Format.printf "%a:@? @[%a@]@.@." Variable.pp v TyScheme.pp_short ty ;
     ctx
   with System.Checker.Untypeable (err) ->
     Format.printf "Untypeable: %s@." err.title ;
@@ -99,7 +94,8 @@ let treat_ast v ctx ast =
 
 let dummy_var = Variable.create (Some "_")
 let treat_def ctx past =
-  let (eid,ast) = PAst.transform { PAst.id = Scope.from_toplevel ctx.tenv ctx.idenv } past in
+  let (eid,ast) = PAst.transform
+    { PAst.id = Scope.from_toplevel (MetaEnv.env ctx.tenv) ctx.idenv } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
   match ast with
   | VarAssign (v, e) -> treat_ast v ctx e
@@ -110,30 +106,25 @@ let add_sig ctx str tye =
   let open Mlsem_common in
   let benv, ty = Builder.resolve ctx.benv tye in
   let ty = ty |> Builder.build ctx.tidenv in
-  let (s,ty) = sigs_of_ty (Mlsem.Common.Env.tvars ctx.tenv) ty in
-  let v,s,ty =
+  let (s,ty) = sigs_of_ty ty in
+  let v,s =
     match StrMap.find_opt str ctx.idenv with
     | None ->
         let v = MVariable.create Immut (Some str) in
-        v,s,ty
+        v,s
     | Some v ->
-      let ty =
-        if Env.mem v ctx.tenv
-        then merge_tl [ty ; (Env.find v ctx.tenv)]
-        else ty
-      in
       let s =
         if VarMap.mem v ctx.senv
         then (VarMap.find v ctx.senv)@s
         else s
       in
-      v,s,ty
+      v,s
   in
   let idenv = StrMap.add str v ctx.idenv in
   (* Format.printf "Adding %s: @[%a@]@." str TyScheme.pp ty ; *)
   (* Format.printf "Adding %s: @[%a@]@." str Sstt.Printer.print_ty'
     (TyScheme.get ty |> snd |> GTy.ub) ; *)
-  let tenv = Mlsem.Common.Env.replace v ty ctx.tenv in
+  let tenv = MetaEnv.add_signature v ty ctx.tenv in
   let senv = VarMap.add v s ctx.senv in
   { benv ; idenv ; tenv ; senv ; tidenv=ctx.tidenv }
 
