@@ -85,9 +85,9 @@ type env = { id: Scope.t }
 let aux_arg f arg =
   match arg with
   | Unnamed e ->
-    Some (Ast.Positional, f e)
+    Some (MetaEnv.Positional, f e)
   | Named (ArgId str, Some e) ->
-    Some (Ast.Named str, f e)
+    Some (MetaEnv.Named str, f e)
   | Named (_, None) -> None
   | _ -> assert false
 let aux_arg f arg =

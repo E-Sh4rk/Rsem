@@ -7,9 +7,6 @@ TODO:
 open Mlsem.Common
 module MVariable = Mlsem.Lang.MVariable
 
-type label = string
-[@@deriving show]
-
 type const =
 | CChr of string
 | CDbl of string
@@ -27,17 +24,13 @@ type e' =
 | VarAssign of Variable.t * e
 | Unop of Variable.t * e
 | Binop of Variable.t * e * e
-| Call of e * arg list
+| Call of e * e MetaEnv.arg list
 | Ite of e * e * e
 | While of e * e
 | TyCheck of { e:e ; ty:Mlsem.Types.Ty.t; necessary:bool; sufficient:bool }
 | Function of param list * e
 | Seq of e * e
 | Return of e option | Break | Next
-[@@deriving show]
-and arg = arg_label * e
-[@@deriving show]
-and arg_label = Positional | Named of label | Ell
 [@@deriving show]
 and param = NoDefault of Variable.t | Default of Variable.t * e | Ellipsis
 [@@deriving show]

@@ -84,7 +84,7 @@ let treat_ast v ctx ast =
       let _ = List.map (infer ctx) asts in
       ctx
     in
-    let ty = MetaEnv.get_sym_signature v ctx.tenv in
+    let ty = MetaEnv.get_signature v ctx.tenv in
     Format.printf "%a:@? @[%a@]@.@." Variable.pp v TyScheme.pp_short ty ;
     ctx
   with System.Checker.Untypeable (err) ->

@@ -146,7 +146,7 @@ let to_mlsem (cfg:cfg) e =
         | (lbl,e)::args ->
           let (npos,named,nrem,es) = parse_args args in
           begin match lbl with
-          | Positional -> npos+1,named,nrem,e::es
+          | MetaEnv.Positional -> npos+1,named,nrem,e::es
           | Named lbl when npos=0 -> 0,lbl::named,nrem,e::es
           | Named lbl -> 0,[lbl],nrem+npos+List.length named,e::es
           | Ell -> 0,[],nrem+npos+List.length named+1,e::es
