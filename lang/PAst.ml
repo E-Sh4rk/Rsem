@@ -127,8 +127,10 @@ let rec aux_e env (pos,e) =
     | "<<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve_parent id env.id, aux_e env e2)
     | _, _, _ -> Ast.Binop (Scope.resolve (str^"__2") env.id, aux_e env e1, aux_e env e2)
     end
-  | Subset _ -> failwith "TODO"
-  | Subset2 _ -> failwith "TODO"
+  | Subset (e,args) ->
+    aux_e env (pos, Call ((pos, Id "[]"), (Some (Unnamed e))::args)) |> snd
+  | Subset2 (e,args) ->
+    aux_e env (pos, Call ((pos, Id "[[]]"), (Some (Unnamed e))::args)) |> snd
   | Call ((_, Return),[]) -> Ast.Return None
   | Call ((_, Return),[Some (Unnamed e)]) -> Ast.Return (Some (aux_e env e))
   | Call (e,args) ->

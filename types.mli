@@ -27,3 +27,4 @@ val fail : empty -> any
 (* ===== Lists ===== *)
 
 val list : ( ; `r ) -> { ; `r }
+val ([[]]) : (lst:{ ...}, elt:num) -> any
