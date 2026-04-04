@@ -29,3 +29,4 @@ val fail : empty -> any
 val list : ( ; `r ) -> { ; `r }
 val ([[]]) : (lst:{ ; 'a}, elt:num|chr) -> 'a|null
 val ([[]]) : (lst:{ #2:'a ...}, elt:num|chr) -> 'a
+val ($) : (lst:{ #2:'a ...}, elt:num|chr) -> 'a

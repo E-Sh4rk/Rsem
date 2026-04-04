@@ -23,6 +23,8 @@ type e' =
 | Call of e * arg option list
 | Subset of e * arg option list
 | Subset2 of e * arg option list
+| Dollar of e * arg_id option
+| At of e * arg_id option
 | Function of bool (* \x fun? *) * param list option * e
 | Ite of e * e * e option
 | While of e * e
@@ -58,7 +60,7 @@ let bv_params ps =
 let rec bv_e (_,e) =
   match e with
   | Return | Break | Next | Const _ | Id _ | Function _ -> StrSet.empty
-  | Unop (_,e) -> bv_e e
+  | Unop (_,e) | Dollar (e, _) | At (e, _) -> bv_e e
   | Binop (str, (e1, e2)) ->
     let res = match str, e1, e2 with
     | "<-", (_, Id id), _ -> StrSet.singleton id
@@ -131,6 +133,14 @@ let rec aux_e env (pos,e) =
     aux_e env (pos, Call ((pos, Id "[]"), (Some (Unnamed e))::args)) |> snd
   | Subset2 (e,args) ->
     aux_e env (pos, Call ((pos, Id "[[]]"), (Some (Unnamed e))::args)) |> snd
+  | Dollar (e, arg) ->
+    let str = match arg with Some (ArgId str) -> str | _ -> assert false in
+    let arg = pos, Const (CStr str) in
+    aux_e env (pos, Call ((pos, Id "$"), [Some (Unnamed e) ; Some (Unnamed arg)])) |> snd
+  | At (e, arg) ->
+    let str = match arg with Some (ArgId str) -> str | _ -> assert false in
+    let arg = pos, Const (CStr str) in
+    aux_e env (pos, Call ((pos, Id "@"), [Some (Unnamed e) ; Some (Unnamed arg)])) |> snd
   | Call ((_, Return),[]) -> Ast.Return None
   | Call ((_, Return),[Some (Unnamed e)]) -> Ast.Return (Some (aux_e env e))
   | Call (e,args) ->

@@ -133,6 +133,16 @@ and aux_case c tree =
   | "Int" ->
     let i, _ = extract2 tree in
     A.Const (A.CInt (aux_float i |> int_of_string))
+  | "Extr_op" ->
+    begin match tree with
+    | Case ("Exp_DOLLAR_rep_nl_opt_choice_str", tree) ->
+      let e, a = aux_extract tree in
+      Dollar (e, a)
+    | Case ("Exp_AT_rep_nl_opt_choice_str", tree) ->
+      let e, a = aux_extract tree in
+      At (e, a)
+    | _ -> assert false
+    end
   | "Comp" ->
     let c, _ = extract2 tree in
     A.Const (A.CClx (aux_float c))
@@ -208,7 +218,7 @@ and aux_arg_id tree =
   | Case ("Null", _) -> A.NullId
   | _ -> assert false
 
-and aux_param tree =
+and aux_param (* map_string_or_identifier *) tree =
   match tree with
   | Case ("Str", tree) -> A.ArgId (aux_string tree)
   | Case ("Choice_dots", tree) -> aux_param_name tree
@@ -283,6 +293,11 @@ and aux_float (* map_float_ *) tree =
   | Case ("Hex_lit", tok) -> aux_tok tok
   | Case ("Num_lit", tok) -> aux_tok tok
   | _ -> assert false
+
+and aux_extract (* map_extract_operator *) tree =
+  let e, _, _, oi = extract4 tree in
+  let oi = oi |> aux_option aux_param in
+  aux_e e, oi
 
 and aux_unary (* map_unary_operator *) tree =
   let aux tree =
