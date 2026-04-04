@@ -48,9 +48,10 @@ let apply_arg acc (i,(k,arg)) =
   | _, None -> acc
   | Ell, _ -> acc
   | Positional, Some arg ->
-    let str = string_of_int i in
+    let str = "#"^string_of_int (i+1) in
     (match Rstt.Labels.substitute str arg acc with None -> raise Exit | Some acc -> acc)
   | Named str, Some arg ->
+    let str = "#"^str in
     (match Rstt.Labels.substitute str arg acc with None -> raise Exit | Some acc -> acc)
 let apply_args args ty =
   args |> List.mapi (fun i a -> (i, a)) |> List.fold_left apply_arg ty
