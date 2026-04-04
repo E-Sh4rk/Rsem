@@ -38,6 +38,7 @@ let replace_signature v ty (env,senv) =
   let env, senv = Env.rm v env, VarMap.remove v senv in
   add_signature v ty (env, senv)
 
+let mem v (env, _) = Env.mem v env
 let env (env, _) = env
 let get_signature v (env,senv) =
   merge_tl (Env.find v env :: get_sym_sigs v senv)

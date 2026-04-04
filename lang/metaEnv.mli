@@ -13,6 +13,7 @@ type t
 val initial : t
 val add_signature : Variable.t -> TyScheme.t -> t -> t
 val replace_signature : Variable.t -> TyScheme.t -> t -> t
+val mem : Variable.t -> t -> bool
 val env : t -> Env.t
 val get_signature : Variable.t -> t -> TyScheme.t
 val get_fun_signature : Variable.t -> Rstt.Labels.t option arg list -> t -> TyScheme.t

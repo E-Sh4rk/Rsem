@@ -33,8 +33,8 @@ let typeof_const_comp c =
   exact, Builder.build Builder.TIdMap.empty ty
 
 let typeof_expr env (_,e) =
-  match e with
-  | Id v when Env.mem v env -> Some (Env.find v env)
+  match e with (* TODO: get_fun_signature *)
+  | Id v when MetaEnv.mem v env -> Some (MetaEnv.get_signature v env)
   | _ -> None
 
 (* Arguments builder / Attr projector *)
@@ -126,7 +126,7 @@ let rec rem_n_first n lst =
 
 let ellipsis_var = MVariable.create Immut (Some "...")
 
-type cfg = { env : Mlsem.Common.Env.t ; infer_mode : bool }
+type cfg = { env : MetaEnv.t ; infer_mode : bool }
 
 let to_mlsem (cfg:cfg) e =
   let rec aux (eid,e) =
