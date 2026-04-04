@@ -27,6 +27,5 @@ val fail : empty -> any
 (* ===== Lists ===== *)
 
 val list : ( ; `r ) -> { ; `r }
-val ([[]]) : (lst:{ ...}, elt:num|chr) -> any
+val ([[]]) : (lst:{ ; 'a}, elt:num|chr) -> 'a|null
 val ([[]]) : (lst:{ #2:'a ...}, elt:num|chr) -> 'a
-val ([[]]) : (lst:{ #2:empty? ...}, elt:num|chr) -> null

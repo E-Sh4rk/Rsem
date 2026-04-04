@@ -108,7 +108,6 @@ list(42)
 list(aa = 42)
 
 test_lists <- function() {
-  l <- list(42)
-  list(l[[1]],l[[2]])
+  l <- list(42, a=42L)
+  list(l[[1]],l$a)
 }
-# TODO: $ projection
