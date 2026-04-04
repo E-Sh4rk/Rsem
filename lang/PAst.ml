@@ -115,6 +115,20 @@ let add_def env e str =
   let v = Scope.resolve str env.id in
   Eid.unique (), Ast.Declare (v, e)
 
+let left_op (_, e) =
+  match e with
+  | Dollar ((pos, Id id),arg) ->
+    let str = match arg with Some (ArgId str) -> str | _ -> assert false in
+    let arg = pos, Const (CStr str) in
+    (id, "$", [Some (Unnamed (pos, Id id)); Some (Unnamed arg)])
+  | At ((pos, Id id),arg) ->
+    let str = match arg with Some (ArgId str) -> str | _ -> assert false in
+    let arg = pos, Const (CStr str) in
+    (id, "@", [Some (Unnamed (pos, Id id)); Some (Unnamed arg)])
+  | Subset ((pos, Id id),args) -> (id, "[]", [Some (Unnamed (pos, Id id))]@args)
+  | Subset2 ((pos, Id id),args) -> (id, "[[]]", [Some (Unnamed (pos, Id id))]@args)
+  | _ -> failwith "Invalid left value."
+
 let rec aux_e env (pos,e) =
   let eid = Eid.unique_with_pos pos in
   let e = match e with
@@ -126,7 +140,13 @@ let rec aux_e env (pos,e) =
   | Binop (str, (e1,e2)) ->
     begin match str, e1, e2 with
     | "<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve id env.id, aux_e env e2)
+    | "<-", e1, e2 ->
+      let (id, op_prefix, args) = left_op e1 in
+      let args = args@[Some (Unnamed e2)] in
+      let call = aux_e env (pos, Call ((pos, Id (op_prefix^"<-")), args)) in
+      Ast.VarAssign (Scope.resolve id env.id, call)
     | "<<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve_parent id env.id, aux_e env e2)
+    | "<<-", _, _ -> failwith "Invalid left value."
     | _, _, _ -> Ast.Binop (Scope.resolve (str^"__2") env.id, aux_e env e1, aux_e env e2)
     end
   | Subset (e,args) ->

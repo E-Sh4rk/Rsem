@@ -2,6 +2,7 @@
 TODO:
 - Lists
 - Attributes
+- Error localization
 *)
 
 open Mlsem.Common
