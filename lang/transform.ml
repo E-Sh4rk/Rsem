@@ -3,6 +3,7 @@ open R_types
 open Types
 open Mlsem.Common
 module GTy = Mlsem.Types.GTy
+module TyScheme = Mlsem.Types.TyScheme
 module MVariable = Mlsem.Lang.MVariable
 module A = Mlsem.Lang.Ast
 module SA = Mlsem.System.Ast
@@ -33,9 +34,41 @@ let typeof_const_comp c =
   exact, Builder.build Builder.TIdMap.empty ty
 
 let typeof_expr env (_,e) =
-  match e with (* TODO: get_fun_signature *)
+  match e with
+  | Const c -> Some (typeof_const c |> GTy.mk |> TyScheme.mk_mono)
   | Id v when MetaEnv.mem v env -> Some (MetaEnv.get_signature v env)
   | _ -> None
+let labelof_expr env e =
+  match snd e with
+  | Const (CChr str) -> Some (Labels.Named str)
+  | Const (CInt i) -> Some (Labels.Pos (i-1))
+  | Const (CDbl dbl) ->
+    int_of_string_opt dbl |> Option.map (fun i -> Labels.Pos (i-1))
+  | _ -> (* If the expr is not a constant, we may still guess the label from its type *)
+    begin match typeof_expr env e with
+    | None -> None
+    | Some ty ->
+      let ty = TyScheme.get ty |> snd |> GTy.ub in
+      begin match ty |> Attr.proj_content |> Vec.destruct with
+      | [(CstLength (1, ty),_)] when Prim.is_singleton ty ->
+        let ty = Prim.destruct ty in
+        if Ty.leq ty Prim.Int.any then
+          match Prim.Int.destruct ty with
+          | false, [(Some i1, Some i2)] when i1=i2 -> Some (Labels.Pos (i1-1))
+          | _ -> assert false
+        else if Ty.leq ty Prim.Chr.any then
+          match Prim.Chr.destruct ty with
+          | false, { positive=true ; content=[str] } -> Some (Labels.Named str)
+          | _ -> assert false
+        else None
+      | _ -> None
+      end
+    end
+let typeof_fun env e args =
+  let args = args |> List.map (fun (k,e) -> (k,labelof_expr env e)) in
+  match snd e with
+  | Id v when MetaEnv.mem v env -> Some (MetaEnv.get_fun_signature v args env)
+  | _ -> typeof_expr env e
 
 (* Arguments builder / Attr projector *)
 
@@ -154,27 +187,27 @@ let to_mlsem (cfg:cfg) e =
       in
       let (npos,names,nrem,es) = parse_args args in
       let es = List.map aux es in
-      let args = Eid.unique (), A.Constructor
+      let arg = Eid.unique (), A.Constructor
         (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (npos,names,nrem) ; cons=ArgBuilder.cons (npos,names,nrem) }, es) in
-      begin match typeof_expr cfg.env f with
+      begin match typeof_fun cfg.env f args with
       | None ->
         let f = Eid.unique (), A.Projection
           (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux f) in
-        eid, A.App (f, args)
+        eid, A.App (f, arg)
       | Some ty when cfg.infer_mode ->
         let ty = TyUtils.proj_content ty in
         let tys = ty |> TyUtils.decompose_fun in
         (* tys |> List.iter (fun ty -> Format.printf "Alt: %a@." Mlsem_types.TyScheme.pp ty) ; *)
         let alts = tys |> List.map (fun ty ->
-          Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, args)
+          Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
           ) in
         begin match alts with
-        | [] -> eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, args)
+        | [] -> eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
         | a::alts -> List.fold_left (fun acc a -> Eid.unique (), A.Alt (a, acc)) a alts
         end
       | Some ty ->
         let ty = TyUtils.proj_content ty in
-        eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, args)
+        eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
       end
     | Ite (e, e1, e2) ->
       let e = aux e in
