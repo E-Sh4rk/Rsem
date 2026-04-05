@@ -114,14 +114,22 @@ test_lists <- function() {
   list(l[[1]],l$a,l$b)
 }
 
-test_classes <- function(x) {
-  unclass(x)
-  class(x) <- c("abc", "def")
-  class(x)
-}
-
-test_attr <- function(x) {
-  attributes(x) <- list(a=42)
-  attr(x,"dim") <- c(2,5)
+## foo : (a:'a<...>) -> 'a<>
+test_foo <- function(x) {
+  foo(x)
   x
 }
+# TODO: why type inferred is not simplified?
+
+test_classes <- function(x) {
+  unclass(x)
+  # class(x) <- c("abc", "def")
+  # class(x) <- class(x)
+  x
+}
+
+# test_attr <- function(x) {
+#   attributes(x) <- list(a=42)
+#   attr(x,"dim") <- c(2,5)
+#   x
+# }

@@ -38,19 +38,6 @@ and param = NoDefault of Variable.t | Default of Variable.t * e | Ellipsis
 and e = Eid.t * e'
 [@@deriving show]
 
-module BuiltinOp = struct
-  let eq = MVariable.create Immut (Some "==__2")
-  let neq = MVariable.create Immut (Some "!=__2")
-  let all = [ eq ; neq ]
-  let find_builtin str =
-    let f v =
-      match Variable.get_name v with
-      | None -> false
-      | Some name -> String.equal name str
-    in
-    List.find_opt f all
-end
-
 let map f e =
   let rec aux (id,e) =
     let e =

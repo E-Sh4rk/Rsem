@@ -36,7 +36,7 @@ let add_local_binding str kind t =
     env::t
 
 let unresolved str =
-  begin match Ast.BuiltinOp.find_builtin str with
+  begin match Defs.BuiltinOp.find_builtin str with
   | None -> MVariable.create Immut (Some str)
   | Some v -> v
   end

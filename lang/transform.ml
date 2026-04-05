@@ -134,15 +134,25 @@ end
 
 (* Transformations *)
 
+let recognize_mutators e =
+  let f e =
+    match e with
+    | id, Call ((_, Id v), [(_, (_, Id v'))])
+      when Variable.equal v Defs.BuiltinOp.unclass ->
+        id, VarAssign (v', e)
+    | e -> e
+  in
+  map f e
+
 let recognize_const_comparison e =
   let f e =
     match e with
     | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
-      when Variable.equal v BuiltinOp.eq ->
+      when Variable.equal v Defs.BuiltinOp.eq ->
         let exact, ty = typeof_const_comp c in
         id, TyCheck { e ; ty ; sufficient=exact ; necessary=true }
     | id, (Binop (v, e, (_, Const c)) | Binop (v, (_, Const c), e))
-      when Variable.equal v BuiltinOp.neq ->
+      when Variable.equal v Defs.BuiltinOp.neq ->
         let exact, ty = typeof_const_comp c in
         id, TyCheck { e ; ty=Ty.neg ty ; sufficient=true ; necessary=exact }
     | e -> e
@@ -280,4 +290,5 @@ let to_mlsem (cfg:cfg) e =
   aux e
 
 let to_mlsem cfg e =
-  e |> recognize_const_comparison |> to_mlsem cfg |> Mlsem.Lang.Transform.transform
+  e |> recognize_const_comparison |> recognize_mutators
+  |> to_mlsem cfg |> Mlsem.Lang.Transform.transform
