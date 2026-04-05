@@ -115,6 +115,7 @@ let add_def env e str =
   let v = Scope.resolve str env.id in
   Eid.unique (), Ast.Declare (v, e)
 
+(* TODO: nested (e.g. unclass(x)[i], x[i][j], etc.) *)
 let left_op (_, e) =
   match e with
   | Dollar ((pos, Id id),arg) ->
@@ -127,6 +128,8 @@ let left_op (_, e) =
     (id, "@", [Some (Unnamed (pos, Id id)); Some (Unnamed arg)])
   | Subset ((pos, Id id),args) -> (id, "[]", [Some (Unnamed (pos, Id id))]@args)
   | Subset2 ((pos, Id id),args) -> (id, "[[]]", [Some (Unnamed (pos, Id id))]@args)
+  | Call ((_, Id id), (Some (Unnamed (pos, Id id')))::args) ->
+    (id', id, (Some (Unnamed (pos, Id id')))::args)
   | _ -> failwith "Invalid left value."
 
 let rec aux_e env (pos,e) =

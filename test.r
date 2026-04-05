@@ -114,17 +114,10 @@ test_lists <- function() {
   list(l[[1]],l$a,l$b)
 }
 
-## foo : (a:'a<...>) -> 'a<>
-test_foo <- function(x) {
-  foo(x)
-  x
-}
-# TODO: why type inferred is not simplified?
-
 test_classes <- function(x) {
   unclass(x)
-  # class(x) <- c("abc", "def")
-  # class(x) <- class(x)
+  class(x) <- c("abc", "def")
+  class(x) <- class(x)
   x
 }
 

@@ -33,3 +33,8 @@ val ($) : (lst:{ #2:'a ...}, k:num|chr) -> 'a
 val ($<-) : (lst:{ #2:any? ; `r}, k:num|chr, v:'b) -> { #2:'b ; `r}
 val ([[]]<-) : (lst:{ ; 'a}, k:num|chr, v:'b) -> { ; 'a|'b}
 val ([[]]<-) : (lst:{ #2:any? ; `r}, k:num|chr, v:'b) -> { #2:'b ; `r}
+
+(* ===== Classes ===== *)
+
+val class<- : (x:'a<...> , c:^chr) -> 'a<...>
+val class : (x:'a<...>) -> ^chr
