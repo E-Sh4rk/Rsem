@@ -113,3 +113,15 @@ test_lists <- function() {
   l[["a"]] <- "a"
   list(l[[1]],l$a,l$b)
 }
+
+test_classes <- function(x) {
+  unclass(x)
+  class(x) <- c("abc", "def")
+  class(x)
+}
+
+test_attr <- function(x) {
+  attributes(x) <- list(a=42)
+  attr(x,"dim") <- c(2,5)
+  x
+}
