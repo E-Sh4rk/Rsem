@@ -116,7 +116,7 @@ let add_def env e str =
   Eid.unique (), Ast.Declare (v, e)
 
 let rec expr_of_left pos r l =
-  let call pos r (op_prefix, args) =
+  let call pos r op_prefix args =
     let args = args@[Some (Unnamed r)] in
     (pos, Call ((pos, Id (op_prefix^"<-")), args))
   in
@@ -126,21 +126,21 @@ let rec expr_of_left pos r l =
     let str = match arg with Some (ArgId str) -> str | _ -> assert false in
     let arg = pos, Const (CStr str) in
     let (id, r) = expr_of_left pos r l in
-    (id, call pos r ("$", [Some (Unnamed (pos, Id id)); Some (Unnamed arg)]))
+    (id, call pos r "$" [Some (Unnamed (pos, Id id)); Some (Unnamed arg)])
   | At (l,arg) ->
     let str = match arg with Some (ArgId str) -> str | _ -> assert false in
     let arg = pos, Const (CStr str) in
     let (id, r) = expr_of_left pos r l in
-    (id, call pos r ("@", [Some (Unnamed (pos, Id id)); Some (Unnamed arg)]))
+    (id, call pos r "@" [Some (Unnamed (pos, Id id)); Some (Unnamed arg)])
   | Subset (l,args) ->
     let (id, r) = expr_of_left pos r l in
-    (id, call pos r ("[]", [Some (Unnamed (pos, Id id))]@args))
+    (id, call pos r "[]" ([Some (Unnamed (pos, Id id))]@args))
   | Subset2 (l,args) ->
     let (id, r) = expr_of_left pos r l in
-    (id, call pos r ("[[]]", [Some (Unnamed (pos, Id id))]@args))
+    (id, call pos r "[[]]" ([Some (Unnamed (pos, Id id))]@args))
   | Call ((_, Id id'), (Some (Unnamed l))::args) ->
     let (id, r) = expr_of_left pos r l in
-    (id, call pos r (id', (Some (Unnamed (pos, Id id')))::args))
+    (id, call pos r id' ((Some (Unnamed l))::args))
   | _ -> failwith "Invalid left value."
 
 let rec aux_e env (pos,e) =
@@ -153,7 +153,6 @@ let rec aux_e env (pos,e) =
   | Unop (str, e) -> Ast.Unop (Scope.resolve (str^"__1") env.id, aux_e env e)
   | Binop (str, (e1,e2)) ->
     begin match str, e1, e2 with
-    | "<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve id env.id, aux_e env e2)
     | "<-", e1, e2 ->
       let (id, r) = expr_of_left pos e2 e1 in
       Ast.VarAssign (Scope.resolve id env.id, aux_e env r)
