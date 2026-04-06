@@ -125,22 +125,22 @@ let rec expr_of_left pos r l =
   | Dollar (l,arg) ->
     let str = match arg with Some (ArgId str) -> str | _ -> assert false in
     let arg = pos, Const (CStr str) in
-    let (id, r) = expr_of_left pos r l in
-    (id, call pos r "$" [Some (Unnamed (pos, Id id)); Some (Unnamed arg)])
+    let r = call pos r "$" [Some (Unnamed l); Some (Unnamed arg)] in
+    expr_of_left pos r l
   | At (l,arg) ->
     let str = match arg with Some (ArgId str) -> str | _ -> assert false in
     let arg = pos, Const (CStr str) in
-    let (id, r) = expr_of_left pos r l in
-    (id, call pos r "@" [Some (Unnamed (pos, Id id)); Some (Unnamed arg)])
+    let r = call pos r "@" [Some (Unnamed l); Some (Unnamed arg)] in
+    expr_of_left pos r l
   | Subset (l,args) ->
-    let (id, r) = expr_of_left pos r l in
-    (id, call pos r "[]" ([Some (Unnamed (pos, Id id))]@args))
+    let r = call pos r "[]" ((Some (Unnamed l))::args) in
+    expr_of_left pos r l
   | Subset2 (l,args) ->
-    let (id, r) = expr_of_left pos r l in
-    (id, call pos r "[[]]" ([Some (Unnamed (pos, Id id))]@args))
+    let r = call pos r "[[]]" ((Some (Unnamed l))::args) in
+    expr_of_left pos r l
   | Call ((_, Id id'), (Some (Unnamed l))::args) ->
-    let (id, r) = expr_of_left pos r l in
-    (id, call pos r id' ((Some (Unnamed l))::args))
+    let r = call pos r id' ((Some (Unnamed l))::args) in
+    expr_of_left pos r l
   | _ -> failwith "Invalid left value."
 
 let rec aux_e env (pos,e) =

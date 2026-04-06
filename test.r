@@ -117,9 +117,9 @@ test_lists <- function() {
 ## nested_list : (x: { a : { ; lgl1 } ; `r} ) -> { a : { ; lgl1 } ; `r}
 nested_list <- function(x) {
   x$a[[1]] <- FALSE
+  # x <- $<-(x, a, [[]]<-(x$a, 1, FALSE))
   x
 }
-# TODO
 
 test_classes <- function(x) {
   unclass(x)
