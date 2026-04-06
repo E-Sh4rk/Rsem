@@ -115,21 +115,32 @@ let add_def env e str =
   let v = Scope.resolve str env.id in
   Eid.unique (), Ast.Declare (v, e)
 
-(* TODO: nested (e.g. unclass(x)[i], x[i][j], etc.) *)
-let left_op (_, e) =
-  match e with
-  | Dollar ((pos, Id id),arg) ->
+let rec expr_of_left pos r l =
+  let call pos r (op_prefix, args) =
+    let args = args@[Some (Unnamed r)] in
+    (pos, Call ((pos, Id (op_prefix^"<-")), args))
+  in
+  match snd l with
+  | Id id -> (id, r)
+  | Dollar (l,arg) ->
     let str = match arg with Some (ArgId str) -> str | _ -> assert false in
     let arg = pos, Const (CStr str) in
-    (id, "$", [Some (Unnamed (pos, Id id)); Some (Unnamed arg)])
-  | At ((pos, Id id),arg) ->
+    let (id, r) = expr_of_left pos r l in
+    (id, call pos r ("$", [Some (Unnamed (pos, Id id)); Some (Unnamed arg)]))
+  | At (l,arg) ->
     let str = match arg with Some (ArgId str) -> str | _ -> assert false in
     let arg = pos, Const (CStr str) in
-    (id, "@", [Some (Unnamed (pos, Id id)); Some (Unnamed arg)])
-  | Subset ((pos, Id id),args) -> (id, "[]", [Some (Unnamed (pos, Id id))]@args)
-  | Subset2 ((pos, Id id),args) -> (id, "[[]]", [Some (Unnamed (pos, Id id))]@args)
-  | Call ((_, Id id), (Some (Unnamed (pos, Id id')))::args) ->
-    (id', id, (Some (Unnamed (pos, Id id')))::args)
+    let (id, r) = expr_of_left pos r l in
+    (id, call pos r ("@", [Some (Unnamed (pos, Id id)); Some (Unnamed arg)]))
+  | Subset (l,args) ->
+    let (id, r) = expr_of_left pos r l in
+    (id, call pos r ("[]", [Some (Unnamed (pos, Id id))]@args))
+  | Subset2 (l,args) ->
+    let (id, r) = expr_of_left pos r l in
+    (id, call pos r ("[[]]", [Some (Unnamed (pos, Id id))]@args))
+  | Call ((_, Id id'), (Some (Unnamed l))::args) ->
+    let (id, r) = expr_of_left pos r l in
+    (id, call pos r (id', (Some (Unnamed (pos, Id id')))::args))
   | _ -> failwith "Invalid left value."
 
 let rec aux_e env (pos,e) =
@@ -144,10 +155,8 @@ let rec aux_e env (pos,e) =
     begin match str, e1, e2 with
     | "<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve id env.id, aux_e env e2)
     | "<-", e1, e2 ->
-      let (id, op_prefix, args) = left_op e1 in
-      let args = args@[Some (Unnamed e2)] in
-      let call = aux_e env (pos, Call ((pos, Id (op_prefix^"<-")), args)) in
-      Ast.VarAssign (Scope.resolve id env.id, call)
+      let (id, r) = expr_of_left pos e2 e1 in
+      Ast.VarAssign (Scope.resolve id env.id, aux_e env r)
     | "<<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve_parent id env.id, aux_e env e2)
     | "<<-", _, _ -> failwith "Invalid left value."
     | _, _, _ -> Ast.Binop (Scope.resolve (str^"__2") env.id, aux_e env e1, aux_e env e2)
