@@ -17,12 +17,6 @@ let parse_with_errors parser buf =
 
 let parse_type_string = Rstt_repl.IO.parse_type
 
-let parse_type_defs_file source_filename =
-  let cin = open_in source_filename in
-  let buf = from_channel cin in
-  buf.lex_curr_p <- { buf.lex_curr_p with  pos_fname = source_filename };
-  parse_with_errors Parser.defs buf
-
 let parse_sig_def str =
   let buf = from_string str in
   buf.lex_curr_p <- { buf.lex_curr_p with pos_fname = "_" };

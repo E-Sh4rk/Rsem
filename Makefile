@@ -5,7 +5,11 @@ build:
 	dune build
 
 run:
-	dune exec main
+	dune exec main tests/*.r
+
+record:
+	dune exec -- main -record tests/*.r
+
 
 clean:
 	dune clean

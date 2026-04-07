@@ -21,26 +21,11 @@ let sym = ['+''-''['']''$''@''<''>']+
 rule token = parse
 | newline { enter_newline lexbuf |> token }
 | blank   { token lexbuf }
-| "(*"    { comment 0 lexbuf }
 | ':'     { TY (read_ty (Buffer.create 17) lexbuf) }
 | '='     { TYEQ (read_ty (Buffer.create 17) lexbuf) }
 | id as s { ID s }
 | '(' (sym as s) ')' { SYM s }
-| eof     { EOF }
 | _ { raise (LexerError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
-
-and comment depth = parse
-| newline { enter_newline lexbuf |> comment depth }
-| "*)" {
-  if depth = 0 then token lexbuf else comment (depth - 1) lexbuf
-}
-| "(*" {
-  comment (depth + 1) lexbuf
-}
-| eof { EOF }
-| _ {
-  comment depth lexbuf
-}
 
 and read_ty buf = parse
 | escaped_newline {

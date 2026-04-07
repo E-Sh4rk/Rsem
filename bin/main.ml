@@ -153,28 +153,44 @@ let treat_extra ctx extra =
       add_def ctx def
     else ctx
 
-let main () =
-  (* System.Config.infer_overload := false ; *)
-  Mlsem.Lang.Config.void_ty := Transform.typeof_const CNull ;
-  (* TODO: use a regular r file with only type annotations instead of a special mli file *)
-  let tdefs = R_types.IO.parse_type_defs_file "types.def" in
-  let ctx = List.fold_left add_def initial_ctx tdefs in
-  (* Format.printf "%a@.@." Env.pp env ; *)
-  let res = Parse.file "test.r" in
+
+(* ===== COMMAND LINE ===== *)
+
+let record = ref false
+let input_files = ref []
+let usage_msg = "typed-r [-record] <file1> [<file2>] ..."
+let anon_fun filename =
+    input_files := filename::!input_files
+let speclist =
+    [("-record", Arg.Set record, "Record tallying instances into a file")]
+
+let main (ctx, fn) =
+  let res = Parse.file fn in
   match res.program with
-  | None -> ()
+  | None -> ctx
   | Some prog ->
     (* Boilerplate.dump_extras res.extras ; *)
     let ctx = List.fold_left treat_extra ctx res.extras in
     let tree = Boilerplate.map_program () prog in
     let prog = Parser.of_parser tree in
     (* Format.printf "%a@.@." PAst.pp prog ; *)
-    List.fold_left treat_def ctx prog |> ignore
+    List.fold_left treat_def ctx prog
 
 let () =
-  Mlsem.Types.Recording.start_recording () ;
   Printexc.record_backtrace true ;
   Mlsem_types.PEnv.add_printer_param (Rstt.Pp.printer_params ()) ;
   Mlsem_system.Config.normalization_fun := Rstt.Simplify.partition_vecs ;
-  PEnv.sequential_handler PEnv.empty main () |> ignore ;
-  Mlsem.Types.Recording.save_to_file "instances.json" (Mlsem.Types.Recording.tally_calls ())
+  Mlsem.Lang.Config.void_ty := Transform.typeof_const CNull ;
+  (* System.Config.infer_overload := false ; *)
+
+  Arg.parse speclist anon_fun usage_msg ;
+  if !record then Recording.start_recording () ;
+
+  let ctx, penv = ref initial_ctx, ref PEnv.empty in
+  List.rev !input_files |> List.iter (fun fn ->
+      Format.printf "@.@{<bold>===== Processing %s =====@}@." fn ;
+      Recording.clear () ;
+      let ctx', penv' = PEnv.sequential_handler !penv main (!ctx, fn) in
+      ctx := ctx' ; penv := penv' ;
+      if !record then Recording.save_to_file fn (Recording.tally_calls ())
+  )
