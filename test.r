@@ -16,7 +16,7 @@ clx <- 42i
 ## num1 : num1
 num1 <- 42
 
-f <- function(a){
+f_req <- function(a){
   if (a > 0) {
     a
   }
@@ -25,14 +25,26 @@ f <- function(a){
   }
 }
 
-f <- function(a=42){
+f_opt <- function(a=42){
   if (a > 0) {
     a
   }
   else {
-    -a
+    (-a)
   }
 }
+
+## f_opt_ann : ( a: dbl ) -> dbl
+## f_opt_ann : ( a: null? ) -> lgl1
+f_opt_ann <- function(a=NULL){
+  if (a == NULL) {
+    FALSE
+  }
+  else {
+    a
+  }
+}
+# TODO: unify required and optional arguments (cf above)
 
 app <- function(){
   f <- function(b=12){ b }

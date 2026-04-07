@@ -112,6 +112,9 @@ and aux_e tree =
 
 and aux_case c tree =
   match c with
+  | "Paren_exp" ->
+    let _, t, _ = extract3 tree in
+    aux_e t |> snd
   | "Call" ->
     let t1,t2 = extract2 tree in
     let e1 = aux_e t1 in
@@ -172,7 +175,6 @@ and aux_case c tree =
     let _,_,_,e,_,_,e' = extract7 tree in
     A.While (aux_e e, aux_e e')
   | "Ret" -> A.Return | "Brk" -> A.Break | "Next" -> A.Next
-  (* TODO: Paren_exp *)
   | _ -> failwith ("TODO: "^c)
 
 and aux_else tree =
