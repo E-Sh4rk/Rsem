@@ -8,6 +8,7 @@ module MVariable = Mlsem.Lang.MVariable
 module A = Mlsem.Lang.Ast
 module SA = Mlsem.System.Ast
 module TVar = Mlsem.Types.TVar
+module RVar = Mlsem.Types.RVar
 
 let typeof_const c =
   let open Builder in
@@ -109,6 +110,17 @@ module ArgBuilder = struct
         if Ty.leq ty' ty then Some args else None
       )
     with Invalid_argument _ -> []
+end
+
+(* TODO: reuse MLsem PiFieldOpt (need to be able to pass custom Label.t) *)
+module RecordProj = struct
+  let domain lbl ty = Descr.mk_record {
+      Records.Atom.tail=Ty.F.any ;
+      bindings=LabelMap.singleton lbl (Ty.O.optional ty |> Ty.F.mk_descr)
+    } |> Ty.mk_descr
+  let proj lbl ty =
+    ty |> Sstt.Ty.get_descr |> Sstt.Descr.get_records
+    |> Sstt.Op.Records.proj lbl |> fst
 end
 
 module AttrProj = struct
@@ -237,38 +249,57 @@ let to_mlsem (cfg:cfg) e =
     | Function (ps, e) ->
       let has_ell = List.mem Ellipsis ps in
       let rec treat_params ps =
+        let ty = TVar.mk KInfer None |> TVar.typ |> Ty.O.required |> Ty.F.mk_descr in
         match ps with
         | [] -> [], []
         | Ellipsis::ps -> [], treat_params_nopos ps
         | (NoDefault v)::ps ->
           let pos, nopos = treat_params ps in
-          (v, None, TVar.mk KInfer None |> TVar.typ)::pos, nopos
+          (v, None, ty)::pos, nopos
         | (Default (v,e))::ps ->
           let pos, nopos = treat_params ps in
-          (v, Some e, TVar.mk KInfer None |> TVar.typ)::pos, nopos
+          let ty' = RVar.mk KInfer None |> RVar.fty in
+          let ty' = Ty.F.cap ty' (Ty.O.absent |> Ty.F.mk_descr) in
+          (v, Some e, Ty.F.cup ty ty')::pos, nopos
       and treat_params_nopos ps =
+        let ty = TVar.mk KInfer None |> TVar.typ |> Ty.O.required |> Ty.F.mk_descr in
         match ps with
         | [] -> []
         | Ellipsis::_ -> failwith "Invalid parameter layout"
         | (NoDefault v)::ps ->
-          (v, None, TVar.mk KInfer None |> TVar.typ)::(treat_params_nopos ps)
+          (v, None, ty)::(treat_params_nopos ps)
         | (Default (v,e))::ps ->
-          (v, Some e, TVar.mk KInfer None |> TVar.typ)::(treat_params_nopos ps)
+          let ty' = RVar.mk KInfer None |> RVar.fty in
+          let ty' = Ty.F.cap ty' (Ty.O.absent |> Ty.F.mk_descr) in
+          (v, Some e, Ty.F.cup ty ty')::(treat_params_nopos ps)
       in
       let pos, nopos = treat_params ps in
-      let pos_named = pos |> List.map (fun (v,o,ty) -> Variable.get_name v |> Option.get,
-        (if Option.is_none o then Ty.O.required ty else Ty.O.optional ty) |> Ty.F.mk_descr) in
-      let named = nopos |> List.map (fun (v,o,ty) -> Variable.get_name v |> Option.get,
-        (if Option.is_none o then Ty.O.required ty else Ty.O.optional ty) |> Ty.F.mk_descr) in
+      let pos_named = pos |> List.map (fun (v,_,ty) -> Variable.get_name v |> Option.get, ty) in
+      let named = nopos |> List.map (fun (v,_,ty) -> Variable.get_name v |> Option.get, ty) in
       let add_let v def e =
         Eid.unique (), A.Let ([], v, (Eid.unique (), def), e)
       in
-      let add_def e (v,o,ty) =
+      let add_def e (v,o,fty) =
+        let lbl = Labels.named (Variable.get_name v |> Option.get) in
+        let ty = Descr.mk_record {
+            Records.Atom.tail=(Ty.F.mk_descr Ty.O.absent) ;
+            bindings=LabelMap.of_list [lbl, fty]
+          } |> Ty.mk_descr in
+        let ty = Eid.unique (), A.Value (GTy.mk ty) in
+        let e' = A.Projection (SA.PCustom
+          {pname="proj";pdom=RecordProj.domain lbl;proj=RecordProj.proj lbl;pgen=true}, ty) in
         match o with
-        | Some e' ->
-          add_let v (A.Constructor (SA.Join 2,
-            [ Eid.unique (), A.Value (GTy.mk ty) ; aux e' ])) e
-        | None -> add_let v (A.Value (GTy.mk ty)) e
+        | Some e_default ->
+          let e' = Eid.unique (), e' in
+          let tau = Descr.mk_record {
+              Records.Atom.tail=(Ty.F.mk_descr Ty.O.absent) ;
+              bindings=LabelMap.of_list [lbl, Ty.O.required Ty.any |> Ty.F.mk_descr]
+            } |> Ty.mk_descr in
+          let empty = Eid.unique (), A.Value (GTy.mk Ty.empty) in
+          let e_default = Eid.unique (), A.Constructor (SA.Ternary tau, [ty ; empty ; aux e_default]) in
+          let e' = A.Constructor (SA.Join 2, [ e'; e_default ]) in
+          add_let v e' e
+        | None -> add_let v e' e
       in
       let e = List.fold_left add_def (aux e) (pos@nopos) in
       let tl, e =

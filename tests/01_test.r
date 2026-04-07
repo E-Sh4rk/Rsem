@@ -44,7 +44,6 @@ f_opt_ann <- function(a=NULL){
     a
   }
 }
-# TODO: unify required and optional arguments (cf above)
 
 app <- function(){
   f <- function(b=12){ b }
