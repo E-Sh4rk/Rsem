@@ -112,17 +112,6 @@ module ArgBuilder = struct
     with Invalid_argument _ -> []
 end
 
-(* TODO: reuse MLsem PiFieldOpt (need to be able to pass custom Label.t) *)
-module RecordProj = struct
-  let domain lbl ty = Descr.mk_record {
-      Records.Atom.tail=Ty.F.any ;
-      bindings=LabelMap.singleton lbl (Ty.O.optional ty |> Ty.F.mk_descr)
-    } |> Ty.mk_descr
-  let proj lbl ty =
-    ty |> Sstt.Ty.get_descr |> Sstt.Descr.get_records
-    |> Sstt.Op.Records.proj lbl |> fst
-end
-
 module AttrProj = struct
   let pdom ty = Attr.mk_anyclass ty
   let proj ty = Attr.proj_content ty
@@ -280,21 +269,15 @@ let to_mlsem (cfg:cfg) e =
         Eid.unique (), A.Let ([], v, (Eid.unique (), def), e)
       in
       let add_def e (v,o,fty) =
-        let lbl = Labels.named (Variable.get_name v |> Option.get) in
-        let ty = Descr.mk_record {
-            Records.Atom.tail=(Ty.F.mk_descr Ty.O.absent) ;
-            bindings=LabelMap.of_list [lbl, fty]
-          } |> Ty.mk_descr in
+        let open Mlsem_types in
+        let lbl = Labels.named (Variable.get_name v |> Option.get) |> Record.from_label in
+        let ty = Record.mk' (FTy.of_oty (Ty.empty, true)) [lbl, fty] in
         let ty = Eid.unique (), A.Value (GTy.mk ty) in
-        let e' = A.Projection (SA.PCustom
-          {pname="proj";pdom=RecordProj.domain lbl;proj=RecordProj.proj lbl;pgen=true}, ty) in
+        let e' = A.Projection (SA.PiFieldOpt lbl, ty) in
         match o with
         | Some e_default ->
           let e' = Eid.unique (), e' in
-          let tau = Descr.mk_record {
-              Records.Atom.tail=(Ty.F.mk_descr Ty.O.absent) ;
-              bindings=LabelMap.of_list [lbl, Ty.O.required Ty.any |> Ty.F.mk_descr]
-            } |> Ty.mk_descr in
+          let tau = Record.mk' (FTy.of_oty (Ty.empty, true)) [lbl, FTy.of_oty (Ty.any, false)] in
           let empty = Eid.unique (), A.Value (GTy.mk Ty.empty) in
           let e_default = Eid.unique (), A.Constructor (SA.Ternary tau, [ty ; empty ; aux e_default]) in
           let e' = A.Constructor (SA.Join 2, [ e'; e_default ]) in
