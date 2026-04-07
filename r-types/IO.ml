@@ -27,3 +27,13 @@ let parse_sig_def str =
   let buf = from_string str in
   buf.lex_curr_p <- { buf.lex_curr_p with pos_fname = "_" };
   parse_with_errors Parser.sig_def buf
+
+let parse_alias_def str =
+  let buf = from_string str in
+  buf.lex_curr_p <- { buf.lex_curr_p with pos_fname = "_" };
+  parse_with_errors Parser.alias_def buf
+
+let parse_def str =
+  let buf = from_string str in
+  buf.lex_curr_p <- { buf.lex_curr_p with pos_fname = "_" };
+  parse_with_errors Parser.def buf

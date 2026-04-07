@@ -149,15 +149,15 @@ let treat_extra ctx extra =
   | `Comment (_loc, (_, str)) ->
     if String.starts_with ~prefix:"##" str then
       let str = String.sub str 2 ((String.length str) - 2) in
-      let (str, tye) = IO.parse_sig_def str in
-      add_sig ctx str tye
+      let def = IO.parse_def str in
+      add_def ctx def
     else ctx
 
 let main () =
   (* System.Config.infer_overload := false ; *)
   Mlsem.Lang.Config.void_ty := Transform.typeof_const CNull ;
   (* TODO: use a regular r file with only type annotations instead of a special mli file *)
-  let tdefs = R_types.IO.parse_type_defs_file "types.mli" in
+  let tdefs = R_types.IO.parse_type_defs_file "types.def" in
   let ctx = List.fold_left add_def initial_ctx tdefs in
   (* Format.printf "%a@.@." Env.pp env ; *)
   let res = Parse.file "test.r" in

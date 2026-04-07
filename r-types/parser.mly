@@ -2,10 +2,12 @@
 
 %}
 
-%token VAL TYPE EOF
+%token EOF
 %token<string> ID SYM TY TYEQ
 %start<Sigs.t> defs
 %start<Sigs.sig_def> sig_def
+%start<Sigs.alias_def> alias_def
+%start<Sigs.elt> def
 
 %%
 
@@ -15,9 +17,13 @@ defs:
 | defs=def* EOF { defs }
 
 def:
-| VAL id=ID ty=TY { Sig (id, Rstt_repl.IO.parse_type ty) }
-| VAL id=SYM ty=TY { Sig (id, Rstt_repl.IO.parse_type ty) }
-| TYPE name=ID ty=TYEQ { Alias (name, Rstt_repl.IO.parse_type ty) }
+| def=sig_def { let (id,ty) = def in Sig (id,ty) }
+| def=alias_def { let (id,ty) = def in Alias (id, ty) }
 
 sig_def:
 | id=ID ty=TY { (id, Rstt_repl.IO.parse_type ty) }
+| id=SYM ty=TY { (id, Rstt_repl.IO.parse_type ty) }
+
+alias_def:
+| id=ID ty=TYEQ { (id, Rstt_repl.IO.parse_type ty) }
+
