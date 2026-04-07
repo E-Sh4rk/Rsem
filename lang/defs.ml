@@ -7,10 +7,9 @@ let resolve ty = Builder.resolve Builder.empty_env ty |> snd
 let build = Builder.build Builder.TIdMap.empty
 let ty str = IO.parse_type_string(str) |> resolve |> build
 
-(* TODO: make no diff between binary, unary ops and functions *)
 module BuiltinOp = struct
-  let eq = MVariable.create Immut (Some "==__2")
-  let neq = MVariable.create Immut (Some "!=__2")
+  let eq = MVariable.create Immut (Some "==")
+  let neq = MVariable.create Immut (Some "!=")
   let unclass = MVariable.create Immut (Some "unclass")
   let ty_comp = ty "(a:any, b:any) -> ^lgl1"
   let ty_unclass = ty "(a:'a<...>) -> 'a<>"

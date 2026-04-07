@@ -150,7 +150,7 @@ let rec aux_e env (pos,e) =
   | Break -> Ast.Break | Next -> Ast.Next
   | Const c -> Ast.Const (aux_const c)
   | Id str -> Ast.Id (Scope.resolve str env.id)
-  | Unop (str, e) -> Ast.Unop (Scope.resolve (str^"__1") env.id, aux_e env e)
+  | Unop (str, e) -> Ast.Unop (Scope.resolve str env.id, aux_e env e)
   | Binop (str, (e1,e2)) ->
     begin match str, e1, e2 with
     | "<-", e1, e2 ->
@@ -158,7 +158,7 @@ let rec aux_e env (pos,e) =
       Ast.VarAssign (Scope.resolve id env.id, aux_e env r)
     | "<<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve_parent id env.id, aux_e env e2)
     | "<<-", _, _ -> failwith "Invalid left value."
-    | _, _, _ -> Ast.Binop (Scope.resolve (str^"__2") env.id, aux_e env e1, aux_e env e2)
+    | _, _, _ -> Ast.Binop (Scope.resolve str env.id, aux_e env e1, aux_e env e2)
     end
   | Subset (e,args) ->
     aux_e env (pos, Call ((pos, Id "[]"), (Some (Unnamed e))::args)) |> snd

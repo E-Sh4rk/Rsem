@@ -22,8 +22,6 @@ rule token = parse
 | newline { enter_newline lexbuf |> token }
 | blank   { token lexbuf }
 | "val" { VAL }
-| "unary"  { UNARY }
-| "binary" { BINARY }
 | "type"  { TYPE }
 | "(*"    { comment 0 lexbuf }
 | ':'     { TY (read_ty (Buffer.create 17) lexbuf) }
