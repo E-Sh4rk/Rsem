@@ -23,8 +23,9 @@ let merge_tl tys =
 let initial = Defs.initial_env, VarMap.empty
 let get_sym_sigs v senv = match VarMap.find_opt v senv with None -> [] | Some lst -> lst
 let no_symlabel ty =
+  let open Rstt.Labels in
   let lb, ub = TyScheme.get ty |> snd |> GTy.lb, TyScheme.get ty |> snd |> GTy.ub in
-  Rstt.Labels.sym_of_ty lb |> List.is_empty && Rstt.Labels.sym_of_ty ub |> List.is_empty
+  sym_of_ty lb |> Set.is_empty && sym_of_ty ub |> Set.is_empty
 let add_signature v ty (env,senv) =
   let ty = simplify_tl ty in
   if TyScheme.fv ty |> MVarSet.is_empty |> not then
