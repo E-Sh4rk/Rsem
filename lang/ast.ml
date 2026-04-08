@@ -1,6 +1,6 @@
 (*
 TODO:
-- Classes
+- Ellipsis
 - Attributes?
 - Error localization
 *)
