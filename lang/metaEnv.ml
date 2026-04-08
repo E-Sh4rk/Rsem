@@ -10,8 +10,6 @@ type 'a arg = arg_label * 'a
 
 type t = Env.t * (TyScheme.t list) VarMap.t
 
-(* TODO: allow symbols to refer to a label by name or position *)
-
 let simplify_tl ty = ty |> TyScheme.bot_instance |> TyScheme.norm_and_simpl
 let merge_tl tys =
   let tscap t1 t2 =
