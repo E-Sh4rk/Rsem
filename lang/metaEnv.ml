@@ -10,6 +10,8 @@ type 'a arg = arg_label * 'a
 
 type t = Env.t * (TyScheme.t list) VarMap.t
 
+(* TODO: allow symbols to refer to a label by name or position *)
+
 let simplify_tl ty = ty |> TyScheme.bot_instance |> TyScheme.norm_and_simpl
 let merge_tl tys =
   let tscap t1 t2 =
@@ -43,18 +45,15 @@ let env (env, _) = env
 let get_signature v (env,senv) =
   merge_tl (Env.find v env :: get_sym_sigs v senv)
 
-let apply_arg acc (i,(k,arg)) =
+let arg_to_subst (i,(k,arg)) =
   match k, arg with
-  | _, None -> acc
-  | Ell, _ -> acc
-  | Positional, Some arg ->
-    let str = "#"^string_of_int (i+1) in
-    (match Rstt.Labels.substitute str arg acc with None -> raise Exit | Some acc -> acc)
-  | Named str, Some arg ->
-    let str = "#"^str in
-    (match Rstt.Labels.substitute str arg acc with None -> raise Exit | Some acc -> acc)
+  | _, None -> None
+  | Ell, _ -> None
+  | Positional, Some arg -> Some {Rstt.Labels.sym=(Pos i) ; target=arg}
+  | Named str, Some arg -> Some {Rstt.Labels.sym=(Named str) ; target=arg}
 let apply_args args ty =
-  args |> List.mapi (fun i a -> (i, a)) |> List.fold_left apply_arg ty
+  let subst = args |> List.mapi (fun i a -> (i, a)) |> List.filter_map arg_to_subst in
+  Rstt.Labels.substitute subst ty
 let apply_args args ty =
   try
     let tvs, gty = TyScheme.get ty in
