@@ -121,14 +121,12 @@ module AttrConstr = struct
     | [ty] -> Attr.mk { content=ty ; classes }
     | _ -> assert false
   let cdom classes ty =
-    try
-      Attr.destruct ty
-      |> List.filter_map (fun (ps,_) ->
-        let content = ps |> List.map (fun a -> a.Attr.content) |> Ty.conj in
-        let ty' = Attr.mk { content ; classes } in
-        if Ty.leq ty' ty then Some [content] else None
-      )
-    with Invalid_argument _ -> []
+    Attr.destruct ty
+    |> List.filter_map (fun (ps,_) ->
+      let content = ps |> List.map (fun a -> a.Attr.content) |> Ty.conj in
+      let ty' = Attr.mk { content ; classes } in
+      if Ty.leq ty' ty then Some [content] else None
+    )
 end
 
 (* Transformations *)
