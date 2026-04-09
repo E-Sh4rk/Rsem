@@ -23,42 +23,7 @@ let get_sym_sigs v senv = match VarMap.find_opt v senv with None -> [] | Some ls
 let no_symlabel ty =
   let open Rstt.Labels in
   let lb, ub = TyScheme.get ty |> snd |> GTy.lb, TyScheme.get ty |> snd |> GTy.ub in
-  sym_of_ty lb |> Set.is_empty && sym_of_ty ub |> Set.is_empty
-
-let add_sym_aliases ty =
-  let open Sstt in
-  let pos_aliases = Hashtbl.create 16 in
-  let named_aliases = Hashtbl.create 16 in
-  let _ = Ty.nodes ty |> List.iter (fun n ->
-    Rstt.Arg.ids_of n |> List.iter (fun id ->
-      let { Rstt.Arg.pos ; pos_named ; _ } = Rstt.Arg.params_of_id id in
-      let n = List.length pos in
-      pos_named |> List.iteri (fun i (str,()) ->
-        Hashtbl.add pos_aliases (n+i) str ;
-        Hashtbl.add named_aliases str (n+i) ;)
-      )
-    ) in
-  let pos =
-    Hashtbl.to_seq_keys pos_aliases |> List.of_seq |> List.sort_uniq Int.compare
-    |> List.map (fun pos ->
-        let aliases = Hashtbl.find_all pos_aliases pos
-        |> List.sort_uniq String.compare
-        |> List.map (fun alias -> Rstt.Labels.Named alias)
-        in
-        { Rstt.Labels.sym=Pos pos ; target=Sym (Pos pos::aliases) }
-      )
-  in
-  let named =
-    Hashtbl.to_seq_keys named_aliases |> List.of_seq |> List.sort_uniq String.compare
-    |> List.map (fun named ->
-        let aliases = Hashtbl.find_all named_aliases named
-        |> List.sort_uniq Int.compare
-        |> List.map (fun alias -> Rstt.Labels.Pos alias)
-        in
-        { Rstt.Labels.sym=Named named ; target=Sym (Named named::aliases) }
-      )
-  in
-  Rstt.Labels.substitute (pos@named) ty 
+  sym_of_ty lb |> List.is_empty && sym_of_ty ub |> List.is_empty
 
 let add_signature v ty (env,senv) =
   let ty = simplify_tl ty in
@@ -69,9 +34,6 @@ let add_signature v ty (env,senv) =
     Env.replace v ty env, senv
   else
     let env = if Env.mem v env then env else Env.add v (TyScheme.mk_mono GTy.any) env in
-    let tvs, gty = TyScheme.get ty in
-    let gty = GTy.map add_sym_aliases gty in
-    let ty = TyScheme.mk tvs gty in
     let senv = VarMap.add v (ty :: get_sym_sigs v senv) senv in
     env, senv
 let replace_signature v ty (env,senv) =
@@ -87,8 +49,8 @@ let arg_to_subst (i,(k,arg)) =
   match k, arg with
   | _, None -> None
   | Ell, _ -> None
-  | Positional, Some arg -> Some {Rstt.Labels.sym=(Pos i) ; target=arg}
-  | Named str, Some arg -> Some {Rstt.Labels.sym=(Named str) ; target=arg}
+  | Positional, Some arg -> Some {Rstt.Labels.selector=(SelectLabel (Pos i)) ; target=arg}
+  | Named str, Some arg -> Some {Rstt.Labels.selector=(SelectLabel (Named str)) ; target=arg}
 let apply_args args ty =
   let subst = args |> List.mapi (fun i a -> (i, a)) |> List.filter_map arg_to_subst in
   Rstt.Labels.substitute subst ty

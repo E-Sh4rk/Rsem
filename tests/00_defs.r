@@ -29,11 +29,11 @@
 
 ## list : ( ; `r ) -> { ; `r }
 ## ([[]]) : (lst:{ ; 'a}, k:num|chr) -> 'a|null
-## ([[]]) : (lst:{ #k:'a ...}, k:num|chr) -> 'a
-## ($) : (lst:{ #k:'a ...}, k:num|chr) -> 'a
-## ($<-) : (lst:{ #k:any? ; `r}, k:num|chr, v:'b) -> { #k:'b ; `r}
+## ([[]]) : (lst:{ #k:'a ...}, k:#k) -> 'a
+## ($) : (lst:{ #k:'a ...}, k:#k) -> 'a
+## ($<-) : (lst:{ #k:any? ; `r}, k:#k, v:'b) -> { #k:'b ; `r}
 ## ([[]]<-) : (lst:{ ; 'a}, k:num|chr, v:'b) -> { ; 'a|'b}
-## ([[]]<-) : (lst:{ #k:any? ; `r}, k:num|chr, v:'b) -> { #k:'b ; `r}
+## ([[]]<-) : (lst:{ #k:any? ; `r}, k:#k, v:'b) -> { #k:'b ; `r}
 
 # ========== Classes ==========
 
