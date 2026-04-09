@@ -86,14 +86,11 @@ type env = { id: Scope.t }
 
 let aux_arg f arg =
   match arg with
-  | Unnamed e ->
-    Some (MetaEnv.Positional, f e)
-  | Named (ArgId str, Some e) ->
-    Some (MetaEnv.Named str, f e)
-  | Named (_, None) -> None
-  | _ -> assert false
+  | Unnamed e -> MetaEnv.Positional, f e
+  | Named (ArgId str, Some e) -> MetaEnv.Named str, f e
+  | _ -> failwith "Unsupported argument."
 let aux_arg f arg =
-  Option.bind arg (aux_arg f)
+  Option.map (aux_arg f) arg
 let aux_param env f p =
   match p with
   | NoDefault EllipsisId -> Ast.Ellipsis
