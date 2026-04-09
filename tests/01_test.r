@@ -61,7 +61,7 @@ ret <- function(x) {
 }
 
 ## ret_ann : (x:any) -> lgl1
-## ret_ann : (x:null) -> v1(^ff)
+## ret_ann : (x:null) -> ff
 ret_ann <- function(x) {
   if (x == NULL)
     return(FALSE)

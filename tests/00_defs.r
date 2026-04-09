@@ -10,10 +10,10 @@
 ## (+) : ( x:dbl['n] ) -> dbl['n]
 ## (+) : ( x:dbl['n], y:dbl['n] ) -> dbl['n]
 
-## typeof : (( x: dbl ) -> v1(^"double")) & (( x: chr ) -> v1(^"character"))
-## typeof : (( x: lgl ) -> v1(^"logical")) & (( x: int ) -> v1(^"integer"))
-## typeof : (( x: clx ) -> v1(^"complex")) & (( x: raw ) -> v1(^"raw"))
-## typeof : (( x: list ) -> v1(^"list")) & (( x: null ) -> v1(^"NULL"))
+## typeof : (( x: dbl ) -> "double") & (( x: chr ) -> "character")
+## typeof : (( x: lgl ) -> "logical") & (( x: int ) -> "integer")
+## typeof : (( x: clx ) -> "complex") & (( x: raw ) -> "raw")
+## typeof : (( x: list ) -> "list") & (( x: null ) -> "NULL")
 ## fail : empty -> any
 
 # ========== Lists ==========
