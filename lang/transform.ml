@@ -92,24 +92,22 @@ module ArgBuilder = struct
     let named' = List.map2 (fun ty lbl -> lbl, ty |> Ty.O.required |> Ty.F.mk_descr) named' names in
     mk' {pos';tl';named'}
   let cdom (npos,names,nrem) ty =
-    try
-      destruct ty
-      |> List.filter_map (fun a ->
-        let pos, named, tl =
-          match a with
-          | DefSite { pos ; pos_named ; tl ; named } ->
-            pos@(List.map snd pos_named), named@pos_named, tl
-          | CallSite { pos' ; named' ; tl' } -> pos', named', tl'
-        in
-        let args1 = List.init npos (fun i -> if i < List.length pos then List.nth pos i else tl) in
-        let args2 = List.map (fun name -> match List.assoc_opt name named with Some ty -> ty | None -> tl) names in
-        let args3 = List.init nrem (fun _ -> tl) in
-        let args = List.concat [args1 ; args2 ; args3] in
-        let args = List.map (fun fty -> Ty.F.get_descr fty |> Ty.O.get) args in
-        let ty' = cons (npos,names,nrem) args in
-        if Ty.leq ty' ty then Some args else None
-      )
-    with Invalid_argument _ -> []
+    destruct ty
+    |> List.filter_map (fun a ->
+      let pos, named, tl =
+        match a with
+        | DefSite { pos ; pos_named ; tl ; named } ->
+          pos@(List.map snd pos_named), named@pos_named, tl
+        | CallSite { pos' ; named' ; tl' } -> pos', named', tl'
+      in
+      let args1 = List.init npos (fun i -> if i < List.length pos then List.nth pos i else tl) in
+      let args2 = List.map (fun name -> match List.assoc_opt name named with Some ty -> ty | None -> tl) names in
+      let args3 = List.init nrem (fun _ -> tl) in
+      let args = List.concat [args1 ; args2 ; args3] in
+      let args = List.map (fun fty -> Ty.F.get_descr fty |> Ty.O.get) args in
+      let ty' = cons (npos,names,nrem) args in
+      if Ty.leq ty' ty then Some args else None
+    )
 end
 
 module AttrProj = struct
