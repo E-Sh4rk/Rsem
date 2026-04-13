@@ -122,10 +122,10 @@ test_lists <- function() {
   l <- list(42, a=42L)
   l$b <- FALSE
   l[["a"]] <- "a"
-  list(l[[1]],l$a,l$b)
+  list(one=l[[1]],a=l$a,b=l$b)
 }
 
-## nested_list : (x: { a : { ; lgl1 } ; `r} ) -> { a : { ; lgl1 } ; `r}
+## nested_list : (x: { a : { lgl1 }, `r} ) -> { a : { lgl1 }, `r}
 nested_list <- function(x) {
   x$a[[1]] <- FALSE
   # x <- $<-(x, a, [[]]<-(x$a, 1, FALSE))

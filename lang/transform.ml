@@ -42,9 +42,9 @@ let typeof_expr env (_,e) =
 let labelof_expr env e =
   match snd e with
   | Const (CChr str) -> Some (Labels.Named str)
-  | Const (CInt i) -> Some (Labels.Pos (i-1))
-  | Const (CDbl dbl) ->
-    int_of_string_opt dbl |> Option.map (fun i -> Labels.Pos (i-1))
+  (* | Const (CInt i) -> Some (Labels.Pos (i-1)) *)
+  (* | Const (CDbl dbl) ->
+    int_of_string_opt dbl |> Option.map (fun i -> Labels.Pos (i-1)) *)
   | _ -> (* If the expr is not a constant, we may still guess the label from its type *)
     begin match typeof_expr env e with
     | None -> None
@@ -53,11 +53,12 @@ let labelof_expr env e =
       begin match ty |> Attr.proj_content |> Vec.destruct with
       | [(CstLength (1, ty),_)] when Prim.is_singleton ty ->
         let ty = Prim.destruct ty in
-        if Ty.leq ty Prim.Int.any then
+        (* if Ty.leq ty Prim.Int.any then
           match Prim.Int.destruct ty with
           | false, [(Some i1, Some i2)] when i1=i2 -> Some (Labels.Pos (i1-1))
           | _ -> assert false
-        else if Ty.leq ty Prim.Chr.any then
+        else *)
+        if Ty.leq ty Prim.Chr.any then
           match Prim.Chr.destruct ty with
           | false, { positive=true ; content=[str] } -> Some (Labels.Named str)
           | _ -> assert false
@@ -90,15 +91,15 @@ module ArgBuilder = struct
     let pos', named' = split_at_index definite npos in
     let pos' = List.map (fun ty -> ty |> Ty.O.required |> Ty.F.mk_descr) pos' in
     let named' = List.map2 (fun ty lbl -> lbl, ty |> Ty.O.required |> Ty.F.mk_descr) named' names in
-    mk' {pos';tl';named'}
+    mk' {pos';named_tl'=tl';pos_tl'=tl';named'}
   let cdom (npos,names,nrem) ty =
     destruct ty
     |> List.filter_map (fun a ->
       let pos, named, tl =
         match a with
-        | DefSite { pos ; pos_named ; tl ; named } ->
-          pos@(List.map snd pos_named), named@pos_named, tl
-        | CallSite { pos' ; named' ; tl' } -> pos', named', tl'
+        | DefSite { pos_named ; pos_tl ; named ; named_tl } ->
+          (List.map snd pos_named), named@pos_named, Ty.F.cup pos_tl named_tl
+        | CallSite { pos' ; pos_tl' ; named' ; named_tl' } -> pos', named', Ty.F.cup pos_tl' named_tl'
       in
       let args1 = List.init npos (fun i -> if i < List.length pos then List.nth pos i else tl) in
       let args2 = List.map (fun name -> match List.assoc_opt name named with Some ty -> ty | None -> tl) names in
@@ -285,11 +286,11 @@ let to_mlsem (cfg:cfg) e =
         if has_ell
         then
           let ty = TVar.mk KInfer None |> TVar.typ |> Ty.O.optional |> Ty.F.mk_descr in
-          let ellty = Lst.mk {pos=[];named=[];sym=[];tl=ty} |> Attr.mk_noclass in
+          let ellty = Lst.mk {bindings=[];sym=[];tl=ty} |> Attr.mk_noclass in
           ty, add_let ellipsis_var (A.Value (GTy.mk ellty)) e
         else Ty.O.absent |> Ty.F.mk_descr, e
       in
-      let pty = Arg.mk { pos=[];named;pos_named;tl } in
+      let pty = Arg.mk { named;pos_named;pos_tl=tl;named_tl=tl } in
       let lambda = Eid.unique (), A.Lambda ([], GTy.mk pty, MVariable.create Immut None, e) in
       eid, A.Constructor
         (CCustom { cname="cattr" ; cgen=true ; cdom=AttrConstr.cdom Classes.noclass ; cons=AttrConstr.cons Classes.noclass }, [lambda])
