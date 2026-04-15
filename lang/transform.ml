@@ -67,7 +67,7 @@ let labelof_expr env e =
       end
     end
 let typeof_fun env e args =
-  let args = args |> List.map (fun (k,e) -> (k,labelof_expr env e)) in
+  let args = args |> List.map (fun (k,e) -> (k,Option.bind e (labelof_expr env))) in
   match snd e with
   | Id v when MetaEnv.mem v env -> Some (MetaEnv.get_fun_signature v args env)
   | _ -> typeof_expr env e
@@ -84,29 +84,75 @@ module ArgBuilder = struct
       | p::defs -> aux (p::acc) defs (n-1)
     in
     aux [] lst n
-  let cons (npos,names,nrem) lst =
-    let definite, rem = split_at_index lst (npos + (List.length names)) in
-    assert (List.length rem = nrem) ;
-    let tl' = Ty.disj rem |> Ty.O.optional |> Ty.F.mk_descr in
-    let pos', named' = split_at_index definite npos in
-    let pos' = List.map (fun ty -> ty |> Ty.O.required |> Ty.F.mk_descr) pos' in
-    let named' = List.map2 (fun ty lbl -> lbl, ty |> Ty.O.required |> Ty.F.mk_descr) named' names in
-    mk' {pos';named_tl'=tl';pos_tl'=tl';named'}
-  let cdom (npos,names,nrem) ty =
+  let cons (pos,named,ell) lst =
+    let rec extract_pos pos tys =
+      match pos, tys with
+      | [], tys -> [], tys
+      | false::pos, tys ->
+        let ps, tys = extract_pos pos tys in
+        (Ty.F.mk_descr Ty.O.absent)::ps, tys
+      | true::pos, ty::tys ->
+        let ps, tys = extract_pos pos tys in
+        (Ty.O.required ty |> Ty.F.mk_descr)::ps, tys
+      | _, _ -> assert false
+    in
+    let rec extract_named named tys =
+      match named, tys with
+      | [], tys -> [], tys
+      | (lbl, false)::named, tys ->
+        let ns, tys = extract_named named tys in
+        (lbl, Ty.F.mk_descr Ty.O.absent)::ns, tys
+      | (lbl, true)::named, ty::tys ->
+        let ns, tys = extract_named named tys in
+        (lbl, Ty.O.required ty |> Ty.F.mk_descr)::ns, tys
+      | _, _ -> assert false
+    in
+    let extract_ell ell tys =
+      match ell, tys with
+      | false, [] -> Ty.F.mk_descr Ty.O.absent
+      | true, [ty] -> Ty.O.optional ty |> Ty.F.mk_descr
+      | _, _ -> assert false
+    in
+    let pos', lst = extract_pos pos lst in
+    let named', lst = extract_named named lst in
+    let ell' = extract_ell ell lst in
+    let pos_tl', named_tl' = ell', ell' in
+    mk' {pos';named_tl';pos_tl';named'}
+  let cdom (pos,named,ell) ty =
+    let rec extract_pos pos tys =
+      match pos, tys with
+      | [], _ -> []
+      | false::pos, _::tys -> extract_pos pos tys
+      | false::pos, [] -> extract_pos pos []
+      | true::pos, ty::tys -> (ty |> Ty.F.get_descr |> Ty.O.get)::extract_pos pos tys
+      | true::pos, [] -> Ty.any::extract_pos pos []
+    in
+    let rec extract_named named fields =
+      match named with
+      | [] -> []
+      | (_, false)::named -> extract_named named fields
+      | (lbl, true)::named when List.mem_assoc lbl fields ->
+        (List.assoc lbl fields |> Ty.F.get_descr |> Ty.O.get)::extract_named named fields
+      | (_, true)::named -> Ty.any::extract_named named fields
+    in
+    let extract_ell ell ty =
+      match ell with
+      | false -> []
+      | true -> [ty |> Ty.F.get_descr |> Ty.O.get]
+    in
     destruct ty
     |> List.filter_map (fun a ->
-      let pos, named, tl =
+      let pos', named', ell' =
         match a with
         | DefSite { pos_named ; pos_tl ; named ; named_tl } ->
           (List.map snd pos_named), named@pos_named, Ty.F.cup pos_tl named_tl
         | CallSite { pos' ; pos_tl' ; named' ; named_tl' } -> pos', named', Ty.F.cup pos_tl' named_tl'
       in
-      let args1 = List.init npos (fun i -> if i < List.length pos then List.nth pos i else tl) in
-      let args2 = List.map (fun name -> match List.assoc_opt name named with Some ty -> ty | None -> tl) names in
-      let args3 = List.init nrem (fun _ -> tl) in
+      let args1 = extract_pos pos pos' in
+      let args2 = extract_named named named' in
+      let args3 = extract_ell ell ell' in
       let args = List.concat [args1 ; args2 ; args3] in
-      let args = List.map (fun fty -> Ty.F.get_descr fty |> Ty.O.get) args in
-      let ty' = cons (npos,names,nrem) args in
+      let ty' = cons (pos,named,ell) args in
       if Ty.leq ty' ty then Some args else None
     )
 end
@@ -135,7 +181,7 @@ end
 let recognize_mutators e =
   let f e =
     match e with
-    | id, Call ((_, Id v), [(_, (_, Id v'))])
+    | id, Call ((_, Id v), [(_, Some (_, Id v'))])
       when Variable.equal v Defs.BuiltinOp.unclass ->
         id, VarAssign (v', e)
     | e -> e
@@ -177,26 +223,30 @@ let to_mlsem (cfg:cfg) e =
     | Declare (v,e) -> eid, A.Declare (v, aux e)
     | Let (v, e1, e2) -> eid, A.Let ([], v, aux e1, aux e2)
     | VarAssign (v, e) -> eid, A.VarAssign (v, aux e)
-    | Unop (v,e) -> aux (eid, Call ((Eid.unique (), Id v), [(Positional, e)]))
+    | Unop (v,e) -> aux (eid, Call ((Eid.unique (), Id v), [(Positional, Some e)]))
     | Binop (v,e1,e2) ->
-      aux (eid, Call ((Eid.unique (), Id v), [(Positional, e1);(Positional, e2)]))
+      aux (eid, Call ((Eid.unique (), Id v), [(Positional, Some e1);(Positional, Some e2)]))
     | Call (f, args) ->
       let rec parse_args args =
         match args with
-        | [] -> 0,[],0,[]
+        | [] -> [],[],false,[]
         | (lbl,e)::args ->
-          let (npos,named,nrem,es) = parse_args args in
-          begin match lbl with
-          | MetaEnv.Positional -> npos+1,named,nrem,e::es
-          | Named lbl when npos=0 -> 0,lbl::named,nrem,e::es
-          | Named lbl -> 0,[lbl],nrem+npos+List.length named,e::es
-          | Ell -> 0,[],nrem+npos+List.length named+1,e::es
+          let (pos,named,ell,es) = parse_args args in
+          begin match lbl,e with
+          | MetaEnv.Positional, Some e -> true::pos,named,ell,e::es
+          | MetaEnv.Positional, None -> false::pos,named,ell,es
+          | Named lbl, Some e when pos=[] -> [],(lbl,true)::named,ell,e::es
+          | Named lbl, None when pos=[] -> [],(lbl,false)::named,ell,es
+          | Named _, _ -> failwith "Unsupported positional argument after a named one."
+          | Ell, Some e when pos=[] && named=[] && not ell -> [],[],true,e::es
+          | Ell, None when pos=[] && named=[] && not ell -> [],[],false,es
+          | Ell, _ -> failwith "Unsupported argument after an ellipsis."
           end
       in
-      let (npos,names,nrem,es) = parse_args args in
+      let (pos,named,ell,es) = parse_args args in
       let es = List.map aux es in
       let arg = Eid.unique (), A.Constructor
-        (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (npos,names,nrem) ; cons=ArgBuilder.cons (npos,names,nrem) }, es) in
+        (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (pos,named,ell) ; cons=ArgBuilder.cons (pos,named,ell) }, es) in
       begin match typeof_fun cfg.env f args with
       | None ->
         let f = Eid.unique (), A.Projection

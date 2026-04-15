@@ -86,11 +86,13 @@ type env = { id: Scope.t }
 
 let aux_arg f arg =
   match arg with
-  | Unnamed e -> MetaEnv.Positional, f e
-  | Named (ArgId str, Some e) -> MetaEnv.Named str, f e
+  | Unnamed e -> MetaEnv.Positional, Some (f e)
+  | Named (ArgId str, eo) -> MetaEnv.Named str, Option.map f eo
   | _ -> failwith "Unsupported argument."
 let aux_arg f arg =
-  Option.map (aux_arg f) arg
+  match arg with
+  | None -> MetaEnv.Positional, None
+  | Some arg -> aux_arg f arg
 let aux_param env f p =
   match p with
   | NoDefault EllipsisId -> Ast.Ellipsis
@@ -173,8 +175,12 @@ let rec aux_e env (pos,e) =
   | Call ((_, Return),[Some (Unnamed e)]) -> Ast.Return (Some (aux_e env e))
   | Call (e,args) ->
     let e = aux_e env e in
-    let args = List.filter_map (aux_arg (aux_e env)) args in
-    Ast.Call (e, args)
+    begin match args with
+    | [None] -> Ast.Call (e, []) (* Empty parentheses should be read as 0 positional given *)
+    | args ->
+      let args = List.map (aux_arg (aux_e env)) args in
+      Ast.Call (e, args)
+    end
   | Ite (e, e1, e2) ->
     let e, e1 = aux_e env e, aux_e env e1 in
     let e2 = match e2 with None -> Eid.unique (), Ast.Const Ast.CNull | Some e2 -> aux_e env e2 in

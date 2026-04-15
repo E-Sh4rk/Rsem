@@ -8,6 +8,7 @@ print(TRUE)
 42 + 24
 
 c(print(42), print(FALSE))
+c(, print(42), , print(FALSE), )
 
 int <- 42L
 dbl <- 42

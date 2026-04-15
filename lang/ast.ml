@@ -1,6 +1,5 @@
 (*
 TODO:
-- Missing arguments
 - Ellipsis
 - Attributes?
 - Error localization
@@ -26,7 +25,7 @@ type e' =
 | VarAssign of Variable.t * e
 | Unop of Variable.t * e
 | Binop of Variable.t * e * e
-| Call of e * e MetaEnv.arg list
+| Call of e * e option MetaEnv.arg list
 | Ite of e * e * e
 | While of e * e
 | TyCheck of { e:e ; ty:Mlsem.Types.Ty.t; necessary:bool; sufficient:bool }
@@ -49,7 +48,7 @@ let map f e =
       | VarAssign (v, e) -> VarAssign (v, aux e)
       | Unop (v, e) -> Unop (v, aux e)
       | Binop (v, e1, e2) -> Binop (v, aux e1, aux e2)
-      | Call (e, args) -> Call (aux e, List.map (fun (l,e) -> l, aux e) args)
+      | Call (e, args) -> Call (aux e, List.map (fun (l,e) -> l, Option.map aux e) args)
       | Ite (e,e1,e2) -> Ite (aux e, aux e1, aux e2)
       | While (e, e') -> While (aux e, aux e')
       | TyCheck {e;ty;necessary;sufficient} -> TyCheck {e=aux e ; ty ; necessary ; sufficient}
