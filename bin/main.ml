@@ -178,7 +178,7 @@ let main (ctx, fn) =
 
 let () =
   Printexc.record_backtrace true ;
-  Mlsem_types.PEnv.add_printer_param (Rstt.Pp.printer_params ()) ;
+  Mlsem_types.PrinterCfg.add_printer_param (Rstt.Pp.printer_params ()) ;
   Mlsem_system.Config.normalization_fun := Rstt.Simplify.partition_vecs ;
   Mlsem.Lang.Config.void_ty := Transform.typeof_const CNull ;
   (* System.Config.infer_overload := false ; *)
