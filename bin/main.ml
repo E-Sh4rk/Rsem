@@ -178,6 +178,8 @@ let main (ctx, fn) =
 
 let () =
   Printexc.record_backtrace true ;
+  Mlsem_types.PrinterCfg.set_descr_printer Rstt.Pp.print_descr_ctx ;
+  Mlsem_types.PrinterCfg.set_printer Rstt.Pp.print ;
   Mlsem_types.PrinterCfg.add_printer_param (Rstt.Pp.printer_params ()) ;
   Mlsem_system.Config.normalization_fun := Rstt.Simplify.partition_vecs ;
   Mlsem.Lang.Config.void_ty := Transform.typeof_const CNull ;
