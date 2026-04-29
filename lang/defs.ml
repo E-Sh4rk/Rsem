@@ -5,7 +5,9 @@ module MVariable = Mlsem.Lang.MVariable
 
 let resolve ty = Builder.resolve Builder.empty_env ty |> snd
 let build = Builder.build Builder.TIdMap.empty
+let build_noattr = Builder.build_struct Builder.TIdMap.empty
 let ty str = IO.parse_type_string(str) |> resolve |> build
+let ty_noattr str = IO.parse_type_string(str) |> resolve |> build_noattr
 
 module BuiltinOp = struct
   let eq = MVariable.create Immut (Some "==")
@@ -33,8 +35,12 @@ let tobool, tobool_t =
   let ff = Arrow.mk falsy Ty.ff in
   let ty = Ty.conj [def;tt;ff] in
   v, ty
+let extract, extract_t =
+  let v = MVariable.create Immut (Some "extract") in
+  let ty = ty_noattr "({'a} -> 'a) & (v('p) -> v1('p))" in
+  v, ty
 
-let defs = [tobool, tobool_t]@BuiltinOp.all
+let defs = [tobool, tobool_t ; extract, extract_t]@BuiltinOp.all
 
 let initial_env =
   let open Mlsem.Types in

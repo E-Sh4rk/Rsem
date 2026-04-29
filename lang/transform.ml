@@ -275,8 +275,19 @@ let to_mlsem (cfg:cfg) e =
       let e = aux e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
       eid, A.While (e, GTy.mk Defs.test_type, aux e')
-    | For (None, _e, _e') -> failwith "TODO"
-    | For (Some _v, _e, _e') -> failwith "TODO"
+    | For (None, e, e') ->
+      let e, e' = aux e, aux e' in
+      let e' = Eid.unique (), A.Loop e' in
+      eid, A.Seq (e, e')
+    | For (Some v, e, e') ->
+      let ev = MVariable.create Immut None in
+      let e, e' = aux e, aux e' in
+      let ev' = Eid.unique (), A.Var ev in
+      let lkp = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.extract), ev')) in
+      let assignment = Eid.unique (), A.VarAssign (v, lkp) in
+      let e' = Eid.unique (), A.Seq (assignment, e') in
+      let e' = Eid.unique (), A.Loop e' in
+      eid, A.Let ([], ev, e, e')
     | TyCheck {e;ty;necessary;sufficient} ->
       let e = aux e in
       let tt, ff = typeof_const (CLgl true) |> GTy.mk, typeof_const (CLgl false) |> GTy.mk in
