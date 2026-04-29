@@ -76,6 +76,10 @@ let extract8 tree =
   match tree with
   | Tuple [t1;t2;t3;t4;t5;t6;t7;t8] -> t1,t2,t3,t4,t5,t6,t7,t8
   | _ -> assert false
+let extract9 tree =
+  match tree with
+  | Tuple [t1;t2;t3;t4;t5;t6;t7;t8;t9] -> t1,t2,t3,t4,t5,t6,t7,t8,t9
+  | _ -> assert false
 
 let aux_option f tree =
   match tree with
@@ -174,6 +178,9 @@ and aux_case c tree =
   | "While_stmt" ->
     let _,_,_,e,_,_,e' = extract7 tree in
     A.While (aux_e e, aux_e e')
+  | "For_stmt" ->
+    let _,_,_,v,_,e,_,_,e' = extract9 tree in
+    A.For (aux_param_name v, aux_e e, aux_e e')
   | "Ret" -> A.Return | "Brk" -> A.Break | "Next" -> A.Next
   | _ -> failwith ("TODO: "^c)
 

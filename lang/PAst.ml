@@ -28,6 +28,7 @@ type e' =
 | Function of bool (* \x fun? *) * param list option * e
 | Ite of e * e * e option
 | While of e * e
+| For of arg_id * e * e
 | Braced of e list
 | Return | Break | Next
 [@@deriving show]
@@ -77,6 +78,8 @@ let rec bv_e (_,e) =
     bv_es (e::es)
   | Ite (e, e1, e2) -> bv_es (e::e1::(match e2 with None -> [] | Some e2 -> [e2]))
   | While (e, e') -> bv_es [e;e']
+  | For (ArgId str, e, e') -> bv_es [e;e'] |> StrSet.add str
+  | For (_, e, e') -> bv_es [e;e']
   | Braced es -> bv_es es
 and bv_es es =
   List.map bv_e es |> List.fold_left StrSet.union StrSet.empty
@@ -188,6 +191,7 @@ let rec aux_e env (pos,e) =
   | While (e, e') ->
     let e, e' = aux_e env e, aux_e env e' in
     Ast.While (e, e')
+  | For _ -> failwith "TODO"
   | Function (_,params,e) ->
     (* Params *)
     let env = { id=Scope.new_scope env.id } in

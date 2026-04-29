@@ -5,7 +5,7 @@ build:
 	dune build
 
 run:
-	dune exec main tests/*.r
+	dune exec main tests/*.r tests/**/*.r
 
 record:
 	dune exec -- main -record tests/*.r
