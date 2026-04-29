@@ -5,6 +5,8 @@
 ## print : ( x:'a ) -> 'a
 ## c : ( ; v('p) ) -> v('p)<>
 
+## (:) : ( from:num1, to:num1 ) -> num
+
 ## (-) : ( x:dbl['n] ) -> dbl['n]
 ## (-) : ( x:dbl['n], y:dbl['n] ) -> dbl['n]
 ## (+) : ( x:dbl['n] ) -> dbl['n]
