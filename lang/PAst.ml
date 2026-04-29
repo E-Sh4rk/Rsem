@@ -188,10 +188,11 @@ let rec aux_e env (pos,e) =
     let e, e1 = aux_e env e, aux_e env e1 in
     let e2 = match e2 with None -> Eid.unique (), Ast.Const Ast.CNull | Some e2 -> aux_e env e2 in
     Ast.Ite (e, e1, e2)
-  | While (e, e') ->
-    let e, e' = aux_e env e, aux_e env e' in
-    Ast.While (e, e')
-  | For _ -> failwith "TODO"
+  | While (e, e') -> Ast.While (aux_e env e, aux_e env e')
+  | For (NullId, e, e') -> Ast.For (None, aux_e env e, aux_e env e')
+  | For (EllipsisId, _, _) -> failwith "Unexpected ellipsis."
+  | For (ArgId str, e, e') ->
+    Ast.For (Some (Scope.resolve str env.id), aux_e env e, aux_e env e')
   | Function (_,params,e) ->
     (* Params *)
     let env = { id=Scope.new_scope env.id } in
