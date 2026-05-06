@@ -48,7 +48,13 @@
 ## class<- : (x:'a<...> , v:^chr) -> 'a<...>
 ## unclass : (x:'a<...>) -> 'a<>
 
-# ========== Matrices ==========
+# ========== Vectors and matrices ==========
+
+## vector : (mode: "logical"?, length: num?) -> lgl
+## vector : (mode: "numeric", length: num?) -> dbl
+## vector : (mode: "character", length: num?) -> chr
+## vector : (mode: "raw", length: num?) -> raw
+## vector : (mode: "list", length: num?) -> { null }
 
 ## matrix : (data: absent, nrow: num?, ncol: num?) -> lgl
 ## matrix : (data: v1('a), nrow: num?, ncol: num?) -> v('a)
