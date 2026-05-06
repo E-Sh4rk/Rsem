@@ -247,7 +247,7 @@ let to_mlsem (cfg:cfg) e =
       let es = List.map aux es in
       let arg = Eid.unique (), A.Constructor
         (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (pos,named,ell) ; cons=ArgBuilder.cons (pos,named,ell) }, es) in
-      begin match typeof_fun cfg.env f args with
+      let res = match typeof_fun cfg.env f args with
       | None ->
         let f = Eid.unique (), A.Projection
           (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux f) in
@@ -266,7 +266,8 @@ let to_mlsem (cfg:cfg) e =
       | Some ty ->
         let ty = TyUtils.proj_content ty in
         eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
-      end
+      in
+      Eid.unique (), A.Constructor (SA.Normalize, [res])
     | Ite (e, e1, e2) ->
       let e = aux e in
       let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
@@ -285,7 +286,7 @@ let to_mlsem (cfg:cfg) e =
       let e, e' = aux e, aux e' in
       let ev' = Eid.unique (), A.Var ev in
       let lkp = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.extract), ev')) in
-      let lkp = Eid.unique (), A.Constructor (SA.Normalize, [lkp]) in (* TODO: generalize to all applications *)
+      let lkp = Eid.unique (), A.Constructor (SA.Normalize, [lkp]) in
       let assignment = Eid.unique (), A.VarAssign (v, lkp) in
       let e' = Eid.unique (), A.Seq (assignment, e') in
       let e' = Eid.unique (), A.Voidify e' in
