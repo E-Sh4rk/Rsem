@@ -12,10 +12,8 @@ let ty_noattr str = IO.parse_type_string(str) |> resolve |> build_noattr
 module BuiltinOp = struct
   let eq = MVariable.create Immut (Some "==")
   let neq = MVariable.create Immut (Some "!=")
-  let unclass = MVariable.create Immut (Some "unclass")
   let ty_comp = ty "(a:any, b:any) -> ^lgl1"
-  let ty_unclass = ty "(a:'a<...>) -> 'a<>"
-  let all = [ eq, ty_comp ; neq, ty_comp ; unclass, ty_unclass ]
+  let all = [ eq, ty_comp ; neq, ty_comp ]
   let find_builtin str =
     let f (v,_) =
       match Variable.get_name v with

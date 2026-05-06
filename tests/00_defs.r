@@ -44,3 +44,4 @@
 
 ## class : (x:'a<...>) -> ^chr
 ## class<- : (x:'a<...> , c:^chr) -> 'a<...>
+## unclass : (x:'a<...>) -> 'a<>

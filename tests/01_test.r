@@ -143,7 +143,7 @@ nested_list <- function(x) {
 }
 
 test_classes <- function(x) {
-  unclass(x)
+  x <- unclass(x)
   class(x) <- c("abc", "def")
   class(x) <- class(x)
   x

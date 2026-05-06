@@ -178,16 +178,6 @@ end
 
 (* Transformations *)
 
-let recognize_mutators e =
-  let f e =
-    match e with
-    | id, Call ((_, Id v), [(_, Some (_, Id v'))])
-      when Variable.equal v Defs.BuiltinOp.unclass ->
-        id, VarAssign (v', e)
-    | e -> e
-  in
-  map f e
-
 let recognize_const_comparison e =
   let f e =
     match e with
@@ -368,5 +358,6 @@ let to_mlsem (cfg:cfg) e =
   aux e
 
 let to_mlsem cfg e =
-  e |> recognize_const_comparison |> recognize_mutators
-  |> to_mlsem cfg |> Mlsem.Lang.Transform.transform
+  e |> recognize_const_comparison
+    |> to_mlsem cfg
+    |> Mlsem.Lang.Transform.transform
