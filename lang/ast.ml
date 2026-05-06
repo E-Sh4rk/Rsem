@@ -1,6 +1,5 @@
 (*
 TODO:
-- Normalization: only normalize when a non-any vector component is present? (cf. type of test_classes)
 - Ellipsis
 - Attributes?
 - Error localization
