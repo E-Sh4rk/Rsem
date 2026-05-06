@@ -5,12 +5,21 @@
 ## print : ( x:'a ) -> 'a
 ## c : ( ; v('p) ) -> v('p)<>
 
-## (:) : ( from:num1, to:num1 ) -> num
+## (:) : ( from:num, to:num ) -> num
 
 ## (-) : ( x:dbl['n] ) -> dbl['n]
 ## (-) : ( x:dbl['n], y:dbl['n] ) -> dbl['n]
 ## (+) : ( x:dbl['n] ) -> dbl['n]
 ## (+) : ( x:dbl['n], y:dbl['n] ) -> dbl['n]
+
+## (<) : ( x:num1, y:num1 ) -> lgl1<>
+## (<) : ( x:num, y:num ) -> lgl<>
+## (<=) : ( x:num1, y:num1 ) -> lgl1<>
+## (<=) : ( x:num, y:num ) -> lgl<>
+## (>) : ( x:num1, y:num1 ) -> lgl1<>
+## (>) : ( x:num, y:num ) -> lgl<>
+## (>=) : ( x:num1, y:num1 ) -> lgl1<>
+## (>=) : ( x:num, y:num ) -> lgl<>
 
 ## typeof : (( x: dbl ) -> "double") & (( x: chr ) -> "character")
 ## typeof : (( x: lgl ) -> "logical") & (( x: int ) -> "integer")

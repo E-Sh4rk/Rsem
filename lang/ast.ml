@@ -3,6 +3,7 @@ TODO:
 - Ellipsis
 - Attributes?
 - Error localization
+- Type aliases that could be used both as a struct type and type
 *)
 
 open Mlsem.Common

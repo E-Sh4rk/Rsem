@@ -285,6 +285,7 @@ let to_mlsem (cfg:cfg) e =
       let e, e' = aux e, aux e' in
       let ev' = Eid.unique (), A.Var ev in
       let lkp = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.extract), ev')) in
+      let lkp = Eid.unique (), A.Constructor (SA.Normalize, [lkp]) in (* TODO: generalize to all applications *)
       let assignment = Eid.unique (), A.VarAssign (v, lkp) in
       let e' = Eid.unique (), A.Seq (assignment, e') in
       let e' = Eid.unique (), A.Voidify e' in
