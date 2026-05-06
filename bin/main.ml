@@ -14,6 +14,12 @@ open Mlsem.Types
     ~dump_tree:Boilerplate.dump_tree
     ~dump_extras:Boilerplate.dump_extras *)
 
+(* PARAMETERS *)
+let record = ref false
+let input_files = ref []
+let gradual = ref false
+(* ========== *)
+
 module StrMap = Map.Make(String)
 
 let refresh_vars kind ty =
@@ -51,11 +57,14 @@ let sigs_of_ty ty =
   let ty = refresh_vars KNoInfer ty in
   (aux ty, GTy.mk ty |> TyScheme.mk_poly)
 let extend_env mlast env =
-  let fv = System.Ast.fv mlast in
-  let dom = Env.domain env |> VarSet.of_list in
-  let missing = VarSet.diff fv dom in
-  missing |> VarSet.elements |> List.fold_left
-    (fun env v -> Env.add v (TyScheme.mk_mono GTy.dyn) env) env
+  if !gradual then
+    let fv = System.Ast.fv mlast in
+    let dom = Env.domain env |> VarSet.of_list in
+    let missing = VarSet.diff fv dom in
+    missing |> VarSet.elements |> List.fold_left
+      (fun env v -> Env.add v (TyScheme.mk_mono GTy.dyn) env) env
+  else
+    env
 
 type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: MetaEnv.t ; senv: Ty.t list VarMap.t ;
                     benv: Rstt.Builder.env ; tidenv: Ty.t Rstt.Builder.TIdMap.t }
@@ -156,13 +165,14 @@ let treat_extra ctx extra =
 
 (* ===== COMMAND LINE ===== *)
 
-let record = ref false
-let input_files = ref []
-let usage_msg = "typed-r [-record] <file1> [<file2>] ..."
+let usage_msg = "typed-r [-record] [-gradual] <file1> [<file2>] ..."
 let anon_fun filename =
     input_files := filename::!input_files
 let speclist =
-    [("-record", Arg.Set record, "Record tallying instances into a file")]
+    [
+      ("-record", Arg.Set record, "Record tallying instances into a file") ;
+      ("-gradual", Arg.Set gradual, "Give the dyn type to undefined functions")
+    ]
 
 let main (ctx, fn) =
   let res = Parse.file fn in

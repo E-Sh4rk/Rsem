@@ -119,7 +119,7 @@ let add_def env e str =
 
 let rec expr_of_left pos r l =
   let call pos r op_prefix args =
-    let args = args@[Some (Unnamed r)] in
+    let args = args@[Some (Named (ArgId "v", Some r))] in
     (pos, Call ((pos, Id (op_prefix^"<-")), args))
   in
   match snd l with

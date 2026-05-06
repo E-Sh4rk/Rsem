@@ -1,6 +1,6 @@
 
-## num1 = int1 | dbl1
-## num = int | dbl
+## num1 = lgl1 | int1 | dbl1
+## num = lgl | int | dbl
 
 ## print : ( x:'a ) -> 'a
 ## c : ( ; v('p) ) -> v('p)<>
@@ -35,13 +35,20 @@
 ## ($) : (lst:{ #k:'a, any}, k=#k) -> 'a
 ## ($<-) : (lst:{ #k:any?, `r}, k=#k, v:'b) -> { #k:'b, `r}
 
-## ([[]]) : (lst:{ 'a}, k:num|chr) -> 'a|null
+## ([[]]) : (lst:v('a) ; num) -> v('a)
+## ([[]]) : (lst:{ 'a} ; num|chr) -> 'a|null
 ## ([[]]) : (lst:{ #k:'a, any }, k=#k) -> 'a
-## ([[]]<-) : (lst:{ 'a}, k:num|chr, v:'b) -> { 'a|'b}
+## ([[]]<-) : (lst:v('a) ; num ; v:v('a)) -> v('a)
+## ([[]]<-) : (lst:{ 'a} ; num|chr ; v:'b) -> { 'a|'b}
 ## ([[]]<-) : (lst:{ #k:any?, `r}, k=#k, v:'b) -> { #k:'b, `r}
 
 # ========== Classes ==========
 
 ## class : (x:'a<...>) -> ^chr
-## class<- : (x:'a<...> , c:^chr) -> 'a<...>
+## class<- : (x:'a<...> , v:^chr) -> 'a<...>
 ## unclass : (x:'a<...>) -> 'a<>
+
+# ========== Matrices ==========
+
+## matrix : (data: absent, nrow: num?, ncol: num?) -> lgl
+## matrix : (data: v1('a), nrow: num?, ncol: num?) -> v('a)
