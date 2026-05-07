@@ -1,0 +1,96 @@
+
+(* val typeof : %( (v('a) -> v('a)) & ('a \ v(any) -> 'a \ v(any)) )% *)
+val typeof : %( s((v('b) -> v('b)) & ('a \ v(any) -> 'a \ v(any))) )%
+val tobool : ( %( any )% -> bool ) & ( %( v(tt) | v(int\0) )% -> true ) & ( %( v(ff) | v(0) )% -> false )
+val length : %( s((v[1](any) -> v[1](1)) & (v(any) \ v[1](any) -> v[1](int \ 1))) )%
+val error : empty -> any
+(* type vec = %( v(int) | v(lgl) | v(chr) | v(clx) | v(dbl) | v(raw) )% *)
+(* type part = %( v(int) | v(lgl) | v(chr) | v(clx) | v(dbl) | v(raw) | ~v(any) )% *)
+
+# infer_overload = false
+let test_switch x =
+  match typeof x with
+  | :%( v(lgl) )% -> 0
+  | :%( v(int) )% -> 1
+  | :%( v(dbl) )% -> 2
+  | :%( v(clx) )% -> 3
+  | :%( v(chr) )% -> 4
+  | :%( v(raw) )% -> 5
+  | _ -> 6
+  end
+
+let test_switch2 x =
+  match typeof x with
+  | :%( v(lgl) )% -> 0
+  | :%( v(int) )% -> 1
+  | :%( v(dbl) )% -> 2
+  | :%( v(clx) )% -> 3
+  | :%( v(chr) )% -> 4
+  | :%( v(raw) )% -> 5
+  end
+
+let test_switch_ann (x: %( v(any) )% ) =
+  match typeof x with
+  | :%( v(lgl) )% -> 0
+  | :%( v(int) )% -> 1
+  | :%( v(dbl) )% -> 2
+  | :%( v(clx) )% -> 3
+  | :%( v(chr) )% -> 4
+  | :%( v(raw) )% -> 5
+  | _ -> 6
+  end
+
+let test_switch_ann2 (x: %( v(any) )% ) =
+  match typeof x with
+  | :%( v(lgl) )% -> 0
+  | :%( v(int) )% -> 1
+  | :%( v(dbl) )% -> 2
+  | :%( v(clx) )% -> 3
+  | :%( v(chr) )% -> 4
+  | :%( v(raw) )% -> 5
+  | _ -> error "Param should be a vector"
+  end
+
+# infer_overload = true
+let test_switch' x =
+  match typeof x with
+  | :%( v(lgl) )% -> 0
+  | :%( v(int) )% -> 1
+  | :%( v(dbl) )% -> 2
+  | :%( v(clx) )% -> 3
+  | :%( v(chr) )% -> 4
+  | :%( v(raw) )% -> 5
+  | _ -> 6
+  end
+
+let test_switch2' x =
+  match typeof x with
+  | :%( v(lgl) )% -> 0
+  | :%( v(int) )% -> 1
+  | :%( v(dbl) )% -> 2
+  | :%( v(clx) )% -> 3
+  | :%( v(chr) )% -> 4
+  | :%( v(raw) )% -> 5
+  | _ -> error "Param should be a vector"
+  end
+
+let test_switch3' x =
+  match typeof x with
+  | :%( v(lgl) )% -> 0
+  | :%( v(int) )% -> 1
+  | :%( v(dbl) )% -> 2
+  | :%( v(clx) )% -> 3
+  | :%( v(chr) )% -> 4
+  | :%( v(raw) )% -> 5
+  end
+
+let test_switch_simple x =
+  match x with
+  | :%( v(lgl) )% -> 0
+  | :%( v(int) )% -> 1
+  | :%( v(dbl) )% -> 2
+  | :%( v(clx) )% -> 3
+  | :%( v(chr) )% -> 4
+  | :%( v(raw) )% -> 5
+  | _ -> 6
+  end
