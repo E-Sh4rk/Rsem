@@ -75,7 +75,8 @@ let infer ctx mlast =
   let env = MetaEnv.env ctx.tenv |> extend_env mlast in
   let renvs = System.Refinement.refinements env mlast in
   (* REnvSet.elements renvs |> List.iter (fun renv -> Format.printf "Renv: %a@." REnv.pp renv) ; *)
-  let anns = System.Reconstruction.infer ~direct_narrowing:true env renvs mlast in
+  let anns = System.Reconstruction.infer
+    ~direct_narrowing:true ~partition_narrowing:true env renvs mlast in
   let tvs, ty = System.Checker.typeof_def env anns mlast |> TyScheme.get in
   TyScheme.mk tvs (GTy.ub ty |> GTy.mk)
 
