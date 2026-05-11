@@ -4,8 +4,8 @@ synopsis: "A static type-checker for R"
 maintainer: ["Mickael Laurent"]
 authors: ["Mickael Laurent"]
 license: "MIT"
-homepage: "https://github.com/E-Sh4rk/typed-r"
-bug-reports: "https://github.com/E-Sh4rk/typed-r/issues"
+homepage: "https://github.com/E-Sh4rk/Rsem"
+bug-reports: "https://github.com/E-Sh4rk/Rsem/issues"
 depends: [
   "ocaml" {>= "5.3.0"}
   "dune" {>= "3.13"}

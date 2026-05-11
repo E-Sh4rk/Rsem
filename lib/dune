@@ -2,7 +2,7 @@
 (include_subdirs qualified)
 
 (library
-  (public_name typed-r.r)
+  (public_name rsem.r)
   (name tree_sitter_r)
   (libraries atdgen-runtime tree-sitter.run)
 

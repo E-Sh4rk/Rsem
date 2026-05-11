@@ -1,6 +1,6 @@
 (executable
-  (package typed-r)
+  (package rsem)
   (public_name main)
   (name main)
-  (libraries typed-r.r typed-r.lang typed-r.r_types mlsem)
+  (libraries rsem.r rsem.lang rsem.r_types mlsem)
 )

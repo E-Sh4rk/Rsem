@@ -166,7 +166,7 @@ let treat_extra ctx extra =
 
 (* ===== COMMAND LINE ===== *)
 
-let usage_msg = "typed-r [-record] [-gradual] <file1> [<file2>] ..."
+let usage_msg = "rsem [-record] [-gradual] <file1> [<file2>] ..."
 let anon_fun filename =
     input_files := filename::!input_files
 let speclist =
