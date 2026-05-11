@@ -31,8 +31,8 @@ compare_output () {
 
 if [ "$1" = "perf" ]
 then
-    opam exec -- dune build main
-    perf record --call-graph=dwarf -- main tests/*.r tests/**/*.r >/dev/null 2>&1
+    opam exec -- dune build bin/main.exe
+    perf record --call-graph=dwarf -- _build/default/bin/main.exe tests/*.r tests/**/*.r >/dev/null 2>&1
 elif [ "$1" = "report" ]
 then
     perf report
