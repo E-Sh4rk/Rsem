@@ -1,0 +1,106 @@
+
+===== Processing tests/00_defs.r =====
+
+===== Processing tests/01_test.r =====
+_: "Hello World!"<>
+
+_: ^dbl1<>
+
+_: tt<>
+
+_: dbl1
+
+_: dbl1
+
+_: dbl1
+
+_: v(^dbl | ^ff)<>
+
+_: v(^dbl | ^ff)<>
+
+int: 42<>
+
+dbl: ^dbl1<>
+
+clx: ^clx1<>
+
+num1: num1
+
+f_req: ∀'a. (( a: dbl['a] ) -> dbl['a])<>
+
+f_opt: ∀'a. (( a: dbl[^1 | 'a]? ) -> dbl[^1 | 'a])<>
+
+f_opt_ann: (( a: dbl ) -> dbl) & (( a: null? ) -> lgl1)
+
+app: ((  ) -> ^dbl1<> | tt<>)<>
+
+ret: ((( x: ^dbl1 ) -> ff<> | tt<>) & (( x: ff ) | ( x: null ) -> ff<>) &
+ (( x: ~(^dbl1 | ff | null) ) -> tt<>))<>
+
+ret_ann: (( x: any ) -> lgl1) & (( x: null ) -> ff)
+
+narrowing: ∀'a. ((( x: dbl['a] ) -> dbl['a]) & (( x: null ) -> null<>))<>
+
+narrowing_ann: (( x: dbl ) -> dbl) & (( x: dbl1 ) -> dbl1) & (( x: null ) -> null)
+
+loop_break: ∀'a,'b. ((( x: 'a & null ) -> null & 'a) & (( x: dbl1 ) -> dbl1) &
+ (( x: dbl[^1 | 'b] ) -> dbl[^1 | 'b]))<>
+
+cases: (( x: dbl ) -> ^dbl1<>)<>
+
+assign: ∀'a. (( x: 'a ) -> 'a)<>
+
+superassign: ∀'a. (( x: ^dbl1<> | 'a ) -> ^dbl1<> | 'a)<>
+
+_: {  }
+
+_: { ^dbl1<> }
+
+_: { aa: ^dbl1<> }
+
+test_lists: ((  ) -> { a: "a"<>, b: ff<>, one: "a"<> | 42<> | ^dbl1<> | ff<> | null })<>
+
+nested_list: ∀`a. ( x: { a: { lgl1 }, `a } ) -> { a: { lgl1 }, `a }
+
+test_classes: ∀'a. (( x: 'a ) -> 'a)<>
+
+
+===== Processing tests/02_simple/empty-for.r =====
+execute: (( n: num ) -> null<>)<>
+
+
+===== Processing tests/02_simple/empty-while.r =====
+execute: (( n: num ) -> null<>)<>
+
+
+===== Processing tests/02_simple/list-for.r =====
+execute: (( n: num ) -> null<>)<>
+
+
+===== Processing tests/02_simple/list-while.r =====
+execute: (( n: num ) -> null<>)<>
+
+
+===== Processing tests/02_simple/matrix-for.r =====
+execute: (( n: num ) -> null<>)<>
+
+
+===== Processing tests/02_simple/scalar-for.r =====
+execute: (( n: num ) -> null<>)<>
+
+
+===== Processing tests/02_simple/scalar-while.r =====
+execute: (( n: num ) -> null<>)<>
+
+
+===== Processing tests/02_simple/super-while.r =====
+execute: (( n: num ) -> null<>)<>
+
+
+===== Processing tests/02_simple/vector-for.r =====
+execute: (( n: num ) -> null<>)<>
+
+
+===== Processing tests/02_simple/vector-while.r =====
+execute: (( n: num ) -> null<>)<>
+

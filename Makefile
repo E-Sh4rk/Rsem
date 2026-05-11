@@ -10,6 +10,11 @@ run:
 record:
 	dune exec -- main -record tests/*.r
 
+test:
+	./bench.sh diff
+
+promote:
+	./bench.sh ref
 
 clean:
 	dune clean

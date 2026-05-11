@@ -8,3 +8,9 @@ _build
 *.install
 
 instances.json
+
+# Benchmark files
+_bench/
+
+# Linux perf tool
+perf.data
