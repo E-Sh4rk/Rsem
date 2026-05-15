@@ -8,9 +8,18 @@
 ## (:) : ( from:num, to:num ) -> num
 
 ## (-) : ( x:dbl['n] ) -> dbl['n]
-## (-) : ( x:dbl['n], y:dbl['n] ) -> dbl['n]
+## (-) : ( x:int['n] ) -> int['n]
+## (-) : ( x:num, y:num) -> num
+## (-) : ( x:int, y:int ) -> int
 ## (+) : ( x:dbl['n] ) -> dbl['n]
-## (+) : ( x:dbl['n], y:dbl['n] ) -> dbl['n]
+## (+) : ( x:int['n] ) -> int['n]
+## (+) : ( x:num, y:num) -> num
+## (+) : ( x:int, y:int ) -> int
+
+## (*) : ( x:num, y:num) -> num
+## (*) : ( x:int, y:int ) -> int
+## (/) : ( x:num, y:num) -> dbl
+## (%/%) : ( x:int, y:int ) -> int
 
 ## (<) : ( x:num1, y:num1 ) -> lgl1<>
 ## (<) : ( x:num, y:num ) -> lgl<>
@@ -26,6 +35,8 @@
 ## typeof : (( x: clx ) -> "complex") & (( x: raw ) -> "raw")
 ## typeof : (( x: list ) -> "list") & (( x: null ) -> "NULL")
 ## fail : empty -> any
+
+## lapply : (X:'a, FUN:@('a, X:absent, FUN:absent ; absent, `r) -> 'b ; absent, `r) -> 'b
 
 # ========== Lists ==========
 
