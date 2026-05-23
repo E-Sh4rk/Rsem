@@ -124,7 +124,8 @@ module ArgBuilder = struct
       | [], _ -> []
       | false::pos, _::tys -> extract_pos pos tys
       | false::pos, [] -> extract_pos pos []
-      | true::pos, ty::tys -> (ty |> Ty.F.get_descr |> Ty.O.get)::extract_pos pos tys
+      | true::pos, ty::tys ->
+        (ty |> Ty.F.get_descr |> Ty.O.get |> Ty.O.Atom.get)::extract_pos pos tys
       | true::pos, [] -> Ty.any::extract_pos pos []
     in
     let rec extract_named named fields =
@@ -132,13 +133,13 @@ module ArgBuilder = struct
       | [] -> []
       | (_, false)::named -> extract_named named fields
       | (lbl, true)::named when List.mem_assoc lbl fields ->
-        (List.assoc lbl fields |> Ty.F.get_descr |> Ty.O.get)::extract_named named fields
+        (List.assoc lbl fields |> Ty.F.get_descr |> Ty.O.get |> Ty.O.Atom.get)::extract_named named fields
       | (_, true)::named -> Ty.any::extract_named named fields
     in
     let extract_ell ell ty =
       match ell with
       | false -> []
-      | true -> [ty |> Ty.F.get_descr |> Ty.O.get]
+      | true -> [ty |> Ty.F.get_descr |> Ty.O.get |> Ty.O.Atom.get]
     in
     destruct ty
     |> List.filter_map (fun a ->
