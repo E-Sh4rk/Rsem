@@ -12,7 +12,7 @@ _: dbl1
 
 _: dbl1
 
-_: dbl1
+_: num
 
 _: v(^dbl | ^ff)<>
 
@@ -26,25 +26,25 @@ clx: ^clx1<>
 
 num1: num1
 
-f_req: ∀'a. (( a: dbl['a] ) -> dbl['a])<>
+f_req: ∀'a,'b. ((( a: dbl['a] ) -> dbl['a]) & (( a: int['b] ) -> int['b]))<>
 
 f_opt: ∀'a. (( a: dbl[^1 | 'a]? ) -> dbl[^1 | 'a])<>
 
-f_opt_ann: (( a: dbl ) -> dbl) & (( a: null? ) -> lgl1)
+f_opt_ann: ((( a: dbl ) -> dbl) & (( a: null? ) -> lgl1))<...>
 
 app: ((  ) -> ^dbl1<> | tt<>)<>
 
 ret: ((( x: ^dbl1 ) -> ff<> | tt<>) & (( x: ff ) | ( x: null ) -> ff<>) &
  (( x: ~(^dbl1 | ff | null) ) -> tt<>))<>
 
-ret_ann: (( x: any ) -> lgl1) & (( x: null ) -> ff)
+ret_ann: ((( x: any ) -> lgl1) & (( x: null ) -> ff))<...>
 
-narrowing: ∀'a. ((( x: dbl['a] ) -> dbl['a]) & (( x: null ) -> null<>))<>
+narrowing: ∀'a,'b. ((( x: dbl['a] ) -> dbl['a]) & (( x: int['b] ) -> int['b]) &
+ (( x: null ) -> null<>))<>
 
-narrowing_ann: (( x: dbl ) -> dbl) & (( x: dbl1 ) -> dbl1) & (( x: null ) -> null)
+narrowing_ann: ((( x: dbl ) -> dbl) & (( x: dbl1 ) -> dbl1) & (( x: null ) -> null))<...>
 
-loop_break: ∀'a,'b. ((( x: 'a & null ) -> null & 'a) & (( x: dbl1 ) -> dbl1) &
- (( x: dbl[^1 | 'b] ) -> dbl[^1 | 'b]))<>
+loop_break: ∀'a. ((( x: 'a & null ) -> null & 'a) & (( x: num ) -> num))<>
 
 cases: (( x: dbl ) -> ^dbl1<>)<>
 
@@ -60,9 +60,9 @@ _: { aa: ^dbl1<> }
 
 test_lists: ((  ) -> { a: "a"<>, b: ff<>, one: "a"<> | 42<> | ^dbl1<> | ff<> | null })<>
 
-nested_list: ∀`a. ( x: { a: { lgl1 }, `a } ) -> { a: { lgl1 }, `a }
+nested_list: ∀`a. (( x: { a: { lgl1 }, `a } ) -> { a: { lgl1 }, `a })<...>
 
-test_classes: ∀'a. (( x: 'a ) -> 'a)<>
+test_classes: ∀'a. (( x: 'a<...> ) -> 'a<...>)<>
 
 
 ===== Processing tests/02_simple/empty-for.r =====
@@ -71,6 +71,14 @@ execute: (( n: num ) -> null<>)<>
 
 ===== Processing tests/02_simple/empty-while.r =====
 execute: (( n: num ) -> null<>)<>
+
+
+===== Processing tests/02_simple/lapply-dots.r =====
+execute: (( n: num ) -> num)<>
+
+
+===== Processing tests/02_simple/lapply.r =====
+execute: (( n: num ) -> num)<>
 
 
 ===== Processing tests/02_simple/list-for.r =====
