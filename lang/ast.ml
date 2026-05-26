@@ -3,7 +3,10 @@ TODO:
 - Ellipsis
 - Attributes?
 - Error localization
+- Possibility to write a type signature f.class (previous sigs will be restricted to <~class,...>)
 - Type aliases that could be used both as a struct type and type
+- Constrained polymorphism, e.g.: (x:'a) -> int where f('a):lgl
+- Use more general type schemes for label polymorphism
 *)
 
 open Mlsem.Common
