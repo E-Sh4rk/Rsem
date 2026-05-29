@@ -20,8 +20,7 @@ let typeof_const c =
   | CLgl b -> TVec (Vec.CstLength (1, PHat (PLgl' b)))
   | CNull -> TNull
   in
-  let b = TAttr { content=e ; classes=CNoClass } in
-  Builder.build Builder.TIdMap.empty b
+  Builder.build_struct Builder.TIdMap.empty e |> Attr.mk_content_noattr
 let typeof_const_comp c =
   let open Builder in
   let exact, ty = match c with
@@ -159,20 +158,20 @@ module ArgBuilder = struct
 end
 
 module AttrProj = struct
-  let pdom ty = Attr.mk_anyclass ty
+  let pdom ty = Attr.mk_content ty
   let proj ty = Attr.proj_content ty
 end
 
 module AttrConstr = struct
-  let cons classes tys =
+  let cons tys =
     match tys with
-    | [ty] -> Attr.mk { content=ty ; classes }
+    | [ty] -> Attr.mk_content_noattr ty
     | _ -> assert false
-  let cdom classes ty =
+  let cdom ty =
     Attr.destruct ty
     |> List.filter_map (fun (ps,_) ->
       let content = ps |> List.map (fun a -> a.Attr.content) |> Ty.conj in
-      let ty' = Attr.mk { content ; classes } in
+      let ty' = Attr.mk_content_noattr content in
       if Ty.leq ty' ty then Some [content] else None
     )
 end
@@ -343,14 +342,14 @@ let to_mlsem (cfg:cfg) e =
         if has_ell
         then
           let ty = TVar.mk KInfer None |> TVar.typ |> Ty.O.optional |> Ty.F.mk_descr in
-          let ellty = Lst.mk {bindings=[];sym=[];tl=ty} |> Attr.mk_noclass in
+          let ellty = Lst.mk {bindings=[];sym=[];tl=ty} |> Attr.mk_content_noattr in
           ty, add_let ellipsis_var (A.Value (GTy.mk ellty)) e
         else Ty.O.absent |> Ty.F.mk_descr, e
       in
       let pty = Arg.mk { named;pos_named;pos_tl=tl;named_tl=tl } in
       let lambda = Eid.unique (), A.Lambda ([], GTy.mk pty, MVariable.create Immut None, e) in
       eid, A.Constructor
-        (CCustom { cname="cattr" ; cgen=true ; cdom=AttrConstr.cdom Classes.noclass ; cons=AttrConstr.cons Classes.noclass }, [lambda])
+        (CCustom { cname="cattr" ; cgen=true ; cdom=AttrConstr.cdom ; cons=AttrConstr.cons }, [lambda])
     | Seq (e1, e2) -> eid, A.Seq (aux e1, aux e2)
     | Return e -> eid, A.Return (match e with Some e -> aux e | None -> Eid.unique (), A.Void)
     | Break -> eid, A.Break | Next -> eid, A.Break

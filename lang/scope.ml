@@ -9,7 +9,7 @@ type t = env list
 
 exception ScopeError of string
 
-let fun_ty = Arrow.any |> Rstt.Attr.mk_anyclass
+let fun_ty = Arrow.any |> Rstt.Attr.mk_content
 let from_toplevel env idmap =
   let env = idmap |> StrMap.map (fun v ->
     if Env.mem v env

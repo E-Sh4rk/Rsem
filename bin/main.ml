@@ -42,8 +42,8 @@ let sigs_of_ty ty =
         )
     | _ -> [ty]
   in
-  let aux_p { Rstt.Attr.content ; classes } =
-    aux content |> List.map (fun content -> Rstt.Attr.mk {Rstt.Attr.content ; classes})
+  let aux_p { Rstt.Attr.content ; classes ; attrs } =
+    aux content |> List.map (fun content -> Rstt.Attr.mk {Rstt.Attr.content ; classes ; attrs})
   in
   let aux_n a = [Rstt.Attr.mk a |> Ty.neg] in
   let aux (ps, ns) =
