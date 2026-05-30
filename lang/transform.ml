@@ -12,15 +12,17 @@ module RVar = Mlsem.Types.RVar
 
 let typeof_const c =
   let open Builder in
-  let e = match c with
-  | CChr chr -> TVec (Vec.CstLength (1, PHat (PChr' chr)))
-  | CDbl _ -> TVec (Vec.CstLength (1, PHat PDbl))
-  | CInt i -> TVec (Vec.CstLength (1, PHat (PInt' (Some i, Some i))))
-  | CClx _ -> TVec (Vec.CstLength (1, PHat PClx))
-  | CLgl b -> TVec (Vec.CstLength (1, PHat (PLgl' b)))
-  | CNull -> TNull
+  let pack t =
+    Builder.build_struct Builder.TIdMap.empty t |> Attr.mk_content_noattr
   in
-  Builder.build_struct Builder.TIdMap.empty e |> Attr.mk_content_noattr
+  let nopack t = Builder.build_struct Builder.TIdMap.empty t in
+  match c with
+  | CChr chr -> TVec (Vec.CstLength (1, PHat (PChr' chr))) |> pack
+  | CDbl _ -> TVec (Vec.CstLength (1, PHat PDbl)) |> pack
+  | CInt i -> TVec (Vec.CstLength (1, PHat (PInt' (Some i, Some i)))) |> pack
+  | CClx _ -> TVec (Vec.CstLength (1, PHat PClx)) |> pack
+  | CLgl b -> TVec (Vec.CstLength (1, PHat (PLgl' b))) |> pack
+  | CNull -> TNull |> nopack
 let typeof_const_comp c =
   let open Builder in
   let exact, ty = match c with

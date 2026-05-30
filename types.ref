@@ -36,13 +36,13 @@ f_opt_ann: (( a: dbl ) -> dbl) & (( a: null? ) -> lgl1)
 app: ((  ) -> ^dbl1<> with {  } | tt<> with {  })<> with {  }
 
 ret: ((( x: ^dbl1 ) -> ff<> with {  } | tt<> with {  }) & (( x: ff ) |
- ( x: null ) -> ff<> with {  }) & (( x: ~(^dbl1 | ff | null) ) ->
+ ( x: null ) -> ff<> with {  }) & (( x: ~((^dbl1 | ff) | null) ) ->
  tt<> with {  }))<> with {  }
 
 ret_ann: (( x: any ) -> lgl1) & (( x: null ) -> ff)
 
 narrowing: ∀'a,'b. ((( x: dbl['a] ) -> dbl['a]) & (( x: int['b] ) -> int['b]) &
- (( x: null ) -> null<> with {  }))<> with {  }
+ (( x: null ) -> null))<> with {  }
 
 narrowing_ann: (( x: dbl ) -> dbl) & (( x: dbl1 ) -> dbl1) & (( x: null ) -> null)
 
@@ -60,8 +60,8 @@ _: { ^dbl1<> with {  } }
 
 _: { aa: ^dbl1<> with {  } }
 
-test_lists: ((  ) -> { a: "a"<> with {  }, b: ff<> with {  }, one: "a"<> with {  } |
- 42<> with {  } | ^dbl1<> with {  } | ff<> with {  } | null })<> with {  }
+test_lists: ((  ) -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a"<> with {  } |
+ 42<> with {  } | ^dbl1<> with {  } | ff<> with {  }) | null })<> with {  }
 
 nested_list: ∀`a. ( x: { a: { lgl1 }, `a } ) -> { a: { lgl1 }, `a }
 
@@ -69,11 +69,11 @@ test_classes: ∀'a. (( x: 'a<...> ) -> 'a<...>)<> with {  }
 
 
 ===== Processing tests/02_simple/empty-for.r =====
-execute: (( n: num ) -> null<> with {  })<> with {  }
+execute: (( n: num ) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/empty-while.r =====
-execute: (( n: num ) -> null<> with {  })<> with {  }
+execute: (( n: num ) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/lapply-dots.r =====
@@ -85,33 +85,33 @@ execute: (( n: num ) -> num)<> with {  }
 
 
 ===== Processing tests/02_simple/list-for.r =====
-execute: (( n: num ) -> null<> with {  })<> with {  }
+execute: (( n: num ) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/list-while.r =====
-execute: (( n: num ) -> null<> with {  })<> with {  }
+execute: (( n: num ) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/matrix-for.r =====
-execute: (( n: num ) -> null<> with {  })<> with {  }
+execute: (( n: num ) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/scalar-for.r =====
-execute: (( n: num ) -> null<> with {  })<> with {  }
+execute: (( n: num ) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/scalar-while.r =====
-execute: (( n: num ) -> null<> with {  })<> with {  }
+execute: (( n: num ) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/super-while.r =====
-execute: (( n: num ) -> null<> with {  })<> with {  }
+execute: (( n: num ) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/vector-for.r =====
-execute: (( n: num ) -> null<> with {  })<> with {  }
+execute: (( n: num ) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/vector-while.r =====
-execute: (( n: num ) -> null<> with {  })<> with {  }
+execute: (( n: num ) -> null)<> with {  }
 
