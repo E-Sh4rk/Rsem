@@ -61,7 +61,8 @@ let labelof_expr env e =
         else *)
         if Ty.leq ty Prim.Chr.any then
           match Prim.Chr.destruct ty with
-          | false, { positive=true ; content=[str] } -> Some (Labels.Named str)
+          | false, [{ pos=true ; prim=[str] ; pvs=[] ; nvs=[] }]
+          -> Some (Labels.Named str)
           | _ -> assert false
         else None
       | _ -> None
