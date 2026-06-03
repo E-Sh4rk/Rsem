@@ -17,6 +17,7 @@ let typeof_const c =
   in
   let nopack t = Builder.build_struct Builder.TIdMap.empty t in
   match c with
+  | CNan -> TVec (Vec.CstLength (1, PLgl)) |> pack
   | CChr chr -> TVec (Vec.CstLength (1, PHat (PChr' chr))) |> pack
   | CDbl _ -> TVec (Vec.CstLength (1, PHat PDbl)) |> pack
   | CInt i -> TVec (Vec.CstLength (1, PHat (PInt' (Some i, Some i)))) |> pack
@@ -26,6 +27,7 @@ let typeof_const c =
 let typeof_const_comp c =
   let open Builder in
   let exact, ty = match c with
+  | CNan -> false, TVec (Vec.CstLength (1, PLgl))
   | CChr chr -> true, TVec (Vec.CstLength (1, PHat (PChr' chr)))
   | CDbl _ -> false, TVec (Vec.CstLength (1, PHat PDbl))
   | CInt i -> true, TVec (Vec.CstLength (1, PHat (PInt' (Some i, Some i))))

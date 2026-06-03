@@ -7,6 +7,7 @@ module Position = struct
 end
 
 type const =
+| CNan
 | CStr of string
 | CFloat of string
 | CInt of int
@@ -106,6 +107,7 @@ let aux_param env f p =
 
 let aux_const c =
   match c with
+  | CNan -> Ast.CNan
   | CStr str -> Ast.CChr str
   | CFloat str -> Ast.CDbl str
   | CInt i -> Ast.CInt i

@@ -13,6 +13,7 @@ open Mlsem.Common
 module MVariable = Mlsem.Lang.MVariable
 
 type const =
+| CNan
 | CChr of string
 | CDbl of string
 | CInt of int
