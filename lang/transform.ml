@@ -17,22 +17,22 @@ let typeof_const c =
   in
   let nopack t = Builder.build_struct Builder.TIdMap.empty t in
   match c with
-  | CNan -> TVec (Vec.CstLength (1, PLgl)) |> pack
-  | CChr chr -> TVec (Vec.CstLength (1, PHat (PChr' chr))) |> pack
-  | CDbl _ -> TVec (Vec.CstLength (1, PHat PDbl)) |> pack
-  | CInt i -> TVec (Vec.CstLength (1, PHat (PInt' (Some i, Some i)))) |> pack
-  | CClx _ -> TVec (Vec.CstLength (1, PHat PClx)) |> pack
-  | CLgl b -> TVec (Vec.CstLength (1, PHat (PLgl' b))) |> pack
+  | CNan -> TVec (Vec.Scalar PLgl) |> pack
+  | CChr chr -> TVec (Vec.Scalar (PChr' chr)) |> pack
+  | CDbl _ -> TVec (Vec.Scalar PDbl) |> pack
+  | CInt i -> TVec (Vec.Scalar (PInt' (Some i, Some i))) |> pack
+  | CClx _ -> TVec (Vec.Scalar PClx) |> pack
+  | CLgl b -> TVec (Vec.Scalar (PLgl' b)) |> pack
   | CNull -> TNull |> nopack
 let typeof_const_comp c =
   let open Builder in
   let exact, ty = match c with
-  | CNan -> false, TVec (Vec.CstLength (1, PLgl))
-  | CChr chr -> true, TVec (Vec.CstLength (1, PHat (PChr' chr)))
-  | CDbl _ -> false, TVec (Vec.CstLength (1, PHat PDbl))
-  | CInt i -> true, TVec (Vec.CstLength (1, PHat (PInt' (Some i, Some i))))
-  | CClx _ -> false, TVec (Vec.CstLength (1, PHat PClx))
-  | CLgl b -> true, TVec (Vec.CstLength (1, PHat (PLgl' b)))
+  | CNan -> false, TVec (Vec.Scalar PLgl)
+  | CChr chr -> true, TVec (Vec.Scalar (PChr' chr))
+  | CDbl _ -> false, TVec (Vec.Scalar PDbl)
+  | CInt i -> true, TVec (Vec.Scalar (PInt' (Some i, Some i)))
+  | CClx _ -> false, TVec (Vec.Scalar PClx)
+  | CLgl b -> true, TVec (Vec.Scalar (PLgl' b))
   | CNull -> true, TNull
   in
   exact, Builder.build Builder.TIdMap.empty ty
@@ -54,7 +54,7 @@ let labelof_expr env e =
     | Some ty ->
       let ty = TyScheme.get ty |> snd |> GTy.ub in
       begin match ty |> Attr.proj_content |> Vec.destruct with
-      | [(CstLength (1, ty),_)] when Prim.is_singleton ty ->
+      | [(Scalar ty,_)] when Prim.is_singleton ty ->
         let ty = Prim.destruct ty in
         (* if Ty.leq ty Prim.Int.any then
           match Prim.Int.destruct ty with
@@ -242,7 +242,7 @@ let to_mlsem (cfg:cfg) e =
       let es = List.map aux es in
       let arg = Eid.unique (), A.Constructor
         (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (pos,named,ell) ; cons=ArgBuilder.cons (pos,named,ell) }, es) in
-      let arg = Eid.unique (), A.Constructor (SA.Normalize, [arg]) in
+      (* let arg = Eid.unique (), A.Constructor (SA.Normalize, [arg]) in *)
       begin match typeof_fun cfg.env f args with
       | None ->
         let f = Eid.unique (), A.Projection

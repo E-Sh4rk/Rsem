@@ -14,7 +14,7 @@ int <- 42L
 dbl <- 42
 clx <- 42i
 
-## num1 : num1
+## num1 : dbl1
 num1 <- 42
 
 f_req <- function(a){
@@ -80,7 +80,6 @@ narrowing <- function(x) {
 }
 
 ## narrowing_ann : ( x: dbl ) -> dbl
-## narrowing_ann : ( x: dbl1 ) -> dbl1
 ## narrowing_ann : ( x: null ) -> null
 narrowing_ann <- function(x) {
   if (x == NULL)
