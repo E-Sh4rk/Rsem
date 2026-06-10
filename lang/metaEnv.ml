@@ -31,7 +31,8 @@ let add_signature v ty (env,senv) =
     failwith "Top-level definitions cannot contain monomorphic type variables." ;
   if no_symlabel ty then
     let ty = if Env.mem v env then merge_tl [Env.find v env;ty] else ty in
-    Env.replace v ty env, senv
+    let env = Env.rm v env in
+    Mlsem_lang.MVariable.add_to_env v ty env, senv
   else
     let env = if Env.mem v env then env else Env.add v (TyScheme.mk_mono GTy.any) env in
     let senv = VarMap.add v (ty :: get_sym_sigs v senv) senv in

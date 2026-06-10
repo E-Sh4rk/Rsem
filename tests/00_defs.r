@@ -3,19 +3,22 @@
 
 ## (:) : ( from:dbl, to:dbl ) -> dbl
 
-## (-) : ( x:dbl ) -> dbl
-## (-) : ( x:int ) -> int
-## (-) : ( x:dbl, y:dbl) -> dbl
-## (-) : ( x:int, y:int ) -> int
-## (+) : ( x:dbl ) -> dbl
-## (+) : ( x:int ) -> int
-## (+) : ( x:dbl, y:dbl) -> dbl
-## (+) : ( x:int, y:int ) -> int
+## (-) : ( x:v('a)&dbl ) -> v('a)&dbl
+## (-) : ( x:dbl1 ) -> dbl1
+## (-) : ( x:v('a)&dbl, y:v('a)&dbl) -> v('a)&dbl
+## (-) : ( x:dbl1, y:dbl1) -> dbl1
 
-## (*) : ( x:dbl, y:dbl) -> dbl
-## (*) : ( x:int, y:int ) -> int
-## (/) : ( x:dbl, y:dbl) -> dbl
+## (+) : ( x:v('a)&dbl ) -> v('a)&dbl
+## (+) : ( x:dbl1 ) -> dbl1
+## (+) : ( x:v('a)&dbl, y:v('a)&dbl) -> v('a)&dbl
+## (+) : ( x:dbl1, y:dbl1) -> dbl1
+
+## (*) : ( x:v('a)&dbl, y:v('a)&dbl) -> v('a)&dbl
+## (*) : ( x:dbl1, y:dbl1) -> dbl1
+## (/) : ( x:v('a)&dbl, y:v('a)&dbl) -> v('a)&dbl
+## (/) : ( x:dbl1, y:dbl1) -> dbl1
 ## (%/%) : ( x:int, y:int ) -> int
+## (%/%) : ( x:int1, y:int1 ) -> int1
 
 ## (<) : ( x:dbl1, y:dbl1 ) -> lgl1<>
 ## (<) : ( x:dbl, y:dbl ) -> lgl<>
@@ -65,3 +68,20 @@
 
 ## matrix : (data: absent, nrow: dbl?, ncol: dbl?) -> lgl
 ## matrix : (data: v1('a), nrow: dbl?, ncol: dbl?) -> v('a)
+
+# ========== Bitwise ==========
+
+## bitwNot : (a:dbl) -> INT
+## bitwNot : (a:dbl1) -> INT1
+
+## bitwAnd : (a:dbl, b:dbl) -> INT
+## bitwAnd : (a:dbl1, b:dbl1) -> INT1
+## bitwOr : (a:dbl, b:dbl) -> INT
+## bitwOr : (a:dbl1, b:dbl1) -> INT1
+## bitwXor : (a:dbl, b:dbl) -> INT
+## bitwXor : (a:dbl1, b:dbl1) -> INT1
+
+## bitwShiftL : (a:dbl, n:dbl1) -> INT
+## bitwShiftL : (a:dbl1, n:dbl1) -> INT1
+## bitwShiftR : (a:dbl, n:dbl1) -> INT
+## bitwShiftR : (a:dbl1, n:dbl1) -> INT1

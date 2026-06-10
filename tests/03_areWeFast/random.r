@@ -1,5 +1,5 @@
 
-## seed : int1
+## seed : dbl1
 seed <- NaN
 
 resetSeed <- function() seed <<- 74755

@@ -32,9 +32,11 @@ let refresh_vars kind ty =
   let s = Subst.of_list s1 s2 in
   Subst.apply s ty
 let sigs_of_ty ty =
+  let fun_sig = ref false in
   let aux ty =
     match Arrow.dnf ty with
     | [arrs] ->
+      fun_sig := true ;
       arrs |> List.map
         (fun (a,b) ->
           let a = Rstt.Arg.reidentify ~id:(TVar.mk KInfer None |> TVar.typ) a in
@@ -55,7 +57,8 @@ let sigs_of_ty ty =
     | _ -> [ty]
   in
   let ty = refresh_vars KNoInfer ty in
-  (aux ty, GTy.mk ty |> TyScheme.mk_poly)
+  let sigs = aux ty in
+  (!fun_sig, sigs, GTy.mk ty |> TyScheme.mk_poly)
 let extend_env mlast env =
   if !gradual then
     let fv = System.Ast.fv mlast in
@@ -109,7 +112,9 @@ let treat_def ctx past =
     { PAst.id = Scope.from_toplevel (MetaEnv.env ctx.tenv) ctx.idenv } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
   match ast with
-  | VarAssign (v, e) -> treat_ast v ctx e
+  | VarAssign (v, e) ->
+    (* TODO: If v is a fresh Immut var (if no add_sig before), add it to the idenv *)
+    treat_ast v ctx e
   | _ -> treat_ast dummy_var ctx (eid, ast)
 
 let add_sig ctx str tye =
@@ -117,17 +122,24 @@ let add_sig ctx str tye =
   let open Mlsem_common in
   let benv, ty = Builder.resolve ctx.benv tye in
   let ty = ty |> Builder.build ctx.tidenv in
-  let (s,ty) = sigs_of_ty ty in
+  let fun_sig,s,ty = sigs_of_ty ty in
   let v,s =
     match StrMap.find_opt str ctx.idenv with
-    | None ->
-        let v = MVariable.create Immut (Some str) in
-        v,s
-    | Some v ->
+    | Some v when fun_sig -> (* Overload *)
       let s =
         if VarMap.mem v ctx.senv
         then (VarMap.find v ctx.senv)@s
         else s
+      in
+      v,s
+    | None | Some _ -> (* Redefinition (shadowing) *)
+      let v =
+        if fun_sig
+        then MVariable.create Immut (Some str)
+        else
+          let tvs, ty = TyScheme.get ty in
+          if MixVarSet.is_empty tvs |> not then failwith "Non-functional signatures cannot have type variables" ;
+          MVariable.create (AnnotMut ty) (Some str)
       in
       v,s
   in
