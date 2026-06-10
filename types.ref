@@ -14,9 +14,9 @@ _: dbl
 
 _: dbl
 
-_: (DBL | ff)<>
+_: (DBL | LGL)<>
 
-_: (DBL | ff)<>
+_: (DBL | LGL)<>
 
 int: 42<> with {  }
 
