@@ -31,5 +31,10 @@ build: [
 pin-depends: [
   [ "sstt.0.1.0" "git+https://github.com/E-Sh4rk/sstt.git#main" ]
   [ "mlsem.0.1.0" "git+https://github.com/E-Sh4rk/MLsem.git#main" ]
+  [ "mlsem-types.0.1.0" "git+https://github.com/E-Sh4rk/MLsem.git#main" ]
+  [ "mlsem-common.0.1.0" "git+https://github.com/E-Sh4rk/MLsem.git#main" ]
+  [ "mlsem-system.0.1.0" "git+https://github.com/E-Sh4rk/MLsem.git#main" ]
+  [ "mlsem-lang.0.1.0" "git+https://github.com/E-Sh4rk/MLsem.git#main" ]
   [ "rstt-repl.0.1.0" "git+https://github.com/E-Sh4rk/rstt.git#main" ]
+  [ "rstt.0.1.0" "git+https://github.com/E-Sh4rk/rstt.git#main" ]
 ]
