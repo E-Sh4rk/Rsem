@@ -21,3 +21,7 @@ clean:
 
 deps:
 	opam install . --deps-only
+
+perf:
+	sudo perf record --call-graph=dwarf -- ./_build/default/bin/main.exe tests/*.r tests/**/*.r
+	sudo perf report
