@@ -1,3 +1,7 @@
+
+# TODO: fix loop when no annot
+# TODO: fix sig being intersected with previous types
+## execute: (( n: dbl ) -> dbl)<> with {  }
 execute <- function(n) {
   x <- 1:n
   f <- function(x, y) x + 1.5 * y

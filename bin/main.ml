@@ -113,7 +113,12 @@ let treat_def ctx past =
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
   match ast with
   | VarAssign (v, e) ->
-    (* TODO: If v is a fresh Immut var (if no add_sig before), add it to the idenv *)
+    (* If v is a fresh var (i.e. if it was not declared before), add it to the idenv *)
+    let ctx =
+      match Variable.get_name v with
+      | Some str -> { ctx with idenv = StrMap.add str v ctx.idenv }
+      | None -> ctx
+    in
     treat_ast v ctx e
   | _ -> treat_ast dummy_var ctx (eid, ast)
 

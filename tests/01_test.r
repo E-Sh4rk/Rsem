@@ -17,6 +17,9 @@ clx <- 42i
 ## num1 : dbl1
 num1 <- 42
 
+f_succ <- function(a) a + 1
+f_succ_succ <- function(a) f_succ(f_succ(a))
+
 f_req <- function(a){
   if (a > 0) {
     a
