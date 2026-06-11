@@ -85,3 +85,49 @@ execute: (( n: dbl ) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/lapply-dots.r =====
+execute: (( n: dbl ) -> dbl)<> with {  }
+
+
+===== Processing tests/02_simple/lapply.r =====
+execute: (( n: dbl ) -> dbl)<> with {  }
+
+
+===== Processing tests/02_simple/list-for.r =====
+execute: (( n: dbl ) -> null)<> with {  }
+
+
+===== Processing tests/02_simple/list-while.r =====
+execute: (( n: dbl ) -> null)<> with {  }
+
+
+===== Processing tests/02_simple/matrix-for.r =====
+execute: (( n: dbl ) -> null)<> with {  }
+
+
+===== Processing tests/02_simple/scalar-for.r =====
+execute: (( n: dbl ) -> null)<> with {  }
+
+
+===== Processing tests/02_simple/scalar-while.r =====
+execute: (( n: dbl ) -> null)<> with {  }
+
+
+===== Processing tests/02_simple/super-while.r =====
+execute: (( n: dbl ) -> null)<> with {  }
+
+
+===== Processing tests/02_simple/vector-for.r =====
+execute: (( n: dbl ) -> null)<> with {  }
+
+
+===== Processing tests/02_simple/vector-while.r =====
+execute: (( n: dbl ) -> null)<> with {  }
+
+
+===== Processing tests/03_areWeFast/random.r =====
+seed: dbl1
+
+resetSeed: ((  ) -> null)<> with {  }
+
+nextRandom: ((  ) -> INT1)<> with {  }
+
