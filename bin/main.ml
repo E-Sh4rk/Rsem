@@ -86,17 +86,17 @@ let infer ctx mlast =
 let treat_ast v ctx ast =
   try
     let ctx = match VarMap.find_opt v ctx.senv with
-    | None ->
+    | None (* Inference mode *) ->
       let mlast = Transform.to_mlsem { env=ctx.tenv ; infer_mode=true } ast in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
       let ty = infer ctx mlast in
       { ctx with tenv=MetaEnv.replace_signature v ty ctx.tenv }
-    | Some sigs ->
+    | Some sigs (* Type checking mode *) ->
       let mlast = Transform.to_mlsem { env=ctx.tenv ; infer_mode=false } ast in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
       let asts = List.map (fun s -> Mlsem_system.Ast.coerce CheckStatic (GTy.mk s) mlast) sigs in
       let _ = List.map (infer ctx) asts in
-      ctx
+      { ctx with senv=VarMap.remove v ctx.senv } (* The signature has been verified, remove it *)
     in
     let ty = MetaEnv.get_signature v ctx.tenv in
     Format.printf "%a:@? @[%a@]@.@." Variable.pp v TyScheme.pp_short ty ;
@@ -130,23 +130,20 @@ let add_sig ctx str tye =
   let fun_sig,s,ty = sigs_of_ty ty in
   let v,s =
     match StrMap.find_opt str ctx.idenv with
-    | Some v when fun_sig -> (* Overload *)
-      let s =
-        if VarMap.mem v ctx.senv
-        then (VarMap.find v ctx.senv)@s
-        else s
-      in
-      v,s
-    | None | Some _ -> (* Redefinition (shadowing) *)
-      let v =
-        if fun_sig
-        then MVariable.create Immut (Some str)
-        else
-          let tvs, ty = TyScheme.get ty in
-          if MixVarSet.is_empty tvs |> not then failwith "Non-functional signatures cannot have type variables" ;
-          MVariable.create (AnnotMut ty) (Some str)
-      in
-      v,s
+    | Some v when fun_sig && VarMap.mem v ctx.senv -> (* Overload *)
+      v,(VarMap.find v ctx.senv)@s
+    | Some _ when fun_sig -> (* Redefinition of function signature (shadowing) *)
+      MVariable.create Immut (Some str), s
+    | Some _ -> (* Redefinition of mutable variable signature (shadowing) *)
+      let tvs, ty = TyScheme.get ty in
+      if MixVarSet.is_empty tvs |> not then failwith "Non-functional signatures cannot have type variables" ;
+      MVariable.create (AnnotMut ty) (Some str), s
+    | None when fun_sig -> (* First signature definition *)
+      MVariable.create Immut (Some str), s
+    | None -> (* First mutable definition *)
+      let tvs, ty = TyScheme.get ty in
+      if MixVarSet.is_empty tvs |> not then failwith "Non-functional signatures cannot have type variables" ;
+      MVariable.create (AnnotMut ty) (Some str), s
   in
   let idenv = StrMap.add str v ctx.idenv in
   (* Format.printf "Adding %s: @[%a@]@." str TyScheme.pp ty ; *)
