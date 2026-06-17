@@ -353,7 +353,7 @@ and aux_binary (* map_binary_operator *) tree =
   | Case ("Exp_SLASH_rep_nl_exp", tree) -> "/", aux tree
   | Case ("Exp_STARSTAR_rep_nl_exp", tree) -> "**", aux tree
   | Case ("Exp_HAT_rep_nl_exp", tree) -> "^", aux tree
-  | Case ("Exp_pat_43ed24e_rep_nl_exp", _) ->
+  | Case ("Exp_pat_43ed24e_rep_nl_exp", tree) ->
     (* pattern %[^%\\\n]*% *)
     let a1, tok, _, a2 = extract4 tree in
     aux_tok tok, (aux_e a1, aux_e a2)

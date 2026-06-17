@@ -352,7 +352,7 @@ let to_mlsem (cfg:cfg) e =
         else Ty.O.absent |> Ty.F.mk_descr, e
       in
       let pty = Arg.mk { named;pos_named;pos_tl=tl;named_tl=tl } in
-      let lambda = Eid.unique (), A.Lambda ([], GTy.mk pty, MVariable.create Immut None, e) in
+      let lambda = Eid.unique (), A.Lambda ([], Some (GTy.mk pty), MVariable.create Immut None, e) in
       eid, A.Constructor
         (CCustom { cname="cattr" ; cgen=true ; cdom=AttrConstr.cdom ; cons=AttrConstr.cons }, [lambda])
     | Seq (e1, e2) -> eid, A.Seq (aux e1, aux e2)
