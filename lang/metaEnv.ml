@@ -10,7 +10,10 @@ type 'a arg = arg_label * 'a
 
 type t = Env.t * (TyScheme.t list) VarMap.t
 
-let simplify_tl ty = ty |> TyScheme.bot_instance |> TyScheme.norm_and_simpl
+let simplify_tl ty =
+  let tvs, ty = ty |> TyScheme.bot_instance |> TyScheme.get in
+  let ty = GTy.map Rstt.TyOp.simplify ty |> GTy.normalize in
+  TyScheme.mk tvs ty
 let merge_tl tys =
   let tscap t1 t2 =
     let (tvs1, t1), (tvs2, t2) = TyScheme.get t1, TyScheme.get t2 in

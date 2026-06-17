@@ -10,6 +10,8 @@ val pp_arg_label : Format.formatter -> arg_label -> unit
 
 type t
 
+(* val simplify_tl : TyScheme.t -> TyScheme.t *)
+
 val initial : t
 val add_signature : Variable.t -> TyScheme.t -> t -> t
 val replace_signature : Variable.t -> TyScheme.t -> t -> t
