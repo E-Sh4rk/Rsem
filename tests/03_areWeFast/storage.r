@@ -14,7 +14,7 @@ verifyResult <- function(result, iterations) {
     return (result == 5461)
 }
 
-## buildTreeDepth : (depth: dbl1, random: any) -> { dbl1 }
+## buildTreeDepth : (depth: dbl1, random: any) -> tree where tree = { tree } | dbl | null
 buildTreeDepth <- function(depth, random) {
     count <<- count + 1
     if (depth == 1) {
@@ -23,7 +23,7 @@ buildTreeDepth <- function(depth, random) {
         array <- vector("list", length = 4)
         for (i in 1:4) {
             array[[i]] <- buildTreeDepth(depth - 1, random)
-        }
+        } # TODO: the type system does not know that array does not contain NULL anymore
         return (array)
     }
 }

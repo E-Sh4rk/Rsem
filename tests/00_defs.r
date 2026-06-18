@@ -19,6 +19,8 @@
 ## (/) : ( x:dbl1, y:dbl1) -> dbl1
 ## (%/%) : ( x:int, y:int ) -> int
 ## (%/%) : ( x:int1, y:int1 ) -> int1
+## (%%) : ( x:v('a)&dbl, y:v('a)&dbl) -> v('a)&dbl
+## (%%) : ( x:dbl1, y:dbl1) -> dbl1
 
 ## (<) : ( x:dbl1, y:dbl1 ) -> lgl1<>
 ## (<) : ( x:dbl, y:dbl ) -> lgl<>

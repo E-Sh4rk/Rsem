@@ -24,6 +24,7 @@ let typeof_const c =
   | CClx _ -> TVec (Vec.Scalar PClx) |> pack
   | CLgl b -> TVec (Vec.Scalar (PLgl' b)) |> pack
   | CNull -> TNull |> nopack
+(* TODO: equality can trigger a conversion, e.g. result == 5461 can be true even for result:INT *)
 let typeof_const_comp c =
   let open Builder in
   let exact, ty = match c with
