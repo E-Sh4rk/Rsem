@@ -40,10 +40,10 @@ f_opt: ∀'a. ((( a: (DBL | dbl & v('a))? ) -> DBL | dbl & v('a)) & (( a: dbl1? 
 
 f_opt_ann: (( a: dbl ) -> dbl) & (( a: null? ) -> lgl1)
 
-app: ((  ) -> DBL1<> with {  } | tt<> with {  })<> with {  }
+app: ((  ) -> (DBL1 | tt)<> with {  })<> with {  }
 
-ret: ((( x: DBL1 ) -> ff<> with {  } | tt<> with {  }) & (( x: ff ) | ( x: null )
- -> ff<> with {  }) & (( x: ~((DBL1 | ff) | null) ) ->
+ret: ((( x: DBL1 ) -> ^LGL1<> with {  }) & (( x: ff ) | ( x: null ) ->
+ ff<> with {  }) & (( x: ~((DBL1 | ff) | null) ) ->
  tt<> with {  }))<> with {  }
 
 ret_ann: (( x: any ) -> lgl1) & (( x: null ) -> ff)
@@ -68,8 +68,8 @@ _: { DBL1<> with {  } }
 
 _: { aa: DBL1<> with {  } }
 
-test_lists: ((  ) -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a"<> with {  } |
- 42<> with {  } | DBL1<> with {  } | ff<> with {  }) | null })<> with {  }
+test_lists: ((  ) -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42 | DBL1 |
+ ff)<> with {  } | null })<> with {  }
 
 nested_list: ∀`a. ( x: { a: { lgl1 }, `a } ) -> { a: { lgl1 }, `a }
 
@@ -129,5 +129,16 @@ seed: dbl1
 
 resetSeed: ((  ) -> null)<> with {  }
 
-nextRandom: ((  ) -> INT1)<> with {  }
+nextRandom: ((  ) -> dbl1)<> with {  }
+
+
+===== Processing tests/03_areWeFast/storage.r =====
+count: dbl1
+
+execute: ((  ) -> dbl1)<> with {  }
+
+verifyResult: ((( result: DBL1, iterations: any ) -> ^LGL1<> with {  }) &
+ (( result: ~DBL1, iterations: any ) -> ff<> with {  }))<> with {  }
+
+buildTreeDepth: ( depth: dbl1, random: any ) -> x1 where x1 = (dbl | { x1 }) | null
 
