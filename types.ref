@@ -4,7 +4,7 @@
 ===== Processing tests/01_test.r =====
 _: "Hello World!"<> with {  }
 
-_: DBL1<> with {  }
+_: 42.<> with {  }
 
 _: tt<> with {  }
 
@@ -18,9 +18,9 @@ _: (DBL | LGL)<>
 
 _: (DBL | LGL)<>
 
-int: 42<> with {  }
+int: 42L<> with {  }
 
-dbl: DBL1<> with {  }
+dbl: 42.<> with {  }
 
 clx: CLX1<> with {  }
 
@@ -40,11 +40,10 @@ f_opt: ∀'a. ((( a: (DBL | dbl & v('a))? ) -> DBL | dbl & v('a)) & (( a: dbl1? 
 
 f_opt_ann: (( a: dbl ) -> dbl) & (( a: null? ) -> lgl1)
 
-app: ((  ) -> (DBL1 | tt)<> with {  })<> with {  }
+app: ((  ) -> (12. | tt)<> with {  })<> with {  }
 
-ret: ((( x: DBL1 ) -> ^LGL1<> with {  }) & (( x: ff ) | ( x: null ) ->
- ff<> with {  }) & (( x: ~((DBL1 | ff) | null) ) ->
- tt<> with {  }))<> with {  }
+ret: ((( x: 0 ) | ( x: ff ) | ( x: null ) -> ff<> with {  }) & (( x: ~((0 | ff) |
+ null) ) -> tt<> with {  }))<> with {  }
 
 ret_ann: (( x: any ) -> lgl1) & (( x: null ) -> ff)
 
@@ -60,15 +59,15 @@ cases: (( x: clx ) -> empty)<> with {  }
 
 assign: ∀'a. (( x: 'a ) -> 'a)<> with {  }
 
-superassign: ∀'a. (( x: DBL1<> with {  } | 'a ) -> DBL1<> with {  } | 'a)<> with {  }
+superassign: ∀'a. (( x: 42.<> with {  } | 'a ) -> 42.<> with {  } | 'a)<> with {  }
 
 _: {  }
 
-_: { DBL1<> with {  } }
+_: { 42.<> with {  } }
 
-_: { aa: DBL1<> with {  } }
+_: { aa: 42.<> with {  } }
 
-test_lists: ((  ) -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42 | DBL1 |
+test_lists: ((  ) -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42 |
  ff)<> with {  } | null })<> with {  }
 
 nested_list: ∀`a. ( x: { a: { lgl1 }, `a } ) -> { a: { lgl1 }, `a }
@@ -137,8 +136,8 @@ count: dbl1
 
 execute: ((  ) -> dbl1)<> with {  }
 
-verifyResult: ((( result: DBL1, iterations: any ) -> ^LGL1<> with {  }) &
- (( result: ~DBL1, iterations: any ) -> ff<> with {  }))<> with {  }
+verifyResult: ((( result: 5461, iterations: any ) -> tt<> with {  }) &
+ (( result: ~5461, iterations: any ) -> ff<> with {  }))<> with {  }
 
 buildTreeDepth: ( depth: dbl1, random: any ) -> x1 where x1 = (dbl | { x1 }) | null
 

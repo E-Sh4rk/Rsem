@@ -19,20 +19,27 @@ let typeof_const c =
   match c with
   | CNan -> TVec (Vec.Scalar PLgl) |> pack
   | CChr chr -> TVec (Vec.Scalar (PChr' chr)) |> pack
-  | CDbl _ -> TVec (Vec.Scalar PDbl) |> pack
+  | CDbl str ->
+    begin try
+      let i = int_of_string str in
+      TVec (Vec.Scalar (PDbl' (Some i, Some i))) |> pack
+    with Failure _ -> TVec (Vec.Scalar PDbl) |> pack end
   | CInt i -> TVec (Vec.Scalar (PInt' (Some i, Some i))) |> pack
   | CClx _ -> TVec (Vec.Scalar PClx) |> pack
   | CLgl b -> TVec (Vec.Scalar (PLgl' b)) |> pack
   | CNull -> TNull |> nopack
-(* TODO: equality can trigger a conversion, e.g. result == 5461 can be true even for result:INT *)
 let typeof_const_comp c =
   let open Builder in
   let exact, ty = match c with
-  | CNan -> false, TVec (Vec.Scalar PLgl)
+  | CNan -> true, TDiff (TVec (Vec.Scalar PAny), TVec (Vec.Scalar (PHat PAny)))
   | CChr chr -> true, TVec (Vec.Scalar (PChr' chr))
-  | CDbl _ -> false, TVec (Vec.Scalar PDbl)
-  | CInt i -> true, TVec (Vec.Scalar (PInt' (Some i, Some i)))
-  | CClx _ -> false, TVec (Vec.Scalar PClx)
+  | CDbl str ->
+    begin try
+      let i = int_of_string str in
+      true, TVec (Vec.Scalar (PNum' (Some i, Some i)))
+    with Failure _ -> false, TVec (Vec.Scalar PAny) end
+  | CInt i -> true, TVec (Vec.Scalar (PNum' (Some i, Some i)))
+  | CClx _ -> false, TVec (Vec.Scalar PAny)
   | CLgl b -> true, TVec (Vec.Scalar (PLgl' b))
   | CNull -> true, TNull
   in
