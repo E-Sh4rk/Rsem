@@ -51,32 +51,25 @@ let typeof_expr env (_,e) =
   | Id v when MetaEnv.mem v env -> Some (MetaEnv.get_signature v env)
   | _ -> None
 let labelof_expr env e =
-  match snd e with
-  | Const (CChr str) -> Some (Labels.Named str)
-  (* | Const (CInt i) -> Some (Labels.Pos (i-1)) *)
-  (* | Const (CDbl dbl) ->
-    int_of_string_opt dbl |> Option.map (fun i -> Labels.Pos (i-1)) *)
-  | _ -> (* If the expr is not a constant, we may still guess the label from its type *)
-    begin match typeof_expr env e with
-    | None -> None
-    | Some ty ->
-      let ty = TyScheme.get ty |> snd |> GTy.ub in
-      begin match ty |> Attr.proj_content |> Vec.destruct with
-      | [(Scalar ty,_)] when Prim.is_singleton ty ->
-        let ty = Prim.destruct ty in
-        (* if Ty.leq ty Prim.Int.any then
-          match Prim.Int.destruct ty with
-          | false, [(Some i1, Some i2)] when i1=i2 -> Some (Labels.Pos (i1-1))
-          | _ -> assert false
-        else *)
-        if Ty.leq ty Prim.Chr.any then
-          match Prim.Chr.destruct ty with
-          | false, [{ pos=true ; prim=[str] ; pvs=[] ; nvs=[] }]
-          -> Some (Labels.Named str)
-          | _ -> assert false
-        else None
-      | _ -> None
-      end
+  match typeof_expr env e with
+  | None -> None
+  | Some ty ->
+    let ty = TyScheme.get ty |> snd |> GTy.ub in
+    begin match ty |> Attr.proj_content |> Vec.destruct with
+    | [(Scalar ty,_)] when Prim.is_singleton ty ->
+      let ty = Prim.destruct ty in
+      (* if Ty.leq ty Prim.Int.any then
+        match Prim.Int.destruct ty with
+        | false, [(Some i1, Some i2)] when i1=i2 -> Some (Labels.Pos (i1-1))
+        | _ -> assert false
+      else *)
+      if Ty.leq ty Prim.Chr.any then
+        match Prim.Chr.destruct ty with
+        | false, [{ pos=true ; prim=[str] ; pvs=[] ; nvs=[] }]
+        -> Some (Labels.Named str)
+        | _ -> assert false
+      else None
+    | _ -> None
     end
 let typeof_fun env e args =
   let args = args |> List.map (fun (k,e) -> (k,Option.bind e (labelof_expr env))) in
