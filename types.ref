@@ -83,11 +83,11 @@ execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/lapply-dots.r =====
-execute: ((n: dbl) -> dbl)<> with {  }
+execute: ((n: dbl) -> { dbl })<> with {  }
 
 
 ===== Processing tests/02_simple/lapply.r =====
-execute: ((n: dbl) -> dbl)<> with {  }
+execute: ((n: dbl) -> { dbl1 })<> with {  }
 
 
 ===== Processing tests/02_simple/list-for.r =====

@@ -37,7 +37,8 @@
 ## typeof : (( x: list ) -> "list") & (( x: null ) -> "NULL")
 ## fail : empty -> any
 
-## lapply : (X:'a, FUN:@('a, X:absent, FUN:absent, ...: (absent,`r)) -> 'b, ...:(absent,`r)) -> 'b
+## lapply : (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: (absent,`r)) -> 'b, ...:(absent,`r)) -> {'b}
+## lapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: (absent,`r)) -> 'b, ...:(absent,`r)) -> {'b}
 
 # ========== Lists ==========
 
