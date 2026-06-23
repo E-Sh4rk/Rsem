@@ -26,40 +26,39 @@ clx: CLX1<> with {  }
 
 num1: dbl1
 
-f_succ: ∀'a. ((( a: DBL | dbl & v('a) ) -> DBL | dbl & v('a)) & (( a: dbl1 ) ->
+f_succ: ∀'a. (((a: DBL | dbl & v('a)) -> DBL | dbl & v('a)) & ((a: dbl1) ->
  dbl1))<> with {  }
 
-f_succ_succ: ∀'a. ((( a: DBL | dbl & v('a) ) -> DBL | dbl & v('a)) & (( a: dbl1 ) ->
+f_succ_succ: ∀'a. (((a: DBL | dbl & v('a)) -> DBL | dbl & v('a)) & ((a: dbl1) ->
  dbl1))<> with {  }
 
-f_req: ∀'a. ((( a: dbl & v('a) ) -> dbl & v('a)) & (( a: dbl1 ) ->
+f_req: ∀'a. (((a: dbl & v('a)) -> dbl & v('a)) & ((a: dbl1) -> dbl1))<> with {  }
+
+f_opt: ∀'a. (((a: (DBL | dbl & v('a))?) -> DBL | dbl & v('a)) & ((a: dbl1?) ->
  dbl1))<> with {  }
 
-f_opt: ∀'a. ((( a: (DBL | dbl & v('a))? ) -> DBL | dbl & v('a)) & (( a: dbl1? )
- -> dbl1))<> with {  }
+f_opt_ann: ((a: dbl) -> dbl) & ((a: null?) -> lgl1)
 
-f_opt_ann: (( a: dbl ) -> dbl) & (( a: null? ) -> lgl1)
+app: (() -> (12. | tt)<> with {  })<> with {  }
 
-app: ((  ) -> (12. | tt)<> with {  })<> with {  }
+ret: (((x: 0) | (x: ff) | (x: null) -> ff<> with {  }) & ((x: ~((0 | ff) | null))
+ -> tt<> with {  }))<> with {  }
 
-ret: ((( x: 0 ) | ( x: ff ) | ( x: null ) -> ff<> with {  }) & (( x: ~((0 | ff) |
- null) ) -> tt<> with {  }))<> with {  }
+ret_ann: ((x: any) -> lgl1) & ((x: null) -> ff)
 
-ret_ann: (( x: any ) -> lgl1) & (( x: null ) -> ff)
+narrowing: ∀'a. (((x: dbl & v('a)) -> dbl & v('a)) & ((x: dbl1) -> dbl1) & ((x: null)
+ -> null))<> with {  }
 
-narrowing: ∀'a. ((( x: dbl & v('a) ) -> dbl & v('a)) & (( x: dbl1 ) -> dbl1) &
- (( x: null ) -> null))<> with {  }
+narrowing_ann: ((x: dbl) -> dbl) & ((x: null) -> null)
 
-narrowing_ann: (( x: dbl ) -> dbl) & (( x: null ) -> null)
+loop_break: ∀'a,'b. (((x: 'a & null) -> null & 'a) & ((x: DBL | dbl & v('b)) -> DBL |
+ dbl & v('b)) & ((x: dbl1) -> dbl1))<> with {  }
 
-loop_break: ∀'a,'b. ((( x: 'a & null ) -> null & 'a) & (( x: DBL | dbl & v('b) ) ->
- DBL | dbl & v('b)) & (( x: dbl1 ) -> dbl1))<> with {  }
+cases: ((x: DBL) -> 0.<> with {  })<> with {  }
 
-cases: (( x: clx ) -> empty)<> with {  }
+assign: ∀'a. ((x: 'a) -> 'a)<> with {  }
 
-assign: ∀'a. (( x: 'a ) -> 'a)<> with {  }
-
-superassign: ∀'a. (( x: 42.<> with {  } | 'a ) -> 42.<> with {  } | 'a)<> with {  }
+superassign: ∀'a. ((x: 42.<> with {  } | 'a) -> 42.<> with {  } | 'a)<> with {  }
 
 _: {  }
 
@@ -67,77 +66,77 @@ _: { 42.<> with {  } }
 
 _: { aa: 42.<> with {  } }
 
-test_lists: ((  ) -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42 |
+test_lists: (() -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42 |
  ff)<> with {  } | null })<> with {  }
 
-nested_list: ∀`a. ( x: { a: { lgl1 }, `a } ) -> { a: { lgl1 }, `a }
+nested_list: ∀`a. (x: { a: { lgl1 }, `a }) -> { a: { lgl1 }, `a }
 
-test_classes: ∀'a. (( x: 'a<...> ) -> 'a<...>)<> with {  }
+test_classes: ∀'a. ((x: 'a<...>) -> 'a<...>)<> with {  }
 
 
 ===== Processing tests/02_simple/empty-for.r =====
-execute: (( n: dbl ) -> null)<> with {  }
+execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/empty-while.r =====
-execute: (( n: dbl ) -> null)<> with {  }
+execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/lapply-dots.r =====
-execute: (( n: dbl ) -> dbl)<> with {  }
+execute: ((n: dbl) -> dbl)<> with {  }
 
 
 ===== Processing tests/02_simple/lapply.r =====
-execute: (( n: dbl ) -> dbl)<> with {  }
+execute: ((n: dbl) -> dbl)<> with {  }
 
 
 ===== Processing tests/02_simple/list-for.r =====
-execute: (( n: dbl ) -> null)<> with {  }
+execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/list-while.r =====
-execute: (( n: dbl ) -> null)<> with {  }
+execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/matrix-for.r =====
-execute: (( n: dbl ) -> null)<> with {  }
+execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/scalar-for.r =====
-execute: (( n: dbl ) -> null)<> with {  }
+execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/scalar-while.r =====
-execute: (( n: dbl ) -> null)<> with {  }
+execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/super-while.r =====
-execute: (( n: dbl ) -> null)<> with {  }
+execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/vector-for.r =====
-execute: (( n: dbl ) -> null)<> with {  }
+execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/vector-while.r =====
-execute: (( n: dbl ) -> null)<> with {  }
+execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/03_areWeFast/random.r =====
 seed: dbl1
 
-resetSeed: ((  ) -> null)<> with {  }
+resetSeed: (() -> null)<> with {  }
 
-nextRandom: ((  ) -> dbl1)<> with {  }
+nextRandom: (() -> dbl1)<> with {  }
 
 
 ===== Processing tests/03_areWeFast/storage.r =====
 count: dbl1
 
-execute: ((  ) -> dbl1)<> with {  }
+execute: (() -> dbl1)<> with {  }
 
-verifyResult: ((( result: 5461, iterations: any ) -> tt<> with {  }) &
- (( result: ~5461, iterations: any ) -> ff<> with {  }))<> with {  }
+verifyResult: (((result: 5461, iterations: any) -> tt<> with {  }) &
+ ((result: ~5461, iterations: any) -> ff<> with {  }))<> with {  }
 
-buildTreeDepth: ( depth: dbl1, random: any ) -> x1 where x1 = (dbl | { x1 }) | null
+buildTreeDepth: (depth: dbl1, random: any) -> x1 where x1 = (dbl | { x1 }) | null
 

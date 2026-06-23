@@ -1,5 +1,5 @@
 ## print : ( x:'a ) -> 'a
-## c : ( ; v('p) ) -> v('p)<>
+## c : ( ...: v('p) ) -> v('p)<>
 
 ## (:) : ( from:dbl, to:dbl ) -> dbl
 
@@ -31,27 +31,27 @@
 ## (>=) : ( x:dbl1, y:dbl1 ) -> lgl1<>
 ## (>=) : ( x:dbl, y:dbl ) -> lgl<>
 
-## typeof : (( x: dbl ) -> "double") & (( x: chr ) -> "character")
-## typeof : (( x: lgl ) -> "logical") & (( x: int ) -> "integer")
-## typeof : (( x: clx ) -> "complex") & (( x: raw ) -> "raw")
+## typeof : (( x: DBL ) -> "double") & (( x: CHR ) -> "character")
+## typeof : (( x: LGL ) -> "logical") & (( x: INT ) -> "integer")
+## typeof : (( x: CLX ) -> "complex") & (( x: RAW ) -> "raw")
 ## typeof : (( x: list ) -> "list") & (( x: null ) -> "NULL")
 ## fail : empty -> any
 
-## lapply : (X:'a, FUN:@('a, X:absent, FUN:absent ; absent, `r) -> 'b ; absent, `r) -> 'b
+## lapply : (X:'a, FUN:@('a, X:absent, FUN:absent, ...: (absent,`r)) -> 'b, ...:(absent,`r)) -> 'b
 
 # ========== Lists ==========
 
-## list : ( ; 'a ) -> { 'a }
-## list : ( ; absent, `r ) -> { `r }
+## list : ( ...: 'a ) -> { 'a }
+## list : ( ...: (absent, `r) ) -> { `r }
 
 ## ($) : (lst:{ #k:'a, any}, k=#k) -> 'a
 ## ($<-) : (lst:{ #k:any?, `r}, k=#k, v:'b) -> { #k:'b, `r}
 
-## ([[]]) : (lst:v('a) ; dbl) -> v('a)
-## ([[]]) : (lst:{ 'a} ; chr) -> 'a|null
+## ([[]]) : (lst:v('a), ...: dbl) -> v('a)
+## ([[]]) : (lst:{ 'a}, ...: chr) -> 'a|null
 ## ([[]]) : (lst:{ #k:'a, any }, k=#k) -> 'a
-## ([[]]<-) : (lst:v('a) ; dbl ; v:v('a)) -> v('a)
-## ([[]]<-) : (lst:{ 'a} ; chr ; v:'b) -> { 'a|'b}
+## ([[]]<-) : (lst:v('a), ...: dbl, v:v('a)) -> v('a)
+## ([[]]<-) : (lst:{ 'a}, ...: chr, v:'b) -> { 'a|'b}
 ## ([[]]<-) : (lst:{ #k:any?, `r}, k=#k, v:'b) -> { #k:'b, `r}
 
 # ========== Classes ==========
