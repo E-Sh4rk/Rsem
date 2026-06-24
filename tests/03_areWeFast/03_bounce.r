@@ -14,10 +14,10 @@ execute <- function () {
     }
     
     ball <- function(ball) {
-        # results <- bounce(ball)
-        # if (results[[2]]) bounces <<- bounces + 1
-        # return (results[[1]])
-        return(ball) # TODO
+        if (ball == NULL) exit("TODO: this check is necessary because we cannot ensure balls has no null")
+        results <- bounce(ball)
+        if (results[[2]]) bounces <<- bounces + 1
+        return (results[[1]])
     }
 
     for (i in 1:50) lapply(balls, ball)

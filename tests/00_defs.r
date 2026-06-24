@@ -40,6 +40,7 @@
 ## typeof : (( x: CLX ) -> "complex") & (( x: RAW ) -> "raw")
 ## typeof : (( x: list ) -> "list") & (( x: null ) -> "NULL")
 ## fail : empty -> any
+## exit : any -> empty
 
 ## lapply : (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}
 ## lapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}

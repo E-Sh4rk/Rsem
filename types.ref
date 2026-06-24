@@ -142,7 +142,7 @@ buildTreeDepth: (depth: dbl1, random: any) -> x1 where x1 = (dbl | { x1 }) | nul
 
 
 ===== Processing tests/03_areWeFast/03_bounce.r =====
-Untypeable: Invalid application.
+execute: () -> dbl
 
 verifyResult: (((result: 1331, iterations: any) -> tt<> with {  }) &
  ((result: ~1331, iterations: any) -> ff<> with {  }))<> with {  }
