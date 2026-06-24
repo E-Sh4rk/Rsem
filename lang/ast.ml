@@ -2,6 +2,7 @@
 TODO:
 - Ellipsis
 - Signatures to only consider in non-inference mode
+- Dyn type in signatures
 - Error localization
 - Possibility to write a type signature f.class (previous sigs will be restricted to <~class,...>)
 - Type aliases that could be used both as a struct type and type
