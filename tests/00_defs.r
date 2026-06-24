@@ -37,13 +37,13 @@
 ## typeof : (( x: list ) -> "list") & (( x: null ) -> "NULL")
 ## fail : empty -> any
 
-## lapply : (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: (absent,`r)) -> 'b, ...:(absent,`r)) -> {'b}
-## lapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: (absent,`r)) -> 'b, ...:(absent,`r)) -> {'b}
+## lapply : (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}
+## lapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}
 
 # ========== Lists ==========
 
 ## list : ( ...: 'a ) -> { 'a }
-## list : ( ...: (absent, `r) ) -> { `r }
+## list : ( ...: `r ) -> { `r }
 
 ## ($) : (lst:{ #k:'a, any}, k=#k) -> 'a
 ## ($<-) : (lst:{ #k:any?, `r}, k=#k, v:'b) -> { #k:'b, `r}
