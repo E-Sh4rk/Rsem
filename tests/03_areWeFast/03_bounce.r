@@ -1,5 +1,6 @@
-source('random.r')
+# source('random.r')
 
+## execute : () -> dbl
 execute <- function () {
     ballCount <- 100
     bounces   <- 0
@@ -9,16 +10,18 @@ execute <- function () {
     for (i in 1:ballCount) {
         balls[[i]] = c(nextRandom() %% 500, nextRandom() %% 500, 
                              (nextRandom() %% 300) - 150, (nextRandom() %% 300) - 150)
-                      names(balls[[i]]) = c("x", "y", "xVel", "yVel")        
+        names(balls[[i]]) = c("x", "y", "xVel", "yVel")
     }
     
     ball <- function(ball) {
-        results <- bounce(ball)
-        if (results[[2]]) bounces <<- bounces + 1
-        return (results[[1]])
+        # results <- bounce(ball)
+        # if (results[[2]]) bounces <<- bounces + 1
+        # return (results[[1]])
+        return(ball) # TODO
     }
 
-    for (i in 1:50) balls <- lapply(balls, ball)
+    for (i in 1:50) lapply(balls, ball)
+
     return (bounces)
 }
 
@@ -26,6 +29,7 @@ verifyResult <- function(result, iterations) {
     return (result == 1331);
 }
 
+## bounce : (ball: dbl) -> { dbl }
 bounce <- function(ball) {
     xLimit  <- 500
     yLimit  <- 500

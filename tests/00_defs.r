@@ -2,6 +2,7 @@
 ## c : ( ...: v('p) ) -> v('p)<>
 
 ## (:) : ( from:dbl, to:dbl ) -> dbl
+## (:) : ( from:int, to:int ) -> int
 
 ## (-) : ( x:v('a)&dbl ) -> v('a)&dbl
 ## (-) : ( x:dbl1 ) -> dbl1
@@ -22,6 +23,9 @@
 ## (%%) : ( x:v('a)&dbl, y:v('a)&dbl) -> v('a)&dbl
 ## (%%) : ( x:dbl1, y:dbl1) -> dbl1
 
+## abs : (x:v('a)&dbl) -> v('a)&dbl
+## abs : (x:dbl1) -> dbl1
+
 ## (<) : ( x:dbl1, y:dbl1 ) -> lgl1<>
 ## (<) : ( x:dbl, y:dbl ) -> lgl<>
 ## (<=) : ( x:dbl1, y:dbl1 ) -> lgl1<>
@@ -40,26 +44,35 @@
 ## lapply : (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}
 ## lapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}
 
-# ========== Lists ==========
+# ========== Lists and vector access ==========
 
 ## list : ( ...: 'a ) -> { 'a }
 ## list : ( ...: `r ) -> { `r }
 
-## ($) : (lst:{ #k:'a, any}, k=#k) -> 'a
-## ($<-) : (lst:{ #k:any?, `r}, k=#k, v:'b) -> { #k:'b, `r}
+## ($) : (x:{ #k:'a, any}, k=#k) -> 'a
+## ($<-) : (x:{ #k:any?, `r}, k=#k, v:'b) -> { #k:'b, `r}
 
-## ([[]]) : (lst:v('a), ...: dbl) -> v('a)
-## ([[]]) : (lst:{ 'a}, ...: chr) -> 'a|null
-## ([[]]) : (lst:{ #k:'a, any }, k=#k) -> 'a
-## ([[]]<-) : (lst:v('a), ...: dbl, v:v('a)) -> v('a)
-## ([[]]<-) : (lst:{ 'a}, ...: chr, v:'b) -> { 'a|'b}
-## ([[]]<-) : (lst:{ #k:any?, `r}, k=#k, v:'b) -> { #k:'b, `r}
+## ([]) : (x:v('a), ...: dbl|CHR) -> v('a)
+## ([]) : (x:{'a}, ...: dbl) -> {'a}
+## ([]<-) : (x:v('a), ...: dbl|CHR, v:v('a)) -> v('a)
+## ([]<-) : (x:{'a}, ...: dbl, v:{'a}) -> {'a}
 
-# ========== Classes ==========
+## ([[]]) : (x:v('a), ...: dbl|CHR) -> v1('a)
+## ([[]]) : (x:{'a}, ...: dbl) -> 'a
+## ([[]]) : (x:{'a}, ...: CHR) -> 'a|null
+## ([[]]) : (x:{ #k:'a, any }, k=#k) -> 'a
+## ([[]]<-) : (x:v('a), ...: dbl, v:v('a)) -> v('a)
+## ([[]]<-) : (x:{'a}, ...: chr, v:'a) -> {'a}
+## ([[]]<-) : (x:{ #k:any?, `r}, k=#k, v:'b) -> { #k:'b, `r}
+
+# ========== Classes and attrs ==========
 
 ## class : (x:'a<...>) -> chr
 ## class<- : (x:'a<...> , v:chr) -> 'a<...>
 ## unclass : (x:'a<...>) -> 'a<>
+
+## names : (x:any) -> chr
+## names<- : (x:'a, v:chr) -> 'a
 
 # ========== Vectors and matrices ==========
 

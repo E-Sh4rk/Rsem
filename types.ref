@@ -67,7 +67,7 @@ _: { 42.<> with {  } }
 _: { aa: 42.<> with {  } }
 
 test_lists: (() -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42 |
- ff)<> with {  } | null })<> with {  }
+ ff)<> with {  } })<> with {  }
 
 nested_list: ∀`a. (x: { a: { lgl1 }, `a }) -> { a: { lgl1 }, `a }
 
@@ -122,7 +122,7 @@ execute: ((n: dbl) -> null)<> with {  }
 execute: ((n: dbl) -> null)<> with {  }
 
 
-===== Processing tests/03_areWeFast/random.r =====
+===== Processing tests/03_areWeFast/01_random.r =====
 seed: dbl1
 
 resetSeed: (() -> null)<> with {  }
@@ -130,7 +130,7 @@ resetSeed: (() -> null)<> with {  }
 nextRandom: (() -> dbl1)<> with {  }
 
 
-===== Processing tests/03_areWeFast/storage.r =====
+===== Processing tests/03_areWeFast/02_storage.r =====
 count: dbl1
 
 execute: (() -> dbl1)<> with {  }
@@ -139,4 +139,13 @@ verifyResult: (((result: 5461, iterations: any) -> tt<> with {  }) &
  ((result: ~5461, iterations: any) -> ff<> with {  }))<> with {  }
 
 buildTreeDepth: (depth: dbl1, random: any) -> x1 where x1 = (dbl | { x1 }) | null
+
+
+===== Processing tests/03_areWeFast/03_bounce.r =====
+Untypeable: Invalid application.
+
+verifyResult: (((result: 1331, iterations: any) -> tt<> with {  }) &
+ ((result: ~1331, iterations: any) -> ff<> with {  }))<> with {  }
+
+bounce: (ball: dbl) -> { dbl }
 

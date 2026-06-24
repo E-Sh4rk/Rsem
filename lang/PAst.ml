@@ -65,7 +65,7 @@ let rec bv_e (_,e) =
   | Unop (_,e) | Dollar (e, _) | At (e, _) -> bv_e e
   | Binop (str, (e1, e2)) ->
     let res = match str, e1, e2 with
-    | "<-", (_, Id id), _ -> StrSet.singleton id
+    | ("<-" | "="), (_, Id id), _ | "->", _, (_, Id id) -> StrSet.singleton id
     | "<<-", (_, Id _), _ -> StrSet.empty
     | _, _, _ -> StrSet.empty
     in
@@ -157,7 +157,7 @@ let rec aux_e env (pos,e) =
   | Unop (str, e) -> Ast.Unop (Scope.resolve str env.id, aux_e env e)
   | Binop (str, (e1,e2)) ->
     begin match str, e1, e2 with
-    | "<-", e1, e2 ->
+    | ("<-" | "="), e1, e2 | "->", e2, e1 ->
       let (id, r) = expr_of_left pos e2 e1 in
       Ast.VarAssign (Scope.resolve id env.id, aux_e env r)
     | "<<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve_parent id env.id, aux_e env e2)
