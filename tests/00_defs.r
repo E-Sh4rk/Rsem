@@ -106,3 +106,7 @@
 ## bitwShiftL : (a:dbl1, n:dbl1) -> INT1
 ## bitwShiftR : (a:dbl, n:dbl1) -> INT
 ## bitwShiftR : (a:dbl1, n:dbl1) -> INT1
+
+# ========== Strings ==========
+
+## paste : (...: any, sep:chr1?, collapse:chr1?) -> CHR1

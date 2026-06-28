@@ -149,3 +149,12 @@ verifyResult: (((result: 1331, iterations: any) -> tt<> with {  }) &
 
 bounce: (ball: dbl) -> { dbl }
 
+
+===== Processing tests/03_areWeFast/04_bounce_nonames_simple.r =====
+execute: () -> dbl
+
+verifyResult: (((result: 1331, iterations: any) -> tt<> with {  }) &
+ ((result: ~1331, iterations: any) -> ff<> with {  }))<> with {  }
+
+bounce: (ball: dbl) -> { dbl }
+

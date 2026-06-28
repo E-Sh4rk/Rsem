@@ -1,3 +1,5 @@
+
+## execute : () -> dbl
 execute <- function () {
     seed <- NaN
 
@@ -14,8 +16,12 @@ execute <- function () {
     resetSeed()
 
     for (i in 1:ballCount) {
-        balls[[i]] = c(nextRandom() %% 500, nextRandom() %% 500, 
-                             (nextRandom() %% 300) - 150, (nextRandom() %% 300) - 150)
+        random1 <- nextRandom()
+        random2 <- nextRandom()
+        random3 <- nextRandom()
+        random4 <- nextRandom()
+        balls[[i]] = c(random1 %% 500, random2 %% 500, 
+                             (random3 %% 300) - 150, (random4 %% 300) - 150)
     }
 
     ball <- function(ball) {
@@ -32,6 +38,7 @@ verifyResult <- function(result, iterations) {
     return (result == 1331);
 }
 
+## bounce : (ball: dbl) -> { dbl }
 bounce <- function(ball) {
     xLimit  <- 500
     yLimit  <- 500
