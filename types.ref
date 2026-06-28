@@ -138,7 +138,7 @@ execute: (() -> dbl1)<> with {  }
 verifyResult: (((result: 5461, iterations: any) -> tt<> with {  }) &
  ((result: ~5461, iterations: any) -> ff<> with {  }))<> with {  }
 
-buildTreeDepth: (depth: dbl1, random: any) -> x1 where x1 = (dbl | { x1 }) | null
+buildTreeDepth: (depth: dbl1, random: any) -> x1 where x1 = dbl | { x1 }
 
 
 ===== Processing tests/03_areWeFast/03_bounce.r =====

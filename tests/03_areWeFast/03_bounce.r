@@ -14,7 +14,7 @@ execute <- function () {
     }
     
     ball <- function(ball) {
-        if (ball == NULL) exit("TODO: this check is necessary because we cannot ensure balls has no null")
+        # if (ball == NULL) exit("this check is necessary because we cannot ensure balls has no null")
         results <- bounce(ball)
         if (results[[2]]) bounces <<- bounces + 1
         return (results[[1]])
