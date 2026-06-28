@@ -35,10 +35,14 @@
 ## (>=) : ( x:dbl1, y:dbl1 ) -> lgl1<>
 ## (>=) : ( x:dbl, y:dbl ) -> lgl<>
 
-## typeof : (( x: DBL ) -> "double") & (( x: CHR ) -> "character")
-## typeof : (( x: LGL ) -> "logical") & (( x: INT ) -> "integer")
-## typeof : (( x: CLX ) -> "complex") & (( x: RAW ) -> "raw")
-## typeof : (( x: list ) -> "list") & (( x: null ) -> "NULL")
+## typeof : ( x: DBL ) -> "double"
+## typeof : ( x: CHR ) -> "character"
+## typeof : ( x: LGL ) -> "logical"
+## typeof : ( x: INT ) -> "integer"
+## typeof : ( x: CLX ) -> "complex"
+## typeof : ( x: RAW ) -> "raw"
+## typeof : ( x: list ) -> "list"
+## typeof : ( x: null ) -> "NULL"
 ## fail : empty -> any
 ## exit : any -> empty
 

@@ -31,34 +31,29 @@ let refresh_vars kind ty =
   |> List.map (fun rv -> rv, RVar.mk kind (Some (Sstt.RowVar.name rv |> drop1)) |> Row.id_for) in
   let s = Subst.of_list s1 s2 in
   Subst.apply s ty
-let sigs_of_ty ty =
+let is_arrow_sig ty = Ty.leq ty Arrow.any && not (Ty.is_empty ty)
+let sigs_of_ty gty =
   let fun_sig = ref false in
-  let aux ty =
-    match Arrow.dnf ty with
-    | [arrs] ->
+  let reidentify (a,b) = Rstt.Arg.reidentify ~id:(TVar.mk KInfer None |> TVar.typ) a, b in
+  let reidentify ps = List.map reidentify ps in
+  let reidentify ty =
+    if is_arrow_sig ty then
+      let dnf = Arrow.dnf ty |> List.map reidentify in
       fun_sig := true ;
-      arrs |> List.map
-        (fun (a,b) ->
-          let a = Rstt.Arg.reidentify ~id:(TVar.mk KInfer None |> TVar.typ) a in
-          Arrow.mk a b
-        )
-    | _ -> [ty]
+      Arrow.of_dnf dnf
+    else ty
   in
-  let aux_p { Rstt.Attr.content ; classes ; attrs } =
-    aux content |> List.map (fun content -> Rstt.Attr.mk {Rstt.Attr.content ; classes ; attrs})
+  let reidentify { Rstt.Attr.content ; classes ; attrs } =
+    let content = reidentify content in
+    {Rstt.Attr.content ; classes ; attrs}
   in
-  let aux_n a = [Rstt.Attr.mk a |> Ty.neg] in
-  let aux (ps, ns) =
-    (List.concat_map aux_n ns)@(List.concat_map aux_p ps)
+  let reidentify (ps, ns) = (List.map reidentify ps, ns) in
+  let reidentify ty =
+    Rstt.Attr.destruct ty |> List.map reidentify |> List.map Rstt.Attr.mk_line |> Ty.disj
   in
-  let aux ty =
-    match Rstt.Attr.destruct ty with
-    | [line] -> aux line
-    | _ -> [ty]
-  in
-  let ty = refresh_vars KNoInfer ty in
-  let sigs = aux ty in
-  (!fun_sig, sigs, GTy.mk ty |> TyScheme.mk_poly)
+  let gty = GTy.map (refresh_vars KNoInfer) gty in
+  let fsig = GTy.map reidentify gty in
+  (!fun_sig, fsig, TyScheme.mk_poly gty)
 let extend_env mlast env =
   if !gradual then
     let fv = System.Ast.fv mlast in
@@ -69,7 +64,7 @@ let extend_env mlast env =
   else
     env
 
-type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: MetaEnv.t ; senv: Ty.t list VarMap.t ;
+type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: MetaEnv.t ; senv: GTy.t list VarMap.t ;
                     benv: Rstt.Builder.env ; tidenv: Ty.t Rstt.Builder.TIdMap.t }
 let initial_ctx = { benv=Rstt.Builder.empty_env ; tidenv=Rstt.Builder.TIdMap.empty ;
                     idenv=StrMap.empty ; tenv=MetaEnv.initial ; senv=VarMap.empty }
@@ -94,7 +89,7 @@ let treat_ast v ctx ast =
     | Some sigs (* Type checking mode *) ->
       let mlast = Transform.to_mlsem { env=ctx.tenv ; infer_mode=false } ast in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
-      let asts = List.map (fun s -> Mlsem_system.Ast.coerce CheckStatic (GTy.mk s) mlast) sigs in
+      let asts = List.map (fun s -> Mlsem_system.Ast.coerce CheckStatic s mlast) sigs in
       let _ = List.map (infer ctx) asts in
       { ctx with senv=VarMap.remove v ctx.senv } (* The signature has been verified, remove it *)
     in
@@ -126,24 +121,25 @@ let add_sig ctx str tye =
   let open R_types.Types in
   let open Mlsem_common in
   let benv, ty = Builder.resolve ctx.benv tye in
-  let ty = ty |> Builder.build ctx.tidenv in
-  let fun_sig,s,ty = sigs_of_ty ty in
+  let {Builder.Gradual.lb;ub} = ty |> Builder.build_gradual ctx.tidenv in
+  let gty = GTy.mk_gradual lb ub in
+  let fun_sig,s,ty = sigs_of_ty gty in
   let v,s =
     match StrMap.find_opt str ctx.idenv with
     | Some v when fun_sig && VarMap.mem v ctx.senv -> (* Overload *)
-      v,(VarMap.find v ctx.senv)@s
+      v,s::(VarMap.find v ctx.senv)
     | Some _ when fun_sig -> (* Redefinition of function signature (shadowing) *)
-      MVariable.create Immut (Some str), s
+      MVariable.create Immut (Some str), [s]
     | Some _ -> (* Redefinition of mutable variable signature (shadowing) *)
       let tvs, ty = TyScheme.get ty in
       if MixVarSet.is_empty tvs |> not then failwith "Non-functional signatures cannot have type variables" ;
-      MVariable.create (AnnotMut ty) (Some str), s
+      MVariable.create (AnnotMut ty) (Some str), [s]
     | None when fun_sig -> (* First signature definition *)
-      MVariable.create Immut (Some str), s
+      MVariable.create Immut (Some str), [s]
     | None -> (* First mutable definition *)
       let tvs, ty = TyScheme.get ty in
       if MixVarSet.is_empty tvs |> not then failwith "Non-functional signatures cannot have type variables" ;
-      MVariable.create (AnnotMut ty) (Some str), s
+      MVariable.create (AnnotMut ty) (Some str), [s]
   in
   let idenv = StrMap.add str v ctx.idenv in
   (* Format.printf "Adding %s: @[%a@]@." str TyScheme.pp ty ; *)
