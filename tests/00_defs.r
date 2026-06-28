@@ -85,7 +85,7 @@
 ## vector : (mode: "numeric", length: dbl?) -> dbl
 ## vector : (mode: "character", length: dbl?) -> chr
 ## vector : (mode: "raw", length: dbl?) -> raw
-## vector : (mode: "list", length: dbl?) -> { null }
+## vector : (mode: "list", length: dbl?) -> { null&dyn }
 
 ## matrix : (data: absent, nrow: dbl?, ncol: dbl?) -> lgl
 ## matrix : (data: v1('a), nrow: dbl?, ncol: dbl?) -> v('a)

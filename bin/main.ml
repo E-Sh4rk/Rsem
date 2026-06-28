@@ -22,19 +22,20 @@ let gradual = ref false
 
 module StrMap = Map.Make(String)
 
-let refresh_vars kind ty =
+let refresh_vars kind gty =
   let drop1 str = String.sub str 1 (String.length str - 1) in
-  let vars = TVOp.vars ty in
+  let vars = GTy.fv gty in
   let s1 = MVarSet.elements1 vars
   |> List.map (fun tv -> tv, TVar.mk kind (Some (Sstt.Var.name tv |> drop1)) |> TVar.typ) in
   let s2 = MVarSet.elements2 vars
   |> List.map (fun rv -> rv, RVar.mk kind (Some (Sstt.RowVar.name rv |> drop1)) |> Row.id_for) in
   let s = Subst.of_list s1 s2 in
-  Subst.apply s ty
+  GTy.substitute s gty
 let is_arrow_sig ty = Ty.leq ty Arrow.any && not (Ty.is_empty ty)
 let sigs_of_ty gty =
+  let new_id = TVar.mk KInfer None |> TVar.typ in
   let fun_sig = ref false in
-  let reidentify (a,b) = Rstt.Arg.reidentify ~id:(TVar.mk KInfer None |> TVar.typ) a, b in
+  let reidentify (a,b) = Rstt.Arg.reidentify ~id:new_id a, b in
   let reidentify ps = List.map reidentify ps in
   let reidentify ty =
     if is_arrow_sig ty then
@@ -51,7 +52,7 @@ let sigs_of_ty gty =
   let reidentify ty =
     Rstt.Attr.destruct ty |> List.map reidentify |> List.map Rstt.Attr.mk_line |> Ty.disj
   in
-  let gty = GTy.map (refresh_vars KNoInfer) gty in
+  let gty = refresh_vars KNoInfer gty in
   let fsig = GTy.map reidentify gty in
   (!fun_sig, fsig, TyScheme.mk_poly gty)
 let extend_env mlast env =
