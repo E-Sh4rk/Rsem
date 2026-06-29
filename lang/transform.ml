@@ -373,8 +373,10 @@ let to_mlsem (cfg:cfg) e =
     | Seq (e1, e2) -> eid, A.Seq (aux e1, aux e2)
     | Return e -> eid, A.Return (match e with Some e -> aux e | None -> Eid.unique (), A.Void)
     | Break -> eid, A.Break | Next -> eid, A.Break
-    | Dots -> failwith "TODO: ..."
-    | DotsN _ -> failwith "TODO: ..n"
+    | Dots -> eid, A.Var ellipsis_var
+    | DotsN _ ->
+      let e = Eid.unique (), A.Var ellipsis_var in
+      eid, (A.App ((Eid.unique (), A.Var Defs.flattell), e))
   in
   aux e
 

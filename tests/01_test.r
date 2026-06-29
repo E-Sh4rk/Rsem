@@ -157,11 +157,21 @@ test_classes <- function(x) {
 #   x
 # }
 
-# test_dots <- function(...) {
-#   return(c(...))
-# }
+dots_encoding <- function(...) {
+  return(...)
+}
 
-# test_dots2 <- function(...) {
-#   return(c(..1))
-# }
+## test_dots1 : (...:`r) -> {`r}
+test_dots1 <- function(...) {
+  return(list(...))
+}
 # TODO
+
+## test_dots2 : (...:'a) -> {'a}
+test_dots2 <- function(...) {
+  return(list(...))
+}
+
+test_dots3 <- function(...) {
+  return(list(..1))
+}
