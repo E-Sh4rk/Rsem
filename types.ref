@@ -73,6 +73,14 @@ nested_list: ∀`a. (x: { a: { lgl1 }, `a }) -> { a: { lgl1 }, `a }
 
 test_classes: ∀'a. ((x: 'a<...>) -> 'a<...>)<> with {  }
 
+dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<> with {  }
+
+test_dots1: ∀`a. (...: `a) -> { `a }
+
+test_dots2: ∀'a. (...: 'a) -> { 'a }
+
+test_dots3: ∀'a. ((() -> {  }) & ((...: 'a) -> { 'a }))<> with {  }
+
 
 ===== Processing tests/02_simple/empty-for.r =====
 execute: ((n: dbl) -> null)<> with {  }

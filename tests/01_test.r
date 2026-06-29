@@ -165,7 +165,6 @@ dots_encoding <- function(...) {
 test_dots1 <- function(...) {
   return(list(...))
 }
-# TODO
 
 ## test_dots2 : (...:'a) -> {'a}
 test_dots2 <- function(...) {

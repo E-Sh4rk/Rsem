@@ -71,6 +71,7 @@ let initial_ctx = { benv=Rstt.Builder.empty_env ; tidenv=Rstt.Builder.TIdMap.emp
                     idenv=StrMap.empty ; tenv=MetaEnv.initial ; senv=VarMap.empty }
 
 let infer ctx mlast =
+  (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
   let env = MetaEnv.env ctx.tenv |> extend_env mlast in
   let renvs = System.Refinement.refinements env mlast in
   (* REnvSet.elements renvs |> List.iter (fun renv -> Format.printf "Renv: %a@." REnv.pp renv) ; *)
