@@ -87,6 +87,14 @@ let aux_option f tree =
   | Option (Some t) -> Some (f t)
   | _ -> assert false
 
+let aux_tok tree  =
+  match tree with
+  | Token (_ (* loc *), str) -> str
+  | _ -> assert false
+let aux_dotdot tree =
+  let str = aux_tok tree in
+  String.sub str 2 (String.length str - 2) |> int_of_string
+
 let rec aux_prog tree =
   match tree with
   | Tuple [_ ; elts] -> aux_elts elts
@@ -183,6 +191,8 @@ and aux_case c tree =
     A.For (aux_param_name v, aux_e e, aux_e e')
   | "Ret" -> A.Return | "Brk" -> A.Break | "Next" -> A.Next
   | "Nan" -> A.Const (A.CNan)
+  | "Dots" -> A.Dots
+  | "Dot_dot_i" -> A.DotsN (aux_dotdot tree)
   | _ -> failwith ("TODO: "^c)
 
 and aux_else tree =
@@ -268,7 +278,7 @@ and aux_p (* map_parameter *) tree =
 and aux_param_name (* map_parameter_name *) tree =
   match tree with
   | Case ("Dots", _) -> EllipsisId
-  | Case ("Dot_dot_i", _) -> failwith "TODO: ..i argument"
+  | Case ("Dot_dot_i", tree) -> EllipsisN (aux_dotdot tree)
   | Case ("Id", tree) -> ArgId (aux_tok tree)
   | _ -> assert false
 
@@ -365,11 +375,6 @@ and aux_fkind tree =
   match tree with
   | Case ("BSLASH", _) -> true
   | Case ("Func", _) -> false
-  | _ -> assert false
-
-and aux_tok tree  =
-  match tree with
-  | Token (_ (* loc *), str) -> str
   | _ -> assert false
 
 let of_parser tree =

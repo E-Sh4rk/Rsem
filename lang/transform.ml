@@ -114,14 +114,25 @@ module ArgBuilder = struct
     in
     let extract_ell ell tys =
       match ell, tys with
-      | false, [] -> Ty.F.mk_descr Ty.O.absent
-      | true, [ty] -> Ty.O.optional ty |> Ty.F.mk_descr
+      | false, [] -> let abs = Ty.F.mk_descr Ty.O.absent in abs, abs
+      | true, [ty] ->
+        let dnf = destruct ty in
+        let pos = dnf |> List.map (function
+          | DefSite _ -> assert false
+          | CallSite { pos' ; pos_tl' ; _ } ->
+            pos_tl'::pos' |> Ty.F.disj
+        ) |> Ty.F.disj in
+        let named = dnf |> List.map (function
+          | DefSite _ -> assert false
+          | CallSite { named' ; named_tl' ; _ } ->
+            named_tl'::(List.map snd named') |> Ty.F.disj
+        ) |> Ty.F.disj in
+        pos, named
       | _, _ -> assert false
     in
     let pos', lst = extract_pos pos lst in
     let named', lst = extract_named named lst in
-    let ell' = extract_ell ell lst in
-    let pos_tl', named_tl' = ell', ell' in
+    let pos_tl', named_tl' = extract_ell ell lst in
     mk' {pos';named_tl';pos_tl';named'}
   let cdom (pos,named,ell) ty =
     let rec extract_pos pos tys =
@@ -144,15 +155,17 @@ module ArgBuilder = struct
     let extract_ell ell ty =
       match ell with
       | false -> []
-      | true -> [ty |> Ty.F.get_descr |> Ty.O.get |> Ty.O.Atom.get]
+      | true -> [ty]
     in
     destruct ty
     |> List.filter_map (fun a ->
       let pos', named', ell' =
         match a with
         | DefSite { pos_named ; pos_tl ; named ; named_tl } ->
-          (List.map snd pos_named), named@pos_named, Ty.F.cup pos_tl named_tl
-        | CallSite { pos' ; pos_tl' ; named' ; named_tl' } -> pos', named', Ty.F.cup pos_tl' named_tl'
+          (List.map snd pos_named), named@pos_named,
+            mk' { pos_tl'=pos_tl ; named_tl'=named_tl ; pos'=[] ; named'=[] }
+        | CallSite { pos' ; pos_tl' ; named' ; named_tl' } -> pos', named',
+            mk' { pos_tl' ; named_tl' ; pos'=[] ; named'=[] }
       in
       let args1 = extract_pos pos pos' in
       let args2 = extract_named named named' in
@@ -344,21 +357,24 @@ let to_mlsem (cfg:cfg) e =
         | None -> add_let v e' e
       in
       let e = List.fold_left add_def (aux e) (pos@nopos) in
-      let tl, e =
+      let pos_tl, named_tl, e =
         if has_ell
         then
-          let ty = TVar.mk KInfer None |> TVar.typ |> Ty.O.optional |> Ty.F.mk_descr in
-          let ellty = Lst.mk {bindings=[];sym=[];tl=ty} |> Attr.mk_content_noattr in
-          ty, add_let ellipsis_var (A.Value (GTy.mk ellty)) e
-        else Ty.O.absent |> Ty.F.mk_descr, e
+          let pos_tl = TVar.mk KInfer None |> TVar.typ |> Ty.O.optional |> Ty.F.mk_descr in
+          let named_tl = RVar.mk KInfer None |> RVar.fty in
+          let ellty = Arg.mk' {pos'=[];named'=[];pos_tl'=pos_tl;named_tl'=named_tl} in
+          pos_tl, named_tl, add_let ellipsis_var (A.Value (GTy.mk ellty)) e
+        else let abs = Ty.F.mk_descr Ty.O.absent in abs, abs, e
       in
-      let pty = Arg.mk { named;pos_named;pos_tl=tl;named_tl=tl } in
+      let pty = Arg.mk { named;pos_named;pos_tl;named_tl } in
       let lambda = Eid.unique (), A.Lambda ([], Some (GTy.mk pty), MVariable.create Immut None, e) in
       eid, A.Constructor
         (CCustom { cname="cattr" ; cgen=true ; cdom=AttrConstr.cdom ; cons=AttrConstr.cons }, [lambda])
     | Seq (e1, e2) -> eid, A.Seq (aux e1, aux e2)
     | Return e -> eid, A.Return (match e with Some e -> aux e | None -> Eid.unique (), A.Void)
     | Break -> eid, A.Break | Next -> eid, A.Break
+    | Dots -> failwith "TODO: ..."
+    | DotsN _ -> failwith "TODO: ..n"
   in
   aux e
 

@@ -156,3 +156,12 @@ test_classes <- function(x) {
 #   attr(x,"dim") <- c(2,5)
 #   x
 # }
+
+# test_dots <- function(...) {
+#   return(c(...))
+# }
+
+# test_dots2 <- function(...) {
+#   return(c(..1))
+# }
+# TODO

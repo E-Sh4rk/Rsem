@@ -31,6 +31,7 @@ type e' =
 | While of e * e
 | For of arg_id * e * e
 | Braced of e list
+| Dots | DotsN of int
 | Return | Break | Next
 [@@deriving show]
 and arg =
@@ -41,6 +42,7 @@ and e = Position.t * e'
 and arg_id =
 | NullId
 | EllipsisId
+| EllipsisN of int
 | ArgId of string
 and param =
 | NoDefault of arg_id
@@ -61,7 +63,7 @@ let bv_params ps =
 
 let rec bv_e (_,e) =
   match e with
-  | Return | Break | Next | Const _ | Id _ | Function _ -> StrSet.empty
+  | Return | Break | Next | Const _ | Id _ | Function _  | Dots | DotsN _ -> StrSet.empty
   | Unop (_,e) | Dollar (e, _) | At (e, _) -> bv_e e
   | Binop (str, (e1, e2)) ->
     let res = match str, e1, e2 with
@@ -90,15 +92,20 @@ type env = { id: Scope.t }
 
 let aux_arg f arg =
   match arg with
+  | Unnamed (_,Dots as e) -> MetaEnv.Ell, Some (f e)
+  | Unnamed (_,DotsN _ as e) -> MetaEnv.Ell, Some (f e)
   | Unnamed e -> MetaEnv.Positional, Some (f e)
   | Named (ArgId str, eo) -> MetaEnv.Named str, Option.map f eo
-  | _ -> failwith "Unsupported argument."
+  | Named (EllipsisId, _) -> assert false
+  | Named (EllipsisN _, _) -> assert false
+  | Named (NullId, _) -> assert false
 let aux_arg f arg =
   match arg with
   | None -> MetaEnv.Positional, None
   | Some arg -> aux_arg f arg
 let aux_param env f p =
   match p with
+  | NoDefault (EllipsisN _) | Default (EllipsisN _, _) -> assert false
   | NoDefault EllipsisId -> Ast.Ellipsis
   | Default (EllipsisId, _) -> assert false
   | NoDefault (ArgId str) -> Ast.NoDefault (Scope.resolve str env.id)
@@ -192,7 +199,7 @@ let rec aux_e env (pos,e) =
     Ast.Ite (e, e1, e2)
   | While (e, e') -> Ast.While (aux_e env e, aux_e env e')
   | For (NullId, e, e') -> Ast.For (None, aux_e env e, aux_e env e')
-  | For (EllipsisId, _, _) -> failwith "Unexpected ellipsis."
+  | For (EllipsisId, _, _) | For (EllipsisN _, _, _) -> failwith "Unexpected ellipsis."
   | For (ArgId str, e, e') ->
     Ast.For (Some (Scope.resolve str env.id), aux_e env e, aux_e env e')
   | Function (_,params,e) ->
@@ -217,6 +224,8 @@ let rec aux_e env (pos,e) =
     let undeclared = StrSet.diff ebvs pbvs in
     let e = List.fold_left (add_def env) (aux_e env e) (StrSet.elements undeclared) in
     Ast.Function (params, e)
+  | Dots -> Dots
+  | DotsN n -> DotsN n
   | Braced [] -> Ast.Const Ast.CNull
   | Braced (e::es) ->
     List.fold_left (fun acc e -> Eid.unique (), Ast.Seq (acc, aux_e env e)) (aux_e env e) es |> snd

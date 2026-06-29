@@ -158,3 +158,17 @@ verifyResult: (((result: 1331, iterations: any) -> tt<> with {  }) &
 
 bounce: (ball: dbl) -> { dbl }
 
+
+===== Processing tests/03_areWeFast/05_mandelbrot.r =====
+lim: dbl1
+
+iter: dbl1
+
+mandelbrot: (size: dbl1) -> dbl1
+
+execute: ((n: dbl1?) -> dbl1)<> with {  }
+
+verifyResult: (result: dbl1, innerIterations: any) -> lgl1
+
+innerBenchmarkLoop.mandelbrot: ((class: any, iterations: dbl1) -> ^LGL1<> with {  })<> with {  }
+

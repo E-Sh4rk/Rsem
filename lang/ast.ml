@@ -1,6 +1,5 @@
 (*
 TODO:
-- Ellipsis
 - Type annotations for non-top-level variables
 - Signatures to only consider in non-inference mode
 - Error localization
@@ -39,6 +38,7 @@ type e' =
 | Function of param list * e
 | Seq of e * e
 | Return of e option | Break | Next
+| Dots | DotsN of int
 [@@deriving show]
 and param = NoDefault of Variable.t | Default of Variable.t * e | Ellipsis
 [@@deriving show]
@@ -49,7 +49,7 @@ let map f e =
   let rec aux (id,e) =
     let e =
       match e with
-      | Const _ | Id _ -> e
+      | Const _ | Id _ | Dots | DotsN _ | Break | Next -> e
       | Declare (v, e) -> Declare (v, aux e)
       | Let (v, e1, e2) -> Let (v, aux e1, aux e2)
       | VarAssign (v, e) -> VarAssign (v, aux e)
@@ -68,7 +68,7 @@ let map f e =
         in
         Function (List.map aux' ps, aux e)
       | Seq (e1,e2) -> Seq (aux e1, aux e2)
-      | Return eo -> Return (Option.map aux eo) | Break -> Break | Next -> Next
+      | Return eo -> Return (Option.map aux eo)
     in
     f (id,e)
   in
