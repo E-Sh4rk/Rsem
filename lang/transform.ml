@@ -118,14 +118,13 @@ module ArgBuilder = struct
       | true, [ty] ->
         let dnf = destruct ty in
         let pos = dnf |> List.map (function
-          | DefSite _ -> assert false
-          | CallSite { pos' ; pos_tl' ; _ } ->
-            pos_tl'::pos' |> Ty.F.disj
+          | DefSite { pos_named ; pos_tl ; _ } -> pos_tl::(List.map snd pos_named) |> Ty.F.disj
+          | CallSite { pos' ; pos_tl' ; _ } -> pos_tl'::pos' |> Ty.F.disj
         ) |> Ty.F.disj in
         let named = dnf |> List.map (function
-          | DefSite _ -> assert false
-          | CallSite { named' ; named_tl' ; _ } ->
-            named_tl'::(List.map snd named') |> Ty.F.disj
+          | DefSite { pos_named ; named_tl ; named ; _ } ->
+            named_tl::(List.map snd pos_named)@(List.map snd named) |> Ty.F.disj
+          | CallSite { named' ; named_tl' ; _ } -> named_tl'::(List.map snd named') |> Ty.F.disj
         ) |> Ty.F.disj in
         pos, named
       | _, _ -> assert false
