@@ -10,7 +10,7 @@ lim <- 2
 ## iter : dbl1
 iter <- 50
 
-## mandelbrot : (size:dbl1) -> dbl
+## mandelbrot : (size:dbl1) -> dbl1
 mandelbrot <- function(size) {
     sum = 0
     byteAcc = 0

@@ -296,7 +296,7 @@ and aux_quoted_string_elt tree =
   match tree with
   | Case ("Pat_dc28280", tok) (* Simply quoted *) -> aux_tok tok
   | Case ("Pat_3a2a380", tok) (* Doubly quoted *) -> aux_tok tok
-  | Case ("Esc_seq", _) -> failwith "TODO: escape seq"
+  | Case ("Esc_seq", tok)     (* Escape seq *)    -> aux_tok tok
   | _ -> assert false
 
 and aux_float (* map_float_ *) tree =
