@@ -226,7 +226,7 @@ type cfg = { env : MetaEnv.t ; infer_mode : bool }
 let to_mlsem (cfg:cfg) e =
   let rec aux (eid,e) =
     match e with
-    | Const c -> eid, A.Value (typeof_const c |> GTy.mk)
+    | Const c -> eid, A.Value (typeof_const c |> GTy.mk |> TyScheme.mk_mono)
     | Id v -> eid, A.Var v
     | Declare (v,e) -> eid, A.Declare (v, aux e)
     | Let (v, e1, e2) -> eid, A.Let ([], v, aux e1, aux e2)
@@ -302,9 +302,9 @@ let to_mlsem (cfg:cfg) e =
     | TyCheck {e;ty;necessary;sufficient} ->
       let e = aux e in
       let tt, ff = typeof_const (CLgl true) |> GTy.mk, typeof_const (CLgl false) |> GTy.mk in
-      let bb = Eid.unique (), A.Value (GTy.cup tt ff) in
-      let tt = Eid.unique (), A.Value (tt) in
-      let ff = Eid.unique (), A.Value (ff) in
+      let bb = Eid.unique (), A.Value (GTy.cup tt ff |> TyScheme.mk_mono) in
+      let tt = Eid.unique (), A.Value (TyScheme.mk_mono tt) in
+      let ff = Eid.unique (), A.Value (TyScheme.mk_mono ff) in
       eid, A.Ite (e, GTy.mk ty, (if sufficient then tt else bb), (if necessary then ff else bb))
     | Function (ps, e) ->
       let has_ell = List.mem Ellipsis ps in
@@ -343,13 +343,13 @@ let to_mlsem (cfg:cfg) e =
         let open Mlsem_types in
         let lbl = Labels.named (Variable.get_name v |> Option.get) |> Record.from_label in
         let ty = Record.mk' (FTy.of_oty (Ty.empty, true)) [lbl, fty] in
-        let ty = Eid.unique (), A.Value (GTy.mk ty) in
+        let ty = Eid.unique (), A.Value (GTy.mk ty |> TyScheme.mk_mono) in
         let e' = A.Projection (SA.PiFieldOpt lbl, ty) in
         match o with
         | Some e_default ->
           let e' = Eid.unique (), e' in
           let tau = Record.mk' (FTy.of_oty (Ty.empty, true)) [lbl, FTy.of_oty (Ty.any, false)] in
-          let empty = Eid.unique (), A.Value (GTy.mk Ty.empty) in
+          let empty = Eid.unique (), A.Value (GTy.empty |> TyScheme.mk_mono) in
           let e_default = Eid.unique (), A.Constructor (SA.Ternary tau, [ty ; empty ; aux e_default]) in
           let e' = A.Constructor (SA.Join 2, [ e'; e_default ]) in
           add_let v e' e
@@ -362,7 +362,7 @@ let to_mlsem (cfg:cfg) e =
           let pos_tl = TVar.mk KInfer None |> TVar.typ |> Ty.O.optional |> Ty.F.mk_descr in
           let named_tl = RVar.mk KInfer None |> RVar.fty in
           let ellty = Arg.mk' {pos'=[];named'=[];pos_tl'=pos_tl;named_tl'=named_tl} in
-          pos_tl, named_tl, add_let ellipsis_var (A.Value (GTy.mk ellty)) e
+          pos_tl, named_tl, add_let ellipsis_var (A.Value (GTy.mk ellty |> TyScheme.mk_mono)) e
         else let abs = Ty.F.mk_descr Ty.O.absent in abs, abs, e
       in
       let pty = Arg.mk { named;pos_named;pos_tl;named_tl } in

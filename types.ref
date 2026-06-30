@@ -51,8 +51,8 @@ narrowing: ∀'a. (((x: dbl & v('a)) -> dbl & v('a)) & ((x: dbl1) -> dbl1) & ((x
 
 narrowing_ann: ((x: dbl) -> dbl) & ((x: null) -> null)
 
-loop_break: ∀'a,'b. (((x: 'a & null) -> null & 'a) & ((x: DBL | dbl & v('b)) -> DBL |
- dbl & v('b)) & ((x: dbl1) -> dbl1))<> with {  }
+loop_break: ∀'a,'b. (((x: 'a & null) -> 'a) & ((x: DBL | dbl & v('b)) -> DBL | dbl &
+ v('b)) & ((x: dbl1) -> dbl1))<> with {  }
 
 cases: ((x: DBL) -> 0.<> with {  })<> with {  }
 
