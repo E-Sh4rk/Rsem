@@ -278,11 +278,11 @@ let to_mlsem (cfg:cfg) e =
       end
     | Ite (e, e1, e2) ->
       let e = aux e in
-      let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
+      let e = Eid.unique (), A.Operation (Defs.tobool_op, e) in
       eid, A.Ite (e, GTy.mk Defs.test_type, aux e1, aux e2)
     | While (e, e') ->
       let e = aux e in
-      let e = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.tobool), e)) in
+      let e = Eid.unique (), A.Operation (Defs.tobool_op, e) in
       eid, A.While (e, GTy.mk Defs.test_type, aux e')
     | For (None, e, e') ->
       let e, e' = aux e, aux e' in
@@ -293,7 +293,7 @@ let to_mlsem (cfg:cfg) e =
       let ev = MVariable.create Immut None in
       let e, e' = aux e, aux e' in
       let ev' = Eid.unique (), A.Var ev in
-      let lkp = Eid.unique (), (A.App ((Eid.unique (), A.Var Defs.extract), ev')) in
+      let lkp = Eid.unique (), A.Operation (Defs.extract_op, ev') in
       let assignment = Eid.unique (), A.VarAssign (v, lkp) in
       let e' = Eid.unique (), A.Seq (assignment, e') in
       let e' = Eid.unique (), A.Voidify e' in
@@ -375,7 +375,7 @@ let to_mlsem (cfg:cfg) e =
     | Dots -> eid, A.Var ellipsis_var
     | DotsN _ ->
       let e = Eid.unique (), A.Var ellipsis_var in
-      eid, (A.App ((Eid.unique (), A.Var Defs.flattell), e))
+      eid, (A.Operation (Defs.flattell_op, e))
   in
   aux e
 
