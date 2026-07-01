@@ -221,7 +221,7 @@ let rec rem_n_first n lst =
 
 let ellipsis_var = MVariable.create Immut (Some "...")
 
-type cfg = { env : MetaEnv.t ; infer_mode : bool }
+type cfg = { env : MetaEnv.t }
 
 let to_mlsem (cfg:cfg) e =
   let rec aux (eid,e) =
@@ -253,30 +253,38 @@ let to_mlsem (cfg:cfg) e =
       in
       let (pos,named,ell,es) = parse_args args in
       let es = List.map aux es in
-      let arg = Eid.unique (), A.Constructor
+      let arg_def = Eid.unique (), A.Constructor
         (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (pos,named,ell) ; cons=ArgBuilder.cons (pos,named,ell) }, es) in
-      (* let arg = Eid.unique (), A.Constructor (SA.Normalize, [arg]) in *)
-      begin match sigs_of_fun cfg.env f args with
-      | [] ->
-        let f = Eid.unique (), A.Projection
-          (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux f) in
-        eid, A.App (f, arg)
-      | tys when cfg.infer_mode ->
-        let tys = tys |> List.map (fun gty -> GTy.map (fun ty -> Rstt.Attr.proj_content ty) gty |> TyScheme.mk_poly) in
-        (* tys |> List.iter (fun ty -> Format.printf "Alt: %a@." Mlsem_types.TyScheme.pp ty) ; *)
-        let alts = tys |> List.map (fun ty ->
-          Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
-          ) in
-        let n = List.length alts in
-        let amask _ = List.init n (Fun.const true) in
-        let aerror _ = "" in
-        let settings = { SA.aname="application" ; aerror ; amask } in
-        Eid.unique (), A.Alt (settings, alts)
-      | tys ->
-        let tys = tys |> List.map (GTy.map (fun ty -> Rstt.Attr.proj_content ty)) in
-        let ty = GTy.conj tys |> TyScheme.mk_poly in
-        eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
-      end
+      (* let arg_def = Eid.unique (), A.Constructor (SA.Normalize, [arg_def]) in *)
+      let varg = MVariable.create Immut None in
+      let arg = Eid.unique (), A.Var varg in
+      let e =
+        match sigs_of_fun cfg.env f args with
+        | [] ->
+          let f = Eid.unique (), A.Projection
+            (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux f) in
+          Eid.refresh eid, A.App (f, arg)
+        | tys ->
+          let tys = tys |> List.map (GTy.map (fun ty -> Rstt.Attr.proj_content ty)) in
+          let ty = GTy.conj tys |> TyScheme.mk_poly in
+          let tys = List.map TyScheme.mk_poly tys in
+          let n = List.length tys in
+          (* tys |> List.iter (fun ty -> Format.printf "Alt: %a@." Mlsem_types.TyScheme.pp ty) ; *)
+          let alts = ty::tys |> List.map (fun ty ->
+            Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
+            ) in
+          let amask env =
+            let open Mlsem_types in
+            let arg = if Env.mem varg env then Env.find varg env else TyScheme.mk_mono GTy.any in
+            if MVarSet.subset (TyScheme.fv arg) (TVOp.all_vars KNoInfer)
+            then true::List.init n (Fun.const false)
+            else false::List.init n (Fun.const true)
+          in
+          let aerror _ = "" in
+          let settings = { SA.aname="application" ; aerror ; amask } in
+          Eid.refresh eid, A.Alt (settings, alts)
+      in
+      eid, A.Let ([], varg, arg_def, e)
     | Ite (e, e1, e2) ->
       let e = aux e in
       let e = Eid.unique (), A.Operation (Defs.tobool_op, e) in
