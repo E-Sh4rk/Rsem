@@ -8,46 +8,46 @@ type arg_label = Positional | Named of label | Ell
 type 'a arg = arg_label * 'a
 [@@deriving show]
 
-type t = Env.t * (TyScheme.t list) VarMap.t
+type sigs = { resolved:GTy.t list ; symbolic:GTy.t list }
+type t = Env.t * sigs VarMap.t
 
 let simplify_tl ty =
   let tvs, ty = ty |> TyScheme.bot_instance |> TyScheme.get in
   let ty = GTy.map Rstt.TyOp.simplify ty |> GTy.normalize in
   TyScheme.mk tvs ty
-let merge_tl tys =
-  let tscap t1 t2 =
-    let (tvs1, t1), (tvs2, t2) = TyScheme.get t1, TyScheme.get t2 in
-    TyScheme.mk (MVarSet.union tvs1 tvs2) (GTy.cap t1 t2)
-  in
-  List.fold_left tscap (TyScheme.mk_mono GTy.any) tys |> simplify_tl
 
 let initial = Defs.initial_env, VarMap.empty
-let get_sym_sigs v senv = match VarMap.find_opt v senv with None -> [] | Some lst -> lst
+let get_sigs v senv =
+  match VarMap.find_opt v senv with
+  | None -> { resolved=[] ; symbolic=[] }
+  | Some s -> s
 let no_symlabel ty =
   let open Rstt.Labels in
-  let lb, ub = TyScheme.get ty |> snd |> GTy.lb, TyScheme.get ty |> snd |> GTy.ub in
+  let lb, ub = GTy.lb ty, GTy.ub ty in
   sym_of_ty lb |> List.is_empty && sym_of_ty ub |> List.is_empty
 
 let add_signature v ty (env,senv) =
-  let ty = simplify_tl ty in
-  if TyScheme.fv ty |> MVarSet.is_empty |> not then
+  let sigs = get_sigs v senv in
+  let sigs =
+    if no_symlabel ty
+    then { sigs with resolved=ty::sigs.resolved }
+    else { sigs with symbolic=ty::sigs.symbolic }
+  in
+  let senv = VarMap.add v sigs senv in
+  let ty = sigs.resolved |> GTy.conj |> TyScheme.mk_poly in
+  let env = Env.replace v ty env in
+  env, senv
+
+let set_from_tyscheme v ts (env,senv) =
+  if TyScheme.fv ts |> MVarSet.is_empty |> not then
     failwith "Top-level definitions cannot contain monomorphic type variables." ;
-  if no_symlabel ty then
-    let ty = if Env.mem v env then merge_tl [Env.find v env;ty] else ty in
-    let env = Env.rm v env in
-    Mlsem_lang.MVariable.add_to_env v ty env, senv
-  else
-    let env = if Env.mem v env then env else Env.add v (TyScheme.mk_mono GTy.any) env in
-    let senv = VarMap.add v (ty :: get_sym_sigs v senv) senv in
-    env, senv
-let replace_signature v ty (env,senv) =
+  let ts = simplify_tl ts in
   let env, senv = Env.rm v env, VarMap.remove v senv in
-  add_signature v ty (env, senv)
+  Env.add v ts env, senv
 
 let mem v (env, _) = Env.mem v env
 let env (env, _) = env
-let get_signature v (env,senv) =
-  merge_tl (Env.find v env :: get_sym_sigs v senv)
+let get_resolved v (env,_) = Env.find v env
 
 let arg_to_subst (i,(k,arg)) =
   match k, arg with
@@ -58,15 +58,13 @@ let arg_to_subst (i,(k,arg)) =
 let apply_args args ty =
   let subst = args |> List.mapi (fun i a -> (i, a)) |> List.filter_map arg_to_subst in
   Rstt.Labels.substitute subst ty
-let apply_args args ty =
+let apply_args args gty =
   try
-    let tvs, gty = TyScheme.get ty in
     let gty = GTy.map (apply_args args) gty in
-    let ty = TyScheme.mk tvs gty in
-    if no_symlabel ty |> not then raise Exit ;
-    Some ty
+    if no_symlabel gty |> not then raise Exit ;
+    Some gty
   with Exit -> None
-let get_fun_signature v args (env, senv) =
-  let ty = Env.find v env in
-  let tys = List.filter_map (apply_args args) (get_sym_sigs v senv) in
-  merge_tl (ty::tys)
+let get_signatures v args (_, senv) =
+  let sigs = get_sigs v senv in
+  let symbolic = List.filter_map (apply_args args) (sigs.symbolic) in
+  sigs.resolved@symbolic

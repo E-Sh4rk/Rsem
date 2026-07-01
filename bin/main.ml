@@ -54,7 +54,7 @@ let sigs_of_ty gty =
   in
   let gty = refresh_vars KNoInfer gty in
   let fsig = GTy.map reidentify gty in
-  (!fun_sig, fsig, TyScheme.mk_poly gty)
+  !fun_sig, fsig
 let extend_env mlast env =
   if !gradual then
     let fv = System.Ast.fv mlast in
@@ -86,7 +86,7 @@ let treat_ast v ctx ast =
       let mlast = Transform.to_mlsem { env=ctx.tenv ; infer_mode=true } ast in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
       let ty = infer ctx mlast in
-      { ctx with tenv=MetaEnv.replace_signature v ty ctx.tenv }
+      { ctx with tenv=MetaEnv.set_from_tyscheme v ty ctx.tenv }
     | Some sigs (* Type checking mode *) ->
       let mlast = Transform.to_mlsem { env=ctx.tenv ; infer_mode=false } ast in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
@@ -94,7 +94,7 @@ let treat_ast v ctx ast =
       let _ = List.map (infer ctx) asts in
       { ctx with senv=VarMap.remove v ctx.senv } (* The signature has been verified, remove it *)
     in
-    let ty = MetaEnv.get_signature v ctx.tenv in
+    let ty = MetaEnv.get_resolved v ctx.tenv in
     Format.printf "%a:@? @[%a@]@.@." Variable.pp v TyScheme.pp_short ty ;
     ctx
   with System.Checker.Untypeable (err) ->
@@ -124,7 +124,7 @@ let add_sig ctx str tye =
   let benv, ty = Builder.resolve ctx.benv tye in
   let {Builder.Gradual.lb;ub} = ty |> Builder.build_gradual ctx.tidenv in
   let gty = GTy.mk_gradual lb ub in
-  let fun_sig,s,ty = sigs_of_ty gty in
+  let fun_sig,s = sigs_of_ty gty in
   let v,s =
     match StrMap.find_opt str ctx.idenv with
     | Some v when fun_sig && VarMap.mem v ctx.senv -> (* Overload *)
@@ -132,21 +132,21 @@ let add_sig ctx str tye =
     | Some _ when fun_sig -> (* Redefinition of function signature (shadowing) *)
       MVariable.create Immut (Some str), [s]
     | Some _ -> (* Redefinition of mutable variable signature (shadowing) *)
-      let tvs, ty = TyScheme.get ty in
-      if MixVarSet.is_empty tvs |> not then failwith "Non-functional signatures cannot have type variables" ;
-      MVariable.create (AnnotMut ty) (Some str), [s]
+      if GTy.fv gty |> MixVarSet.is_empty |> not
+      then failwith "Non-functional signatures cannot have type variables" ;
+      MVariable.create (AnnotMut gty) (Some str), [s]
     | None when fun_sig -> (* First signature definition *)
       MVariable.create Immut (Some str), [s]
     | None -> (* First mutable definition *)
-      let tvs, ty = TyScheme.get ty in
-      if MixVarSet.is_empty tvs |> not then failwith "Non-functional signatures cannot have type variables" ;
-      MVariable.create (AnnotMut ty) (Some str), [s]
+      if GTy.fv gty |> MixVarSet.is_empty |> not
+      then failwith "Non-functional signatures cannot have type variables" ;
+      MVariable.create (AnnotMut gty) (Some str), [s]
   in
   let idenv = StrMap.add str v ctx.idenv in
   (* Format.printf "Adding %s: @[%a@]@." str TyScheme.pp ty ; *)
   (* Format.printf "Adding %s: @[%a@]@." str Sstt.Printer.print_ty'
     (TyScheme.get ty |> snd |> GTy.ub) ; *)
-  let tenv = MetaEnv.add_signature v ty ctx.tenv in
+  let tenv = MetaEnv.add_signature v gty ctx.tenv in
   let senv = VarMap.add v s ctx.senv in
   { benv ; idenv ; tenv ; senv ; tidenv=ctx.tidenv }
 

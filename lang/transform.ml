@@ -48,7 +48,7 @@ let typeof_const_comp c =
 let typeof_expr env (_,e) =
   match e with
   | Const c -> Some (typeof_const c |> GTy.mk |> TyScheme.mk_mono)
-  | Id v when MetaEnv.mem v env -> Some (MetaEnv.get_signature v env)
+  | Id v when MetaEnv.mem v env -> Some (MetaEnv.get_resolved v env)
   | _ -> None
 let labelof_expr env e =
   match typeof_expr env e with
@@ -71,11 +71,11 @@ let labelof_expr env e =
       else None
     | _ -> None
     end
-let typeof_fun env e args =
+let sigs_of_fun env e args =
   let args = args |> List.map (fun (k,e) -> (k,Option.bind e (labelof_expr env))) in
   match snd e with
-  | Id v when MetaEnv.mem v env -> Some (MetaEnv.get_fun_signature v args env)
-  | _ -> typeof_expr env e
+  | Id v when MetaEnv.mem v env -> MetaEnv.get_signatures v args env
+  | _ -> []
 
 (* Arguments builder / Attr projector *)
 
@@ -256,22 +256,21 @@ let to_mlsem (cfg:cfg) e =
       let arg = Eid.unique (), A.Constructor
         (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (pos,named,ell) ; cons=ArgBuilder.cons (pos,named,ell) }, es) in
       (* let arg = Eid.unique (), A.Constructor (SA.Normalize, [arg]) in *)
-      begin match typeof_fun cfg.env f args with
-      | None ->
+      begin match sigs_of_fun cfg.env f args with
+      | [] ->
         let f = Eid.unique (), A.Projection
           (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux f) in
         eid, A.App (f, arg)
-      | Some ty when cfg.infer_mode ->
-        let ty = TyUtils.proj_content ty in
-        let tys = ty |> TyUtils.decompose_fun in
-        (* TODO: do not redecompose functions... store them decomposed in the metaenv *)
+      | tys when cfg.infer_mode ->
+        let tys = tys |> List.map (fun gty -> GTy.map (fun ty -> Rstt.Attr.proj_content ty) gty |> TyScheme.mk_poly) in
         (* tys |> List.iter (fun ty -> Format.printf "Alt: %a@." Mlsem_types.TyScheme.pp ty) ; *)
         let alts = tys |> List.map (fun ty ->
           Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
           ) in
         Eid.unique (), A.Alt alts
-      | Some ty ->
-        let ty = TyUtils.proj_content ty in
+      | tys ->
+        let tys = tys |> List.map (GTy.map (fun ty -> Rstt.Attr.proj_content ty)) in
+        let ty = GTy.conj tys |> TyScheme.mk_poly in
         eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
       end
     | Ite (e, e1, e2) ->
