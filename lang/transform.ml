@@ -264,14 +264,12 @@ let to_mlsem (cfg:cfg) e =
       | Some ty when cfg.infer_mode ->
         let ty = TyUtils.proj_content ty in
         let tys = ty |> TyUtils.decompose_fun in
+        (* TODO: do not redecompose functions... store them decomposed in the metaenv *)
         (* tys |> List.iter (fun ty -> Format.printf "Alt: %a@." Mlsem_types.TyScheme.pp ty) ; *)
         let alts = tys |> List.map (fun ty ->
           Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
           ) in
-        begin match alts with
-        | [] -> eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
-        | a::alts -> List.fold_left (fun acc a -> Eid.unique (), A.Alt (a, acc)) a alts
-        end
+        Eid.unique (), A.Alt alts
       | Some ty ->
         let ty = TyUtils.proj_content ty in
         eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
