@@ -259,6 +259,7 @@ let to_mlsem (cfg:cfg) e =
       let varg = MVariable.create Immut None in
       let arg = Eid.unique (), A.Var varg in
       let e =
+        (* TODO: do the symbolic resolution during MLsem type inference *)
         match sigs_of_fun cfg.env f args with
         | [] ->
           let f = Eid.unique (), A.Projection

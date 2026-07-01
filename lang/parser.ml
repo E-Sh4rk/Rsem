@@ -193,7 +193,7 @@ and aux_case c tree =
   | "Nan" -> A.Const (A.CNan)
   | "Dots" -> A.Dots
   | "Dot_dot_i" -> A.DotsN (aux_dotdot tree)
-  | _ -> failwith ("TODO: "^c)
+  | _ -> failwith ("Unsupported token: "^c)
 
 and aux_else tree =
   match tree with
