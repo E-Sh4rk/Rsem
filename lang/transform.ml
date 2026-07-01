@@ -267,7 +267,11 @@ let to_mlsem (cfg:cfg) e =
         let alts = tys |> List.map (fun ty ->
           Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=ty ; ogen=false }, arg)
           ) in
-        Eid.unique (), A.Alt alts
+        let n = List.length alts in
+        let amask _ = List.init n (Fun.const true) in
+        let aerror _ = "" in
+        let settings = { SA.aname="application" ; aerror ; amask } in
+        Eid.unique (), A.Alt (settings, alts)
       | tys ->
         let tys = tys |> List.map (GTy.map (fun ty -> Rstt.Attr.proj_content ty)) in
         let ty = GTy.conj tys |> TyScheme.mk_poly in
