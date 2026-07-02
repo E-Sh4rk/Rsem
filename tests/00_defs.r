@@ -25,6 +25,7 @@
 
 # ========== IO ==========
 
+## identity : ( x:'a ) -> 'a
 ## print : ( x:'a ) -> 'a
 ## write : ( x:any, file:<connection>|chr ) -> null
 ## stdout : () -> <connection>

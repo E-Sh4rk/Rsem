@@ -144,6 +144,12 @@ nested_list <- function(x) {
   x
 }
 
+test_lists_sym <- function() {
+  l <- list(a=42L,b=TRUE)
+  l <- identity(l)
+  l$a
+}
+
 test_classes <- function(x) {
   x <- unclass(x)
   class(x) <- c("abc", "def")

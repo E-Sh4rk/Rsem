@@ -71,6 +71,8 @@ test_lists: (() -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42 |
 
 nested_list: ∀`a. (x: { a: { lgl1 }, `a }) -> { a: { lgl1 }, `a }
 
+test_lists_sym: (() -> 42L<> with {  })<> with {  }
+
 test_classes: ∀'a. ((x: 'a<...>) -> 'a<...>)<> with {  }
 
 dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<> with {  }
