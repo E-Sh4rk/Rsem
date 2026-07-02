@@ -33,11 +33,11 @@ let tobool =
   let ff = Arrow.mk falsy Ty.ff in
   let ty = Ty.conj [def;tt;ff] in
   gen ty
-let tobool_op = SA.OCustom { oname="tobool" ; ofun=tobool ; ogen=false }
+let tobool_op = SA.OCustom { oname="tobool" ; ofun=Fun.const tobool ; ogen=false }
 let extract = ty "({'a} --> 'a) & (v('p) --> v1('p))" |> gen
-let extract_op = SA.OCustom { oname="extract" ; ofun=extract ; ogen=false }
+let extract_op = SA.OCustom { oname="extract" ; ofun=Fun.const extract ; ogen=false }
 let flattell = ty "@(...:'v) --> @(...:'v)" |> gen
-let flattell_op = SA.OCustom { oname="flattell" ; ofun=flattell ; ogen=false }
+let flattell_op = SA.OCustom { oname="flattell" ; ofun=Fun.const flattell ; ogen=false }
 
 let initial_env =
   let add_def env (v,ty) = Env.add v ty env in
