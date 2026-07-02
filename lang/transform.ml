@@ -223,7 +223,7 @@ let to_mlsem (cfg:cfg) e =
     | Const c -> eid, A.Value (typeof_const c |> GTy.mk)
     | Id v -> eid, A.Var v
     | Declare (v,e) -> eid, A.Declare (v, aux e)
-    | Let (v, e1, e2) -> eid, A.Let ([], v, aux e1, aux e2)
+    | Let (v, e1, e2) -> eid, A.Let ([Ty.any], v, aux e1, aux e2)
     | VarAssign (v, e) -> eid, A.VarAssign (v, aux e)
     | Unop (v,e) -> aux (eid, Call ((Eid.unique (), Id v), [(Positional, Some e)]))
     | Binop (v,e1,e2) ->
@@ -320,7 +320,7 @@ let to_mlsem (cfg:cfg) e =
       let e' = Eid.unique (), A.Seq (assignment, e') in
       let e' = Eid.unique (), A.Voidify e' in
       let e' = Eid.unique (), A.Loop e' in
-      eid, A.Let ([], ev, e, e')
+      eid, A.Let ([Ty.any], ev, e, e')
     | TyCheck {e;ty;necessary;sufficient} ->
       let e = aux e in
       let tt, ff = typeof_const (CLgl true) |> GTy.mk, typeof_const (CLgl false) |> GTy.mk in
@@ -359,7 +359,7 @@ let to_mlsem (cfg:cfg) e =
       let pos_named = pos |> List.map (fun (v,_,ty) -> Variable.get_name v |> Option.get, ty) in
       let named = nopos |> List.map (fun (v,_,ty) -> Variable.get_name v |> Option.get, ty) in
       let add_let v def e =
-        Eid.unique (), A.Let ([], v, (Eid.unique (), def), e)
+        Eid.unique (), A.Let ([Ty.any], v, (Eid.unique (), def), e)
       in
       let add_def e (v,o,fty) =
         let open Mlsem_types in

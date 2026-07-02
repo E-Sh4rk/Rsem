@@ -90,6 +90,13 @@ narrowing_ann <- function(x) {
   return(-x)
 }
 
+## narrowing_ann2 : ( x: dbl|null ) -> dbl|null
+narrowing_ann2 <- function(x) {
+  if (x == NULL)
+    return(NULL)
+  return(-x)
+}
+
 loop_break <- function(x) {
   i <- x
   while (i != NULL) {
