@@ -94,7 +94,7 @@ let treat_ast v ctx ast =
       let _ = List.map (infer ctx) asts in
       { ctx with senv=VarMap.remove v ctx.senv } (* The signature has been verified, remove it *)
     in
-    let ty = MetaEnv.get_resolved v ctx.tenv in
+    let ty = MetaEnv.get v ctx.tenv in
     Format.printf "%a:@? @[%a@]@.@." Variable.pp v TyScheme.pp_short ty ;
     ctx
   with System.Checker.Untypeable (err) ->

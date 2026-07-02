@@ -45,13 +45,8 @@ let typeof_const_comp c =
   in
   exact, Builder.build Builder.TIdMap.empty ty
 
-let typeof_expr env (_,e) =
-  match e with
-  | Const c -> Some (typeof_const c |> GTy.mk |> TyScheme.mk_mono)
-  | Id v when MetaEnv.mem v env -> Some (MetaEnv.get_resolved v env)
-  | _ -> None
-let labelof_expr env e =
-  match typeof_expr env e with
+let labelof_tyo ty =
+  match ty with
   | None -> None
   | Some ty ->
     let ty = TyScheme.get ty |> snd |> GTy.ub in
@@ -71,11 +66,10 @@ let labelof_expr env e =
       else None
     | _ -> None
     end
-let sigs_of_fun env e args =
-  let args = args |> List.map (fun (k,e) -> (k,Option.bind e (labelof_expr env))) in
+let sigs_of_fun env e =
   match snd e with
-  | Id v when MetaEnv.mem v env -> MetaEnv.get_signatures v args env
-  | _ -> []
+  | Id v when MetaEnv.mem v env -> MetaEnv.get_signatures v env
+  | _ -> None
 
 (* Arguments builder / Attr projector *)
 
@@ -241,39 +235,56 @@ let to_mlsem (cfg:cfg) e =
         | (lbl,e)::args ->
           let (pos,named,ell,es) = parse_args args in
           begin match lbl,e with
-          | MetaEnv.Positional, Some e -> true::pos,named,ell,e::es
+          | MetaEnv.Positional, Some e -> true::pos,named,ell,(MetaEnv.Positional,e)::es
           | MetaEnv.Positional, None -> false::pos,named,ell,es
-          | Named lbl, Some e when pos=[] -> [],(lbl,true)::named,ell,e::es
+          | Named lbl, Some e when pos=[] -> [],(lbl,true)::named,ell,(MetaEnv.Named lbl, e)::es
           | Named lbl, None when pos=[] -> [],(lbl,false)::named,ell,es
           | Named _, _ -> failwith "Unsupported positional argument after a named one."
-          | Ell, Some e when pos=[] && named=[] && not ell -> [],[],true,e::es
+          | Ell, Some e when pos=[] && named=[] && not ell -> [],[],true,(MetaEnv.Ell, e)::es
           | Ell, None when pos=[] && named=[] && not ell -> [],[],false,es
           | Ell, _ -> failwith "Unsupported argument after an ellipsis."
           end
       in
-      let (pos,named,ell,es) = parse_args args in
-      let es = List.map aux es in
+      let (pos,named,ell,args) = parse_args args in
+      let es = args |> List.map snd |> List.map aux in
+      let vs = List.map (fun _ -> MVariable.create Immut None) es in
       let arg_def = Eid.unique (), A.Constructor
-        (CCustom { cname="cargs" ; cgen=true ; cdom=ArgBuilder.cdom (pos,named,ell) ; cons=ArgBuilder.cons (pos,named,ell) }, es) in
+        (CCustom { cname="cargs" ; cgen=true ;
+          cdom=ArgBuilder.cdom (pos,named,ell) ;
+          cons=ArgBuilder.cons (pos,named,ell) },
+          List.map (fun v -> Eid.unique (), A.Var v) vs) in
       (* let arg_def = Eid.unique (), A.Constructor (SA.Normalize, [arg_def]) in *)
       let varg = MVariable.create Immut None in
       let arg = Eid.unique (), A.Var varg in
       let e =
-        (* TODO: do the symbolic resolution during MLsem type inference *)
-        match sigs_of_fun cfg.env f args with
-        | [] ->
+        match sigs_of_fun cfg.env f with
+        | None -> (* First-class function *)
           let f = Eid.unique (), A.Projection
             (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux f) in
           Eid.refresh eid, A.App (f, arg)
-        | tys ->
-          let tys = tys |> List.map (GTy.map (fun ty -> Rstt.Attr.proj_content ty)) in
-          let ty = GTy.conj tys |> TyScheme.mk_poly in
-          let tys = List.map TyScheme.mk_poly tys in
-          let n = List.length tys in
-          (* tys |> List.iter (fun ty -> Format.printf "Alt: %a@." Mlsem_types.TyScheme.pp ty) ; *)
-          let alts = ty::tys |> List.map (fun ty ->
+        | Some sigs -> (* Top-level function *)
+          let resolved_tys = sigs.resolved |> List.map (GTy.map Rstt.Attr.proj_content) in
+          let symbolic_tys = sigs.symbolic |> List.map (GTy.map Rstt.Attr.proj_content) in
+          let resolve_ty env ty =
+            let tys = vs |> List.map (fun v -> Env.find_opt v env) in
+            let args = List.combine args tys |> List.map (fun (k,ty) -> (fst k, labelof_tyo ty)) in
+            MetaEnv.resolve_signature args ty
+          in
+          let alt_default =
+            Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=(fun env ->
+              let resolved_tys' = List.filter_map (resolve_ty env) symbolic_tys in
+              resolved_tys@resolved_tys' |> GTy.conj |> TyScheme.mk_poly
+              ) ; ogen=false }, arg)
+          in
+          let alts_resolved = resolved_tys |> List.map TyScheme.mk_poly |> List.map (fun ty ->
             Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=Fun.const ty ; ogen=false }, arg)
             ) in
+          let alts_symbolic = symbolic_tys |> List.map (fun ty ->
+            Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ;
+              ofun=(fun env -> resolve_ty env ty |> Option.value ~default:GTy.any |> TyScheme.mk_poly) ;
+              ogen=false }, arg)
+            ) in
+          let n = List.length alts_resolved + List.length alts_symbolic in
           let amask env =
             let open Mlsem_types in
             let arg = if Env.mem varg env then Env.find varg env else TyScheme.mk_mono GTy.any in
@@ -283,9 +294,10 @@ let to_mlsem (cfg:cfg) e =
           in
           let aerror _ = "" in
           let settings = { SA.aname="application" ; aerror ; amask } in
-          Eid.refresh eid, A.Alt (settings, alts)
+          Eid.refresh eid, A.Alt (settings, alt_default::alts_resolved@alts_symbolic)
       in
-      eid, A.Let ([], varg, arg_def, e)
+      let e = eid, A.Let ([], varg, arg_def, e) in
+      List.fold_left (fun e (v,def) -> Eid.refresh eid, A.Let ([], v, def, e)) e (List.combine vs es)
     | Ite (e, e1, e2) ->
       let e = aux e in
       let e = Eid.unique (), A.Operation (Defs.tobool_op, e) in

@@ -47,7 +47,7 @@ let set_from_tyscheme v ts (env,senv) =
 
 let mem v (env, _) = Env.mem v env
 let env (env, _) = env
-let get_resolved v (env,_) = Env.find v env
+let get v (env,_) = Env.find v env
 
 let arg_to_subst (i,(k,arg)) =
   match k, arg with
@@ -58,13 +58,11 @@ let arg_to_subst (i,(k,arg)) =
 let apply_args args ty =
   let subst = args |> List.mapi (fun i a -> (i, a)) |> List.filter_map arg_to_subst in
   Rstt.Labels.substitute subst ty
-let apply_args args gty =
+let get_signatures v (_, senv) = VarMap.find_opt v senv
+
+let resolve_signature args gty =
   try
     let gty = GTy.map (apply_args args) gty in
     if no_symlabel gty |> not then raise Exit ;
     Some gty
   with Exit -> None
-let get_signatures v args (_, senv) =
-  let sigs = get_sigs v senv in
-  let symbolic = List.filter_map (apply_args args) (sigs.symbolic) in
-  sigs.resolved@symbolic

@@ -1,6 +1,8 @@
 open Mlsem_types
 open Mlsem_common
 
+type sigs = { resolved:GTy.t list ; symbolic:GTy.t list }
+
 type label = string
 type arg_label = Positional | Named of label | Ell
 type 'a arg = arg_label * 'a
@@ -17,5 +19,6 @@ val add_signature : Variable.t -> GTy.t -> t -> t
 val set_from_tyscheme : Variable.t -> TyScheme.t -> t -> t
 val mem : Variable.t -> t -> bool
 val env : t -> Env.t
-val get_resolved : Variable.t -> t -> TyScheme.t
-val get_signatures : Variable.t -> Rstt.Labels.t option arg list -> t -> GTy.t list
+val get : Variable.t -> t -> TyScheme.t
+val get_signatures : Variable.t -> t -> sigs option
+val resolve_signature : Rstt.Labels.t option arg list -> GTy.t -> GTy.t option
