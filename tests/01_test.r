@@ -153,8 +153,8 @@ nested_list <- function(x) {
 
 test_lists_sym <- function() {
   l <- list(a=42L,b=TRUE)
-  l <- identity(l)
-  l$a
+  a <- identity("a")
+  l[[a]]
 }
 
 test_classes <- function(x) {
