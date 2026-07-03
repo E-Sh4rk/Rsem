@@ -98,7 +98,9 @@ let treat_ast v ctx ast =
     Format.printf "%a:@? @[%a@]@.@." Variable.pp v TyScheme.pp_short ty ;
     ctx
   with System.Checker.Untypeable (err) ->
-    Format.printf "Untypeable: %s@." err.title ;
+    Format.printf "%a:@? Untypeable: %s@." Variable.pp v err.title ;
+    let loc = Eid.loc err.eid in
+    if loc <> Position.dummy then Format.printf "%s@." (Position.string_of_pos loc) ;
     err.descr |> Option.iter (Format.printf "%s@.") ;
     Format.printf "@." ; ctx
 

@@ -8,13 +8,10 @@ let conv_pos tspos =
   let bol = tspos.Loc.row*line_length in
   {
     Lexing.pos_fname = "" ;
-    pos_lnum = tspos.Loc.row ;
+    pos_lnum = tspos.Loc.row+1 ;
     pos_bol = bol ;
     pos_cnum = bol + tspos.Loc.column ;
   }
-
-(* let conv_loc tsloc =
-  Position.lex_join (conv_pos tsloc.Loc.start) (conv_pos tsloc.end_) *)
 
 let rec option_first lst =
   match lst with

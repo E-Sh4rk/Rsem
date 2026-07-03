@@ -259,7 +259,7 @@ let to_mlsem (cfg:cfg) e =
       let e =
         match sigs_of_fun cfg.env f with
         | None -> (* First-class function *)
-          let f = Eid.unique (), A.Projection
+          let f = Eid.refresh (fst f), A.Projection
             (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux f) in
           Eid.refresh eid, A.App (f, arg)
         | Some sigs -> (* Top-level function *)
@@ -292,19 +292,19 @@ let to_mlsem (cfg:cfg) e =
             then true::List.init n (Fun.const false)
             else false::List.init n (Fun.const true)
           in
-          let aerror _ = "" in
+          let aerror _ = "" in (* TODO *)
           let settings = { SA.aname="application" ; aerror ; amask } in
           Eid.refresh eid, A.Alt (settings, alt_default::alts_resolved@alts_symbolic)
       in
       let e = eid, A.Let ([], varg, arg_def, e) in
-      List.fold_left (fun e (v,def) -> Eid.refresh eid, A.Let ([], v, def, e)) e (List.combine vs es)
+      List.fold_left (fun e (v,def) -> Eid.unique (), A.Let ([], v, def, e)) e (List.combine vs es)
     | Ite (e, e1, e2) ->
       let e = aux e in
-      let e = Eid.unique (), A.Operation (Defs.tobool_op, e) in
+      let e = Eid.refresh (fst e), A.Operation (Defs.tobool_op, e) in
       eid, A.Ite (e, GTy.mk Defs.test_type, aux e1, aux e2)
     | While (e, e') ->
       let e = aux e in
-      let e = Eid.unique (), A.Operation (Defs.tobool_op, e) in
+      let e = Eid.refresh (fst e), A.Operation (Defs.tobool_op, e) in
       eid, A.While (e, GTy.mk Defs.test_type, aux e')
     | For (None, e, e') ->
       let e, e' = aux e, aux e' in
@@ -315,8 +315,8 @@ let to_mlsem (cfg:cfg) e =
       let ev = MVariable.create Immut None in
       let e, e' = aux e, aux e' in
       let ev' = Eid.unique (), A.Var ev in
-      let lkp = Eid.unique (), A.Operation (Defs.extract_op, ev') in
-      let assignment = Eid.unique (), A.VarAssign (v, lkp) in
+      let lkp = Eid.refresh (fst e), A.Operation (Defs.extract_op, ev') in
+      let assignment = Eid.refresh (fst e), A.VarAssign (v, lkp) in
       let e' = Eid.unique (), A.Seq (assignment, e') in
       let e' = Eid.unique (), A.Voidify e' in
       let e' = Eid.unique (), A.Loop e' in
@@ -330,32 +330,25 @@ let to_mlsem (cfg:cfg) e =
       eid, A.Ite (e, GTy.mk ty, (if sufficient then tt else bb), (if necessary then ff else bb))
     | Function (ps, e) ->
       let has_ell = List.mem Ellipsis ps in
-      let rec treat_params ps =
-        let ty = TVar.mk KInfer None |> TVar.typ |> Ty.O.required |> Ty.F.mk_descr in
+      let rec treat_params only_nopos ps =
         match ps with
         | [] -> [], []
-        | Ellipsis::ps -> [], treat_params_nopos ps
+        | Ellipsis::_ when only_nopos -> failwith "Invalid parameter layout"
+        | Ellipsis::ps -> treat_params true ps
         | (NoDefault v)::ps ->
-          let pos, nopos = treat_params ps in
-          (v, None, ty)::pos, nopos
+          let pos, nopos = treat_params only_nopos ps in
+          let ty = TVar.mk KInfer (Variable.get_name v) |> TVar.typ |> Ty.O.required |> Ty.F.mk_descr in
+          let res = (v, None, ty) in
+          if only_nopos then pos, res::nopos else res::pos, nopos
         | (Default (v,e))::ps ->
-          let pos, nopos = treat_params ps in
-          let ty' = RVar.mk KInfer None |> RVar.fty in
+          let pos, nopos = treat_params only_nopos ps in
+          let ty = TVar.mk KInfer (Variable.get_name v) |> TVar.typ |> Ty.O.required |> Ty.F.mk_descr in
+          let ty' = RVar.mk KInfer (Variable.get_name v) |> RVar.fty in
           let ty' = Ty.F.cap ty' (Ty.O.absent |> Ty.F.mk_descr) in
-          (v, Some e, Ty.F.cup ty ty')::pos, nopos
-      and treat_params_nopos ps =
-        let ty = TVar.mk KInfer None |> TVar.typ |> Ty.O.required |> Ty.F.mk_descr in
-        match ps with
-        | [] -> []
-        | Ellipsis::_ -> failwith "Invalid parameter layout"
-        | (NoDefault v)::ps ->
-          (v, None, ty)::(treat_params_nopos ps)
-        | (Default (v,e))::ps ->
-          let ty' = RVar.mk KInfer None |> RVar.fty in
-          let ty' = Ty.F.cap ty' (Ty.O.absent |> Ty.F.mk_descr) in
-          (v, Some e, Ty.F.cup ty ty')::(treat_params_nopos ps)
+          let res = (v, Some e, Ty.F.cup ty ty') in
+          if only_nopos then pos, res::nopos else res::pos, nopos
       in
-      let pos, nopos = treat_params ps in
+      let pos, nopos = treat_params false ps in
       let pos_named = pos |> List.map (fun (v,_,ty) -> Variable.get_name v |> Option.get, ty) in
       let named = nopos |> List.map (fun (v,_,ty) -> Variable.get_name v |> Option.get, ty) in
       let add_let v def e =
@@ -371,8 +364,9 @@ let to_mlsem (cfg:cfg) e =
         | Some e_default ->
           let e' = Eid.unique (), e' in
           let tau = Record.mk' (FTy.of_oty (Ty.empty, true)) [lbl, FTy.of_oty (Ty.any, false)] in
-          let empty = Eid.unique (), A.Value (GTy.empty) in
-          let e_default = Eid.unique (), A.Constructor (SA.Ternary tau, [ty ; empty ; aux e_default]) in
+          let exc = Eid.unique (), A.Exc in
+          let e_default = Eid.unique (),
+          A.Constructor (SA.Ternary tau, [ty ; exc ; aux e_default]) in
           let e' = A.Constructor (SA.Join 2, [ e'; e_default ]) in
           add_let v e' e
         | None -> add_let v e' e
@@ -381,14 +375,14 @@ let to_mlsem (cfg:cfg) e =
       let pos_tl, named_tl, e =
         if has_ell
         then
-          let pos_tl = TVar.mk KInfer None |> TVar.typ |> Ty.O.optional |> Ty.F.mk_descr in
-          let named_tl = RVar.mk KInfer None |> RVar.fty in
+          let pos_tl = TVar.mk KInfer (Some "_ell") |> TVar.typ |> Ty.O.optional |> Ty.F.mk_descr in
+          let named_tl = RVar.mk KInfer (Some "_ell") |> RVar.fty in
           let ellty = Arg.mk' {pos'=[];named'=[];pos_tl'=pos_tl;named_tl'=named_tl} in
           pos_tl, named_tl, add_let ellipsis_var (A.Value (GTy.mk ellty)) e
         else let abs = Ty.F.mk_descr Ty.O.absent in abs, abs, e
       in
       let pty = Arg.mk { named;pos_named;pos_tl;named_tl } in
-      let lambda = Eid.unique (), A.Lambda ([], Some (GTy.mk pty), MVariable.create Immut None, e) in
+      let lambda = Eid.refresh eid, A.Lambda ([], Some (GTy.mk pty), MVariable.create Immut None, e) in
       eid, A.Constructor
         (CCustom { cname="cattr" ; cgen=true ; cdom=AttrConstr.cdom ; cons=AttrConstr.cons }, [lambda])
     | Seq (e1, e2) -> eid, A.Seq (aux e1, aux e2)
