@@ -308,7 +308,6 @@ let to_mlsem (cfg:cfg) e =
       eid, A.While (e, GTy.mk Defs.test_type, aux e')
     | For (None, e, e') ->
       let e, e' = aux e, aux e' in
-      let e' = Eid.unique (), A.Voidify e' in
       let e' = Eid.unique (), A.Loop e' in
       eid, A.Seq (e, e')
     | For (Some v, e, e') ->
@@ -318,7 +317,6 @@ let to_mlsem (cfg:cfg) e =
       let lkp = Eid.refresh (fst e), A.Operation (Defs.extract_op, ev') in
       let assignment = Eid.refresh (fst e), A.VarAssign (v, lkp) in
       let e' = Eid.unique (), A.Seq (assignment, e') in
-      let e' = Eid.unique (), A.Voidify e' in
       let e' = Eid.unique (), A.Loop e' in
       eid, A.Let ([Ty.any], ev, e, e')
     | TyCheck {e;ty;necessary;sufficient} ->
