@@ -68,7 +68,8 @@ let labelof_tyo ty =
     end
 let sigs_of_fun env e =
   match snd e with
-  | Id v when MetaEnv.mem v env -> MetaEnv.get_signatures v env
+  | Id v when MetaEnv.mem v env ->
+    MetaEnv.get_signatures v env |> Option.map (fun sigs -> v, sigs)
   | _ -> None
 
 (* Arguments builder / Attr projector *)
@@ -262,7 +263,7 @@ let to_mlsem (cfg:cfg) e =
           let f = Eid.refresh (fst f), A.Projection
             (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux f) in
           Eid.refresh eid, A.App (f, arg)
-        | Some sigs -> (* Top-level function *)
+        | Some (v, sigs) -> (* Top-level function *)
           let resolved_tys = sigs.resolved |> List.map (GTy.map Rstt.Attr.proj_content) in
           let symbolic_tys = sigs.symbolic |> List.map (GTy.map Rstt.Attr.proj_content) in
           let resolve_ty env ty =
@@ -292,8 +293,12 @@ let to_mlsem (cfg:cfg) e =
             then true::List.init n (Fun.const false)
             else false::List.init n (Fun.const true)
           in
-          let aerror _ = "" in (* TODO *)
-          let settings = { SA.aname="application" ; aerror ; amask } in
+          let name = Format.asprintf "%a" Variable.pp v in
+          let aerror env =
+            let ty = Env.find varg env in
+            Format.asprintf "application of %s failed\nargument is of type @[<h>%a@]" name TyScheme.pp ty
+          in
+          let settings = { SA.aname=name ; aerror ; amask } in
           Eid.refresh eid, A.Alt (settings, alt_default::alts_resolved@alts_symbolic)
       in
       let e = eid, A.Let ([], varg, arg_def, e) in
