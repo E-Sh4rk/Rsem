@@ -13,7 +13,7 @@ type t = Env.t * sigs VarMap.t
 
 let simplify_tl ty =
   let tvs, ty = ty |> TyScheme.bot_instance |> TyScheme.get in
-  let ty = GTy.map Rstt.TyOp.simplify ty |> GTy.normalize in
+  let ty = GTy.map Rstt.TyOp.simplify ty |> GTy.factorize in
   TyScheme.mk tvs ty
 
 let initial = Defs.initial_env, VarMap.empty
