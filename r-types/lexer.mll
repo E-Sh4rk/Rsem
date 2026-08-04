@@ -15,7 +15,7 @@ let escaped_newline = '\\' newline
 
 let blank   = [' ' '\009' '\012']
 
-let id = ['a'-'z''_''A'-'Z']['a'-'z''A'-'Z''0'-'9''_''\'''?''!''+''-''['']''$''@''<''>']*
+let id = ['a'-'z''_''A'-'Z']['a'-'z''A'-'Z''0'-'9''_''\'''?''!''+''-''['']''$''@''<''>''.']*
 let sym = ['+''-''['']''$''@''<''>'':''=''*''%''/''|''&''!']+
 
 rule token = parse
@@ -23,6 +23,7 @@ rule token = parse
 | blank   { token lexbuf }
 | ':'     { TY (read_ty (Buffer.create 17) lexbuf) }
 | '='     { TYEQ (read_ty (Buffer.create 17) lexbuf) }
+| "new"   { NEW }
 | id as s { ID s }
 | '(' (sym as s) ')' { SYM s }
 | _ { raise (LexerError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }

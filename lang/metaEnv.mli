@@ -16,6 +16,8 @@ type t
 
 val initial : t
 val add_signature : Variable.t -> GTy.t -> t -> t
+val new_class_overload : Variable.t -> string -> t -> t
+val class_overload_ty : string -> GTy.t -> GTy.t
 val set_from_tyscheme : Variable.t -> TyScheme.t -> t -> t
 val mem : Variable.t -> t -> bool
 val env : t -> Env.t

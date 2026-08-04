@@ -86,6 +86,26 @@ test_dots2: ∀'a. (...: 'a) -> { 'a }
 test_dots3: ∀'a. ((() -> {  }) & ((...: 'a) -> { 'a }))<> with {  }
 
 
+===== Processing tests/04_s3.r =====
+area: ((shape: dbl1 & <circle, ...>) -> lgl1) & ((shape: dbl1 & <square, ...> &
+ <~circle, ...>) -> vec1) & ((shape: dbl1 & <~circle, ...> & <~square, ...>)
+ -> dbl1)
+
+area.square: (shape: dbl1 & <square, ...>) -> vec1
+
+area.circle: (shape: dbl1 & <circle, ...>) -> lgl1
+
+a_square: vec1
+
+a_circle: lgl1
+
+a_default: dbl1
+
+a_named: vec1
+
+a_direct: vec1
+
+
 ===== Processing tests/02_simple/empty-for.r =====
 execute: ((n: dbl) -> null)<> with {  }
 

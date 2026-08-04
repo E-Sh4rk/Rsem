@@ -65,10 +65,14 @@ let extend_env mlast env =
   else
     env
 
+(* [covl] maps the name of each declared class-overload (e.g. [print.myclass])
+   to its generic function and to the class it dispatches on. *)
 type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: MetaEnv.t ; senv: GTy.t list VarMap.t ;
+                    covl: (Variable.t * string) StrMap.t ;
                     benv: Rstt.Builder.env ; tidenv: Ty.t Rstt.Builder.TIdMap.t }
 let initial_ctx = { benv=Rstt.Builder.empty_env ; tidenv=Rstt.Builder.TIdMap.empty ;
-                    idenv=StrMap.empty ; tenv=MetaEnv.initial ; senv=VarMap.empty }
+                    idenv=StrMap.empty ; tenv=MetaEnv.initial ; senv=VarMap.empty ;
+                    covl=StrMap.empty }
 
 let infer ctx mlast =
   (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
@@ -126,6 +130,14 @@ let add_sig ctx str tye =
   let benv, ty = Builder.resolve ctx.benv tye in
   let {Builder.Gradual.lb;ub} = ty |> Builder.build_gradual ctx.tidenv in
   let gty = GTy.mk_gradual lb ub in
+  (* If [str] has been declared as a class-overload, restrict its first parameter
+     to the dispatched class and register the result as a new overload of the
+     generic (in addition to the signature of [str] itself). *)
+  let generic, gty =
+    match StrMap.find_opt str ctx.covl with
+    | None -> None, gty
+    | Some (vg, cls) -> Some vg, MetaEnv.class_overload_ty cls gty
+  in
   let fun_sig,s = sigs_of_ty gty in
   let v,s =
     match StrMap.find_opt str ctx.idenv with
@@ -149,8 +161,34 @@ let add_sig ctx str tye =
   (* Format.printf "Adding %s: @[%a@]@." str Sstt.Printer.print_ty'
     (TyScheme.get ty |> snd |> GTy.ub) ; *)
   let tenv = MetaEnv.add_signature v gty ctx.tenv in
+  let tenv =
+    match generic with
+    | None -> tenv
+    | Some vg -> MetaEnv.add_signature vg gty tenv
+  in
   let senv = VarMap.add v s ctx.senv in
-  { benv ; idenv ; tenv ; senv ; tidenv=ctx.tidenv }
+  { ctx with benv ; idenv ; tenv ; senv }
+
+(* Splits [str] into a generic function name and a class name, on each of its
+   dots, longest generic first (e.g. [print.data.frame] yields
+   [("print.data","frame") ; ("print","data.frame")]). *)
+let class_overload_splits str =
+  let n = String.length str in
+  List.init n Fun.id
+  |> List.filter (fun i -> i > 0 && i < n-1 && str.[i] = '.')
+  |> List.rev_map (fun i -> String.sub str 0 i, String.sub str (i+1) (n-i-1))
+
+let add_class ctx str =
+  let generic = class_overload_splits str
+    |> List.find_opt (fun (g,_) -> StrMap.mem g ctx.idenv) in
+  match generic with
+  | None ->
+    failwith ("Cannot declare the class-overload "^str^
+      ": no generic function found (it must be declared before its overloads).")
+  | Some (g, cls) ->
+    let vg = StrMap.find g ctx.idenv in
+    { ctx with tenv=MetaEnv.new_class_overload vg cls ctx.tenv ;
+               covl=StrMap.add str (vg, cls) ctx.covl }
 
 let add_alias ctx str tye =
   let open R_types.Types in
@@ -166,6 +204,7 @@ let add_def ctx def =
   match def with
   | Sigs.Sig (str, tye) -> add_sig ctx str tye
   | Sigs.Alias (str, tye) -> add_alias ctx str tye
+  | Sigs.NewClass str -> add_class ctx str
 
 let treat_extra ctx extra =
   match extra with
