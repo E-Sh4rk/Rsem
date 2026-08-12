@@ -84,6 +84,7 @@ let infer ctx mlast =
   TyScheme.mk tvs (GTy.ub ty |> GTy.mk)
 
 let treat_ast v ctx ast =
+  let open Mlsem_system.Ast in
   try
     let ctx = match VarMap.find_opt v ctx.senv with
     | None (* Inference mode *) ->
@@ -94,7 +95,8 @@ let treat_ast v ctx ast =
     | Some sigs (* Type checking mode *) ->
       let mlast = Transform.to_mlsem { env=ctx.tenv } ast in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
-      let asts = List.map (fun s -> Mlsem_system.Ast.coerce CheckStatic s mlast) sigs in
+      let asts = sigs |> List.map (fun s -> 
+        (Eid.refresh (fst mlast), TypeCoerce (mlast, s, CheckStatic)) |> push_coercions ~duplicate_arrows:true) in
       let _ = List.map (infer ctx) asts in
       { ctx with senv=VarMap.remove v ctx.senv } (* The signature has been verified, remove it *)
     in
