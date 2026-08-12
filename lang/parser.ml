@@ -13,6 +13,10 @@ let conv_pos tspos =
     pos_cnum = bol + tspos.Loc.column ;
   }
 
+(* Offset of the beginning of [loc], in the same referential as the positions
+   decorating the AST (cf. {!conv_pos}). *)
+let start_offset_of_loc loc = (conv_pos loc.Loc.start).Lexing.pos_cnum
+
 let rec option_first lst =
   match lst with
   | [] -> None

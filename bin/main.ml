@@ -49,8 +49,17 @@ let sigs_of_ty gty =
     {Rstt.Attr.content ; classes ; attrs}
   in
   let reidentify (ps, ns) = (List.map reidentify ps, ns) in
-  let reidentify ty =
+  let reidentify_attr ty =
     Rstt.Attr.destruct ty |> List.map reidentify |> List.map Rstt.Attr.mk_line |> Ty.disj
+  in
+  (* The reidentification is performed on the leaves of the type: the top-level
+     type variables are not part of the attribute encoding, and [Attr.destruct]
+     would drop them. *)
+  let reidentify ty =
+    Sstt.Ty.def ty
+    |> Sstt.Ty.VDescr.map (fun d ->
+      Sstt.Ty.mk_descr d |> reidentify_attr |> Sstt.Ty.get_descr)
+    |> Sstt.Ty.of_def
   in
   let gty = refresh_vars KNoInfer gty in
   let fsig = GTy.map reidentify gty in
@@ -65,14 +74,20 @@ let extend_env mlast env =
   else
     env
 
+(* Declared type of a variable local to a top-level function (cf. the
+   [## fun::var : t] declarations). Contrarily to a top-level signature, which
+   is visible in the whole file, such an annotation is attached to the first
+   definition of [lfun] that follows it, [loffset] being its position. *)
+type lannot = { loffset: int ; lfun: string ; lvar: string ; lty: GTy.t }
+
 (* [covl] maps the name of each declared class-overload (e.g. [print.myclass])
    to its generic function and to the class it dispatches on. *)
 type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: MetaEnv.t ; senv: GTy.t list VarMap.t ;
-                    covl: (Variable.t * string) StrMap.t ;
+                    covl: (Variable.t * string) StrMap.t ; lannots: lannot list ;
                     benv: Rstt.Builder.env ; tidenv: Ty.t Rstt.Builder.TIdMap.t }
 let initial_ctx = { benv=Rstt.Builder.empty_env ; tidenv=Rstt.Builder.TIdMap.empty ;
                     idenv=StrMap.empty ; tenv=MetaEnv.initial ; senv=VarMap.empty ;
-                    covl=StrMap.empty }
+                    covl=StrMap.empty ; lannots=[] }
 
 let infer ctx mlast =
   (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
@@ -88,7 +103,11 @@ let treat_ast v ctx ast =
   try
     let ctx = match VarMap.find_opt v ctx.senv with
     | None (* Inference mode *) ->
-      let mlast = Transform.to_mlsem { env=ctx.tenv } ast in
+      (* The coercions of the annotated local variables must be pushed too, so
+         that they guide the reconstruction instead of only constraining the
+         type inferred for their definition. *)
+      let mlast = Transform.to_mlsem { env=ctx.tenv } ast
+        |> push_coercions ~duplicate_arrows:true in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
       let ty = infer ctx mlast in
       { ctx with tenv=MetaEnv.set_from_tyscheme v ty ctx.tenv }
@@ -110,10 +129,37 @@ let treat_ast v ctx ast =
     err.descr |> Option.iter (Format.printf "%s@.") ;
     Format.printf "@." ; ctx
 
+(* Name of the variable a top-level definition binds, if any. It is the name
+   under which the annotations of its local variables are registered. *)
+let toplevel_name (_,e) =
+  match e with
+  | PAst.Binop (("<-"|"="), ((_, PAst.Id str), _))
+  | PAst.Binop ("->", (_, (_, PAst.Id str))) -> Some str
+  | _ -> None
+
+(* Extracts from [ctx] the annotations that the definition of [name] ending at
+   the offset [end_] claims: those declared before it, or inside its own body.
+   They are removed from [ctx], so that a later definition shadowing [name] can
+   declare its own annotations. *)
+let claim_lannots ctx name end_ =
+  match name with
+  | None -> ctx, StrMap.empty
+  | Some f ->
+    let claimed, lannots = ctx.lannots
+      |> List.partition (fun a -> String.equal a.lfun f && a.loffset < end_) in
+    let annots = claimed |> List.fold_left (fun acc a ->
+      if StrMap.mem a.lvar acc
+      then failwith ("The local variable "^f^"::"^a.lvar^" has several type annotations.") ;
+      StrMap.add a.lvar a.lty acc) StrMap.empty in
+    { ctx with lannots }, annots
+
 let dummy_var = Variable.create (Some "_")
 let treat_def ctx past =
+  let name = toplevel_name past in
+  let end_ = (Position.end_of_position (fst past)).Lexing.pos_cnum in
+  let ctx, annots = claim_lannots ctx name end_ in
   let (eid,ast) = PAst.transform
-    { PAst.id = Scope.from_toplevel (MetaEnv.env ctx.tenv) ctx.idenv } past in
+    { PAst.id = Scope.from_toplevel (MetaEnv.env ctx.tenv) ctx.idenv ; annots } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
   match ast with
   | VarAssign (v, e) ->
@@ -202,19 +248,49 @@ let add_alias ctx str tye =
   let ctx = { ctx with tidenv=Builder.TIdMap.add tid ty ctx.tidenv } in
   PEnv.register str ty ; ctx
 
-let add_def ctx def =
+(* Annotation of the variable [x] local to the top-level function [f]. It is
+   treated as a signature: its type variables are made rigid, and its arrows are
+   reidentified so that their parameters can be matched against the arguments of
+   a call. Contrarily to a top-level annotation, it may contain type variables:
+   they are bound by the enclosing scope. *)
+let add_local_sig ctx offset f x tye =
+  let open R_types.Types in
+  let benv, ty = Builder.resolve ctx.benv tye in
+  let {Builder.Gradual.lb;ub} = ty |> Builder.build_gradual ctx.tidenv in
+  let lty = GTy.mk_gradual lb ub |> sigs_of_ty |> snd in
+  { ctx with benv ; lannots = ctx.lannots@[{ loffset=offset ; lfun=f ; lvar=x ; lty }] }
+
+let add_def ctx offset def =
   match def with
   | Sigs.Sig (str, tye) -> add_sig ctx str tye
+  | Sigs.LocalSig (f, str, tye) -> add_local_sig ctx offset f str tye
   | Sigs.Alias (str, tye) -> add_alias ctx str tye
   | Sigs.NewClass str -> add_class ctx str
 
-let treat_extra ctx extra =
+(* Name of the top-level definition the offset [offset] falls into, if any. *)
+let enclosing_def prog offset =
+  let contains past =
+    let pos = fst past in
+    (Position.start_of_position pos).Lexing.pos_cnum <= offset &&
+    offset < (Position.end_of_position pos).Lexing.pos_cnum
+  in
+  match List.find_opt contains prog with
+  | None -> None
+  | Some past -> toplevel_name past
+
+(* A [##] comment written inside the definition of [f] declares the type of a
+   variable local to [f]: there, a bare [## var : t] is exactly the top-level
+   [## f::var : t]. Every other declaration is treated right away, as it is
+   visible in the whole file whatever its position. *)
+let treat_extra prog ctx extra =
   match extra with
-  | `Comment (_loc, (_, str)) ->
+  | `Comment (loc, (_, str)) ->
     if String.starts_with ~prefix:"##" str then
+      let offset = Parser.start_offset_of_loc loc in
       let str = String.sub str 2 ((String.length str) - 2) in
-      let def = IO.parse_def str in
-      add_def ctx def
+      match enclosing_def prog offset, IO.parse_def str with
+      | Some f, Sigs.Sig (x, tye) -> add_local_sig ctx offset f x tye
+      | _, def -> add_def ctx offset def
     else ctx
 
 
@@ -236,10 +312,13 @@ let main (ctx, fn) =
   | None -> ctx
   | Some prog ->
     (* Boilerplate.dump_extras res.extras ; *)
-    let ctx = List.fold_left treat_extra ctx res.extras in
     let tree = Boilerplate.map_program () prog in
     let prog = Parser.of_parser tree in
     (* Format.printf "%a@.@." PAst.pp prog ; *)
+    (* The annotations declared by the previous files precede everything here. *)
+    let ctx = { ctx with lannots =
+      ctx.lannots |> List.map (fun a -> { a with loffset = min_int }) } in
+    let ctx = List.fold_left (treat_extra prog) ctx res.extras in
     List.fold_left treat_def ctx prog
 
 let () =

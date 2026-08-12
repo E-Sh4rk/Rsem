@@ -1,6 +1,5 @@
 (*
 TODO:
-- Type annotations for non-top-level variables
 - Signatures to only consider in non-inference mode
 - Error localization
 - Possibility to write a type signature (+).class1.class2 for binary operators

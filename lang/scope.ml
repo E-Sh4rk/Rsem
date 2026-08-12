@@ -23,7 +23,9 @@ let from_toplevel env idmap =
   [ env ]
 
 let new_scope t = StrMap.empty::t
-let add_local_binding str kind t =
+(* [annot] is the type the user has annotated [str] with, if any (cf. the
+   [## fun::var : t] declarations). *)
+let add_local_binding ?annot str kind t =
   match t with
   | [] -> assert false
   | env::t when StrMap.mem str env ->
@@ -31,7 +33,11 @@ let add_local_binding str kind t =
     then raise (ScopeError ("Symbol "^str^" already defined with different kind"))
     else env::t
   | env::t ->
-    let v = MVariable.create Mut (Some str) in
+    let mkind = match annot with
+      | None -> MVariable.Mut
+      | Some gty -> MVariable.AnnotMut gty
+    in
+    let v = MVariable.create mkind (Some str) in
     let env = StrMap.add str (kind,v) env in
     env::t
 

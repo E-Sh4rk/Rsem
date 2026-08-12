@@ -106,6 +106,29 @@ a_named: vec1
 a_direct: vec1
 
 
+===== Processing tests/05_annot.r =====
+annot_local: (() -> dbl)<> with {  }
+
+annot_none: (() -> 42.<> with {  })<> with {  }
+
+annot_inside: (() -> dbl)<> with {  }
+
+annot_param: ((a: dbl) -> dbl)<> with {  }
+
+annot_loop: ((n: dbl) -> dbl)<> with {  }
+
+annot_fun: (() -> dbl)<> with {  }
+
+annot_shadow: (() -> dbl)<> with {  }
+
+annot_shadow: (() -> lgl)<> with {  }
+
+annot_err: Untypeable: untypeable coercion
+Line 59, characters 7-9
+expected: lgl
+given: 42.<> with {  }
+
+
 ===== Processing tests/02_simple/empty-for.r =====
 execute: ((n: dbl) -> null)<> with {  }
 

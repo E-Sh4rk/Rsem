@@ -88,7 +88,9 @@ and bv_es es =
   List.map bv_e es |> List.fold_left StrSet.union StrSet.empty
 
 module StrMap = Map.Make(String)
-type env = { id: Scope.t }
+(* [annots] maps the name of a variable local to the top-level definition being
+   transformed to the type the user has annotated it with. *)
+type env = { id: Scope.t ; annots: Mlsem.Types.GTy.t StrMap.t }
 
 let aux_arg f arg =
   match arg with
@@ -203,15 +205,16 @@ let rec aux_e env (pos,e) =
   | For (ArgId str, e, e') ->
     Ast.For (Some (Scope.resolve str env.id), aux_e env e, aux_e env e')
   | Function (_,params,e) ->
+    let add_binding acc str =
+      Scope.add_local_binding ?annot:(StrMap.find_opt str env.annots) str Scope.KAny acc in
     (* Params *)
-    let env = { id=Scope.new_scope env.id } in
+    let env = { env with id=Scope.new_scope env.id } in
     let pbvs =
       match params with
       | None -> StrSet.empty
       | Some lst -> bv_params lst
     in
-    let env = { id=List.fold_left
-      (fun acc str -> Scope.add_local_binding str Scope.KAny acc) env.id (StrSet.elements pbvs) } in
+    let env = { env with id=List.fold_left add_binding env.id (StrSet.elements pbvs) } in
     let params =
       match params with
       | None -> []
@@ -219,8 +222,7 @@ let rec aux_e env (pos,e) =
     in
     (* Body *)
     let ebvs = bv_e e in
-    let env = { id=List.fold_left
-      (fun acc str -> Scope.add_local_binding str Scope.KAny acc) env.id (StrSet.elements ebvs) } in
+    let env = { env with id=List.fold_left add_binding env.id (StrSet.elements ebvs) } in
     let undeclared = StrSet.diff ebvs pbvs in
     let e = List.fold_left (add_def env) (aux_e env e) (StrSet.elements undeclared) in
     Ast.Function (params, e)

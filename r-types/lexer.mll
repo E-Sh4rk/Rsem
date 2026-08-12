@@ -21,6 +21,7 @@ let sym = ['+''-''['']''$''@''<''>'':''=''*''%''/''|''&''!']+
 rule token = parse
 | newline { enter_newline lexbuf |> token }
 | blank   { token lexbuf }
+| "::"    { COLONCOLON }
 | ':'     { TY (read_ty (Buffer.create 17) lexbuf) }
 | '='     { TYEQ (read_ty (Buffer.create 17) lexbuf) }
 | "new"   { NEW }
