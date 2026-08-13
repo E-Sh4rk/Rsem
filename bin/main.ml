@@ -31,14 +31,15 @@ let refresh_vars kind gty =
   |> List.map (fun rv -> rv, RVar.mk kind (Some (Sstt.RowVar.name rv |> drop1)) |> Row.id_for) in
   let s = Subst.of_list s1 s2 in
   GTy.substitute s gty
-let is_arrow_sig ty = Ty.leq ty Arrow.any && not (Ty.is_empty ty)
+let is_arrow ty = Ty.leq ty Arrow.any && not (Ty.is_empty ty)
+let is_attr ty = Ty.leq ty Rstt.Attr.any && not (Ty.is_empty ty)
 let sigs_of_ty gty =
   let new_id = TVar.mk KInfer None |> TVar.typ in
   let fun_sig = ref false in
   let reidentify (a,b) = Rstt.Arg.reidentify ~id:new_id a, b in
   let reidentify ps = List.map reidentify ps in
   let reidentify ty =
-    if is_arrow_sig ty then
+    if is_arrow ty then
       let dnf = Arrow.dnf ty |> List.map reidentify in
       fun_sig := true ;
       Arrow.of_dnf dnf
@@ -50,11 +51,10 @@ let sigs_of_ty gty =
   in
   let reidentify (ps, ns) = (List.map reidentify ps, ns) in
   let reidentify_attr ty =
-    Rstt.Attr.destruct ty |> List.map reidentify |> List.map Rstt.Attr.mk_line |> Ty.disj
+    if is_attr ty then
+      Rstt.Attr.destruct ty |> List.map reidentify |> List.map Rstt.Attr.mk_line |> Ty.disj
+    else ty
   in
-  (* The reidentification is performed on the leaves of the type: the top-level
-     type variables are not part of the attribute encoding, and [Attr.destruct]
-     would drop them. *)
   let reidentify ty =
     Sstt.Ty.def ty
     |> Sstt.Ty.VDescr.map (fun d ->
@@ -187,22 +187,22 @@ let add_sig ctx str tye =
     | Some (vg, cls) -> Some vg, MetaEnv.class_overload_ty cls gty
   in
   let fun_sig,s = sigs_of_ty gty in
-  let v,s =
+  let v,sigs =
     match StrMap.find_opt str ctx.idenv with
     | Some v when fun_sig && VarMap.mem v ctx.senv -> (* Overload *)
       v,s::(VarMap.find v ctx.senv)
     | Some _ when fun_sig -> (* Redefinition of function signature (shadowing) *)
       MVariable.create Immut (Some str), [s]
     | Some _ -> (* Redefinition of mutable variable signature (shadowing) *)
-      if GTy.fv gty |> MixVarSet.is_empty |> not
+      if GTy.fv s |> MixVarSet.is_empty |> not
       then failwith "Non-functional signatures cannot have type variables" ;
-      MVariable.create (AnnotMut gty) (Some str), [s]
+      MVariable.create (AnnotMut s) (Some str), [s]
     | None when fun_sig -> (* First signature definition *)
       MVariable.create Immut (Some str), [s]
     | None -> (* First mutable definition *)
-      if GTy.fv gty |> MixVarSet.is_empty |> not
+      if GTy.fv s |> MixVarSet.is_empty |> not
       then failwith "Non-functional signatures cannot have type variables" ;
-      MVariable.create (AnnotMut gty) (Some str), [s]
+      MVariable.create (AnnotMut s) (Some str), [s]
   in
   let idenv = StrMap.add str v ctx.idenv in
   (* Format.printf "Adding %s: @[%a@]@." str TyScheme.pp ty ; *)
@@ -214,7 +214,7 @@ let add_sig ctx str tye =
     | None -> tenv
     | Some vg -> MetaEnv.add_signature vg gty tenv
   in
-  let senv = VarMap.add v s ctx.senv in
+  let senv = VarMap.add v sigs ctx.senv in
   { ctx with benv ; idenv ; tenv ; senv }
 
 (* Splits [str] into a generic function name and a class name, on each of its
