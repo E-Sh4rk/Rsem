@@ -227,12 +227,10 @@ let to_mlsem (cfg:cfg) e =
       in
       let (pos,named,ell,args) = parse_args args in
       let es = args |> List.map snd |> List.map aux in
-      let vs = List.map (fun _ -> MVariable.create Immut None) es in
       let arg_def = Eid.unique (), A.Constructor
         (CCustom { cname="cargs" ; cgen=true ;
           cdom=ArgBuilder.cdom (pos,named,ell) ;
-          cons=ArgBuilder.cons (pos,named,ell) },
-          List.map (fun v -> Eid.unique (), A.Var v) vs) in
+          cons=ArgBuilder.cons (pos,named,ell) }, es) in
       (* let arg_def = Eid.unique (), A.Constructor (SA.Normalize, [arg_def]) in *)
       let varg = MVariable.create Immut None in
       let arg = Eid.unique (), A.Var varg in
@@ -284,8 +282,7 @@ let to_mlsem (cfg:cfg) e =
           let settings = { SA.aname=name ; aerror ; amask } in
           Eid.refresh eid, A.Alt (settings, alt_default::alts_resolved@alts_symbolic)
       in
-      let e = eid, A.Let ([], varg, arg_def, e) in
-      List.fold_left (fun e (v,def) -> Eid.unique (), A.Let ([], v, def, e)) e (List.combine vs es)
+      eid, A.Let ([], varg, arg_def, e)
     | Ite (e, e1, e2) ->
       let e = aux e in
       let e = Eid.refresh (fst e), A.Operation (Defs.tobool_op, e) in
