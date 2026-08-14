@@ -5,7 +5,7 @@ TODO:
 - Possibility to write a type signature (+).class1.class2 for binary operators
 - Type aliases that could be used both as a struct type and type
 - Constrained polymorphism, e.g.: (x:'a) -> int where f('a):lgl
-- Use more general type schemes for label polymorphism
+- Add more features to FunSig for label polymorphism
 *)
 
 open Mlsem.Common

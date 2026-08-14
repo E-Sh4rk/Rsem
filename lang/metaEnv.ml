@@ -8,7 +8,19 @@ type arg_label = Positional | Named of label | Ell
 type 'a arg = arg_label * 'a
 [@@deriving show]
 
-type sigs = { resolved:GTy.t list ; symbolic:GTy.t list }
+type builder = (Rstt.Var.t, Rstt.RowVar.t, Rstt.Builder.TId.t) Rstt.Builder.t
+type funsig = (Rstt.Var.t, Rstt.RowVar.t, Rstt.Builder.TId.t) Rstt.FunSig.t
+
+type fsig = {
+  decl : funsig ;
+  (* Class-overload restrictions declared for this signature, in the order they
+     must be applied to its first parameter. *)
+  restr : (bool * string) list ;
+  build : builder -> GTy.t ;
+}
+
+type sigs = { resolved:GTy.t list ; symbolic:fsig list }
+type signature = SigTy of GTy.t | SigFun of fsig
 type t = Env.t * sigs VarMap.t
 
 let simplify_tl ty =
@@ -21,10 +33,6 @@ let get_sigs v senv =
   match VarMap.find_opt v senv with
   | None -> { resolved=[] ; symbolic=[] }
   | Some s -> s
-let no_symlabel ty =
-  let open Rstt.Labels in
-  let lb, ub = GTy.lb ty, GTy.ub ty in
-  sym_of_ty lb |> List.is_empty && sym_of_ty ub |> List.is_empty
 
 (* ===== S3 dispatch (class overloads) ===== *)
 
@@ -84,18 +92,63 @@ let restrict_first_param ~present cls ty =
   in
   GTy.map restrict ty
 
+(* Same restriction, but performed on the (not yet built) signature. It must be
+   used for the signatures whose argument is polymorphic: their identifier being
+   a type variable, they cannot be destructed once built. *)
+let restrict_first_param' ~present cls b =
+  let open Rstt.Builder in
+  let restr =
+    let cty = TTy (class_ty ~present cls) in
+    if present then cty else TOption cty
+  in
+  let restrict a =
+    match a.Rstt.Arg.pos_named with
+    | [] -> a
+    | (name,t)::ps -> { a with pos_named=(name, TCap (t, restr))::ps }
+  in
+  match b with
+  | TArrow (TArg a, ret) -> TArrow (TArg (restrict a), ret)
+  | TArrow (TPolyArg a, ret) -> TArrow (TPolyArg (restrict a), ret)
+  | b -> b
+
+(* ===== Function signatures ===== *)
+
+let mk_fsig build decl = { decl ; restr=[] ; build }
+let is_resolved f = Rstt.FunSig.is_regular_ty f.decl
+let restrict_sig ~present cls f = { f with restr=f.restr@[present,cls] }
+
+(* Type of the instance [decl] of the signature [f]. *)
+let instance_ty ?(polymorphic=false) f decl =
+  Rstt.FunSig.to_regular ~polymorphic decl
+  |> (fun b -> List.fold_left
+    (fun b (present,cls) -> restrict_first_param' ~present cls b) b f.restr)
+  |> f.build
+let fsig_ty ?polymorphic f = instance_ty ?polymorphic f f.decl
+
+let resolve_signature arg f =
+  (* [specialize] fails when a label variable has no possible instantiation, and
+     [instance_ty] when one could not be resolved at all. *)
+  try
+    match Rstt.FunSig.specialize f.decl arg with
+    | [] -> None
+    | insts -> Some (insts |> List.map (instance_ty f) |> GTy.conj)
+  with Invalid_argument _ -> None
+
+(* ===== Registration of the signatures ===== *)
+
 let set_sigs v sigs (env,senv) =
   let senv = VarMap.add v sigs senv in
   let ty = sigs.resolved |> GTy.conj |> TyScheme.mk_poly in
   let env = Env.replace v ty env in
   env, senv
 
-let add_signature v ty (env,senv) =
+let add_signature v s (env,senv) =
   let sigs = get_sigs v senv in
   let sigs =
-    if no_symlabel ty
-    then { sigs with resolved=ty::sigs.resolved }
-    else { sigs with symbolic=ty::sigs.symbolic }
+    match s with
+    | SigTy ty -> { sigs with resolved=ty::sigs.resolved }
+    | SigFun f when is_resolved f -> { sigs with resolved=(fsig_ty f)::sigs.resolved }
+    | SigFun f -> { sigs with symbolic=f::sigs.symbolic }
   in
   set_sigs v sigs (env,senv)
 
@@ -113,17 +166,17 @@ let new_class_overload v cls (env,senv) =
       | Some ty -> { resolved=[ty] ; symbolic=[] }
       | None -> { resolved=[] ; symbolic=[] }
   in
-  let all = sigs.resolved@sigs.symbolic in
-  if List.is_empty all || List.for_all is_fun_sig all |> not then
+  if (List.is_empty sigs.resolved && List.is_empty sigs.symbolic)
+  || List.for_all is_fun_sig sigs.resolved |> not then
     failwith (Format.asprintf
       "Cannot declare a class-overload for %a: it is not a function." Variable.pp v) ;
-  let restrict = restrict_first_param ~present:false cls in
-  let sigs = { resolved=List.map restrict sigs.resolved ;
-               symbolic=List.map restrict sigs.symbolic } in
+  let sigs = { resolved=List.map (restrict_first_param ~present:false cls) sigs.resolved ;
+               symbolic=List.map (restrict_sig ~present:false cls) sigs.symbolic } in
   set_sigs v sigs (env,senv)
 
-(* Type of the overload to register for the method of class [cls]:
-   its first parameter is restricted to the values of class [cls]. *)
+(* Restriction to register for the method of the class [cls]: its first
+   parameter is restricted to the values of class [cls]. *)
+let class_overload_sig cls f = restrict_sig ~present:true cls f
 let class_overload_ty cls ty = restrict_first_param ~present:true cls ty
 
 let set_from_tyscheme v ts (env,senv) =
@@ -136,21 +189,4 @@ let set_from_tyscheme v ts (env,senv) =
 let mem v (env, _) = Env.mem v env
 let env (env, _) = env
 let get v (env,_) = Env.find v env
-
-let arg_to_subst (i,(k,arg)) =
-  match k, arg with
-  | _, None -> None
-  | Ell, _ -> None
-  | Positional, Some arg -> Some {Rstt.Labels.selector=(SelectLabel (Pos i)) ; target=arg}
-  | Named str, Some arg -> Some {Rstt.Labels.selector=(SelectLabel (Named str)) ; target=arg}
-let apply_args args ty =
-  let subst = args |> List.mapi (fun i a -> (i, a)) |> List.filter_map arg_to_subst in
-  Rstt.Labels.substitute subst ty
 let get_signatures v (_, senv) = VarMap.find_opt v senv
-
-let resolve_signature args gty =
-  try
-    let gty = GTy.map (apply_args args) gty in
-    if no_symlabel gty |> not then raise Exit ;
-    Some gty
-  with Exit -> None

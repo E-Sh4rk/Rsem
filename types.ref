@@ -138,7 +138,7 @@ execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/lapply-dots.r =====
-execute: ((n: dbl) -> { dbl })<> with {  }
+execute: (n: dbl) -> { dbl }
 
 
 ===== Processing tests/02_simple/lapply.r =====

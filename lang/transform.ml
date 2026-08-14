@@ -45,27 +45,6 @@ let typeof_const_comp c =
   in
   exact, Builder.build Builder.TIdMap.empty ty
 
-let labelof_tyo ty =
-  match ty with
-  | None -> None
-  | Some ty ->
-    let ty = TyScheme.get ty |> snd |> GTy.ub in
-    begin match ty |> Attr.proj_content |> Vec.destruct with
-    | [(Scalar ty,_)] when Prim.is_singleton ty ->
-      let ty = Prim.destruct ty in
-      (* if Ty.leq ty Prim.Int.any then
-        match Prim.Int.destruct ty with
-        | false, [(Some i1, Some i2)] when i1=i2 -> Some (Labels.Pos (i1-1))
-        | _ -> assert false
-      else *)
-      if Ty.leq ty Prim.Chr.any then
-        match Prim.Chr.destruct ty with
-        | false, [{ pos=true ; prim=[str] ; pvs=[] ; nvs=[] }]
-        -> Some (Labels.Named str)
-        | _ -> assert false
-      else None
-    | _ -> None
-    end
 let sigs_of_fun env e =
   match snd e with
   | Id v when MetaEnv.mem v env ->
@@ -265,24 +244,28 @@ let to_mlsem (cfg:cfg) e =
           Eid.refresh eid, A.App (f, arg)
         | Some (v, sigs) -> (* Top-level function *)
           let resolved_tys = sigs.resolved |> List.map (GTy.map Rstt.Attr.proj_content) in
-          let symbolic_tys = sigs.symbolic |> List.map (GTy.map Rstt.Attr.proj_content) in
-          let resolve_ty env ty =
-            let tys = vs |> List.map (fun v -> Env.find_opt v env) in
-            let args = List.combine args tys |> List.map (fun (k,ty) -> (fst k, labelof_tyo ty)) in
-            MetaEnv.resolve_signature args ty
+          (* The label variables of a symbolic signature are resolved using the
+             type of the argument the function is applied to. *)
+          let resolve_ty env fsig =
+            match Env.find_opt varg env with
+            | None -> None
+            | Some ts ->
+              let aty = TyScheme.get ts |> snd |> GTy.ub in
+              MetaEnv.resolve_signature aty fsig
+              |> Option.map (GTy.map Rstt.Attr.proj_content)
           in
           let alt_default =
             Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=(fun env ->
-              let resolved_tys' = List.filter_map (resolve_ty env) symbolic_tys in
+              let resolved_tys' = List.filter_map (resolve_ty env) sigs.symbolic in
               resolved_tys@resolved_tys' |> GTy.conj |> TyScheme.mk_poly
               ) ; ogen=false }, arg)
           in
           let alts_resolved = resolved_tys |> List.map TyScheme.mk_poly |> List.map (fun ty ->
             Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=Fun.const ty ; ogen=false }, arg)
             ) in
-          let alts_symbolic = symbolic_tys |> List.map (fun ty ->
+          let alts_symbolic = sigs.symbolic |> List.map (fun fsig ->
             Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ;
-              ofun=(fun env -> resolve_ty env ty |> Option.value ~default:GTy.any |> TyScheme.mk_poly) ;
+              ofun=(fun env -> resolve_ty env fsig |> Option.value ~default:GTy.any |> TyScheme.mk_poly) ;
               ogen=false }, arg)
             ) in
           let n = List.length alts_resolved + List.length alts_symbolic in

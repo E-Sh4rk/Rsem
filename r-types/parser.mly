@@ -24,11 +24,11 @@ def:
 | NEW { "new" }
 
 sig_def:
-| id=name ty=TY { (id, Rstt_repl.IO.parse_type ty) }
+| id=name ty=TY { (id, Sigs.parse_annot ty) }
 
 (* [f::x : t] annotates the variable [x] local to the top-level function [f]. *)
 local_sig_def:
-| f=name COLONCOLON id=name ty=TY { (f, id, Rstt_repl.IO.parse_type ty) }
+| f=name COLONCOLON id=name ty=TY { (f, id, Sigs.parse_annot ty) }
 
 alias_def:
 | id=ID ty=TYEQ { (id, Rstt_repl.IO.parse_type ty) }

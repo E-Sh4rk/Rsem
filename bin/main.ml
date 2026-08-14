@@ -22,48 +22,24 @@ let gradual = ref false
 
 module StrMap = Map.Make(String)
 
-let refresh_vars kind gty =
+(* The type variables written in a signature are universally quantified: they
+   are made rigid, so that the definition it annotates must be polymorphic in
+   them. The variables introduced for the identifier of a polymorphic argument
+   are an exception: they must stay inferable, so that the argument of the
+   signature can be matched with the one of the definition. *)
+let rigidify gty =
   let drop1 str = String.sub str 1 (String.length str - 1) in
+  let poly = Rstt.Arg.polymorphic_vars () in
   let vars = GTy.fv gty in
-  let s1 = MVarSet.elements1 vars
-  |> List.map (fun tv -> tv, TVar.mk kind (Some (Sstt.Var.name tv |> drop1)) |> TVar.typ) in
+  let s1 = MVarSet.elements1 vars |> List.map (fun tv ->
+    let tv' =
+      if Sstt.VarSet.mem tv poly then TVar.mk KInfer None
+      else TVar.mk KNoInfer (Some (Sstt.Var.name tv |> drop1))
+    in tv, TVar.typ tv') in
   let s2 = MVarSet.elements2 vars
-  |> List.map (fun rv -> rv, RVar.mk kind (Some (Sstt.RowVar.name rv |> drop1)) |> Row.id_for) in
+  |> List.map (fun rv -> rv, RVar.mk KNoInfer (Some (Sstt.RowVar.name rv |> drop1)) |> Row.id_for) in
   let s = Subst.of_list s1 s2 in
   GTy.substitute s gty
-let is_arrow ty = Ty.leq ty Arrow.any && not (Ty.is_empty ty)
-let is_attr ty = Ty.leq ty Rstt.Attr.any && not (Ty.is_empty ty)
-let sigs_of_ty gty =
-  let new_id = TVar.mk KInfer None |> TVar.typ in
-  let fun_sig = ref false in
-  let reidentify (a,b) = Rstt.Arg.reidentify ~id:new_id a, b in
-  let reidentify ps = List.map reidentify ps in
-  let reidentify ty =
-    if is_arrow ty then
-      let dnf = Arrow.dnf ty |> List.map reidentify in
-      fun_sig := true ;
-      Arrow.of_dnf dnf
-    else ty
-  in
-  let reidentify { Rstt.Attr.content ; classes ; attrs } =
-    let content = reidentify content in
-    {Rstt.Attr.content ; classes ; attrs}
-  in
-  let reidentify (ps, ns) = (List.map reidentify ps, ns) in
-  let reidentify_attr ty =
-    if is_attr ty then
-      Rstt.Attr.destruct ty |> List.map reidentify |> List.map Rstt.Attr.mk_line |> Ty.disj
-    else ty
-  in
-  let reidentify ty =
-    Sstt.Ty.def ty
-    |> Sstt.Ty.VDescr.map (fun d ->
-      Sstt.Ty.mk_descr d |> reidentify_attr |> Sstt.Ty.get_descr)
-    |> Sstt.Ty.of_def
-  in
-  let gty = refresh_vars KNoInfer gty in
-  let fsig = GTy.map reidentify gty in
-  !fun_sig, fsig
 let extend_env mlast env =
   if !gradual then
     let fv = System.Ast.fv mlast in
@@ -172,50 +148,70 @@ let treat_def ctx past =
     treat_ast v ctx e
   | _ -> treat_ast dummy_var ctx (eid, ast)
 
-let add_sig ctx str tye =
+(* Conversion of a type, as written in an annotation, to a gradual type. *)
+let build_gty tidenv tye =
   let open R_types.Types in
+  let {Builder.Gradual.lb;ub} = tye |> Builder.build_gradual tidenv in
+  GTy.mk_gradual lb ub
+
+(* Resolves the identifiers of the annotation [tye] and turns it into a
+   signature, together with the type the definition it annotates must be checked
+   against (there is none when the signature still contains label variables).
+   If [cls] is set, [tye] annotates the overload of a generic function for the
+   class [cls]: its first parameter is restricted to the values of that class. *)
+let build_sig ctx cls tye =
+  let open R_types.Types in
+  match tye with
+  | Sigs.AFun fsig ->
+    let benv, fsig = FunSig.resolve ctx.benv fsig in
+    let fsig = MetaEnv.mk_fsig (build_gty ctx.tidenv) fsig in
+    let fsig = match cls with
+      | None -> fsig
+      | Some cls -> MetaEnv.class_overload_sig cls fsig in
+    let chk =
+      if MetaEnv.is_resolved fsig
+      then Some (MetaEnv.fsig_ty ~polymorphic:true fsig |> rigidify)
+      else None in
+    { ctx with benv }, MetaEnv.SigFun fsig, chk
+  | Sigs.ATy tye ->
+    let benv, tye = Builder.resolve ctx.benv tye in
+    let gty = build_gty ctx.tidenv tye in
+    let gty = match cls with
+      | None -> gty
+      | Some cls -> MetaEnv.class_overload_ty cls gty in
+    { ctx with benv }, MetaEnv.SigTy gty, Some (rigidify gty)
+
+let add_sig ctx str tye =
   let open Mlsem_common in
-  let benv, ty = Builder.resolve ctx.benv tye in
-  let {Builder.Gradual.lb;ub} = ty |> Builder.build_gradual ctx.tidenv in
-  let gty = GTy.mk_gradual lb ub in
-  (* If [str] has been declared as a class-overload, restrict its first parameter
-     to the dispatched class and register the result as a new overload of the
-     generic (in addition to the signature of [str] itself). *)
-  let generic, gty =
-    match StrMap.find_opt str ctx.covl with
-    | None -> None, gty
-    | Some (vg, cls) -> Some vg, MetaEnv.class_overload_ty cls gty
-  in
-  let fun_sig,s = sigs_of_ty gty in
+  (* If [str] has been declared as a class-overload, its first parameter is
+     restricted to the dispatched class, and the result is registered as a new
+     overload of the generic (in addition to the signature of [str] itself). *)
+  let generic = StrMap.find_opt str ctx.covl in
+  let ctx, sign, chk = build_sig ctx (Option.map snd generic) tye in
   let v,sigs =
-    match StrMap.find_opt str ctx.idenv with
-    | Some v when fun_sig && VarMap.mem v ctx.senv -> (* Overload *)
-      v,s::(VarMap.find v ctx.senv)
-    | Some _ when fun_sig -> (* Redefinition of function signature (shadowing) *)
-      MVariable.create Immut (Some str), [s]
-    | Some _ -> (* Redefinition of mutable variable signature (shadowing) *)
-      if GTy.fv s |> MixVarSet.is_empty |> not
-      then failwith "Non-functional signatures cannot have type variables" ;
-      MVariable.create (AnnotMut s) (Some str), [s]
-    | None when fun_sig -> (* First signature definition *)
-      MVariable.create Immut (Some str), [s]
-    | None -> (* First mutable definition *)
-      if GTy.fv s |> MixVarSet.is_empty |> not
+    match sign with
+    | MetaEnv.SigFun _ ->
+      begin match StrMap.find_opt str ctx.idenv with
+      | Some v when VarMap.mem v ctx.senv -> (* Overload *)
+        v, (Option.to_list chk)@(VarMap.find v ctx.senv)
+      (* First signature definition, or redefinition (shadowing) *)
+      | _ -> MVariable.create Immut (Some str), Option.to_list chk
+      end
+    | MetaEnv.SigTy _ -> (* Definition (or redefinition) of a mutable variable *)
+      let s = Option.get chk in
+      if GTy.fv s |> MVarSet.is_empty |> not
       then failwith "Non-functional signatures cannot have type variables" ;
       MVariable.create (AnnotMut s) (Some str), [s]
   in
   let idenv = StrMap.add str v ctx.idenv in
-  (* Format.printf "Adding %s: @[%a@]@." str TyScheme.pp ty ; *)
-  (* Format.printf "Adding %s: @[%a@]@." str Sstt.Printer.print_ty'
-    (TyScheme.get ty |> snd |> GTy.ub) ; *)
-  let tenv = MetaEnv.add_signature v gty ctx.tenv in
+  let tenv = MetaEnv.add_signature v sign ctx.tenv in
   let tenv =
     match generic with
     | None -> tenv
-    | Some vg -> MetaEnv.add_signature vg gty tenv
+    | Some (vg, _) -> MetaEnv.add_signature vg sign tenv
   in
   let senv = VarMap.add v sigs ctx.senv in
-  { ctx with benv ; idenv ; tenv ; senv }
+  { ctx with idenv ; tenv ; senv }
 
 (* Splits [str] into a generic function name and a class name, on each of its
    dots, longest generic first (e.g. [print.data.frame] yields
@@ -249,16 +245,19 @@ let add_alias ctx str tye =
   PEnv.register str ty ; ctx
 
 (* Annotation of the variable [x] local to the top-level function [f]. It is
-   treated as a signature: its type variables are made rigid, and its arrows are
-   reidentified so that their parameters can be matched against the arguments of
-   a call. Contrarily to a top-level annotation, it may contain type variables:
-   they are bound by the enclosing scope. *)
+   treated as a signature: its type variables are made rigid, and the argument
+   of a function signature is made polymorphic so that it can be matched against
+   the parameters of the annotated definition. Contrarily to a top-level
+   annotation, it may contain type variables: they are bound by the enclosing
+   scope. *)
 let add_local_sig ctx offset f x tye =
-  let open R_types.Types in
-  let benv, ty = Builder.resolve ctx.benv tye in
-  let {Builder.Gradual.lb;ub} = ty |> Builder.build_gradual ctx.tidenv in
-  let lty = GTy.mk_gradual lb ub |> sigs_of_ty |> snd in
-  { ctx with benv ; lannots = ctx.lannots@[{ loffset=offset ; lfun=f ; lvar=x ; lty }] }
+  let ctx, _, chk = build_sig ctx None tye in
+  match chk with
+  | Some lty ->
+    { ctx with lannots = ctx.lannots@[{ loffset=offset ; lfun=f ; lvar=x ; lty }] }
+  | None ->
+    failwith ("The annotation of the local variable "^f^"::"^x^
+      " cannot contain label variables.")
 
 let add_def ctx offset def =
   match def with
