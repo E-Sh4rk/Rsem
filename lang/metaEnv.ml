@@ -128,10 +128,7 @@ let fsig_ty ?polymorphic f = instance_ty ?polymorphic f f.decl
 let resolve_signature arg f =
   (* [specialize] fails when a label variable has no possible instantiation, and
      [instance_ty] when one could not be resolved at all. *)
-  try
-    match Rstt.FunSig.specialize f.decl arg with
-    | [] -> None
-    | insts -> Some (insts |> List.map (instance_ty f) |> GTy.conj)
+  try Some (Rstt.FunSig.specialize f.decl arg |> instance_ty f)
   with Invalid_argument _ -> None
 
 (* ===== Registration of the signatures ===== *)
