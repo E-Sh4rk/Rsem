@@ -77,3 +77,12 @@ annot_dot_use <- function() .dot_fun(.dot_global)
   .x <- 42
   .x
 }
+
+# ========== Operator names ==========
+
+# An operator is annotated by parenthesising it. The alphabet covers `^`
+# (declared in 00_defs.r) and `~`, which builds a formula.
+#| (~) : ( e1:any, e2:any ) -> any
+
+annot_pow <- function(x) x^2
+annot_tilde <- function(x, y) x ~ y

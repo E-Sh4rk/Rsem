@@ -19,6 +19,8 @@
 #| (%/%) : ( x:int1, y:int1 ) -> int1
 #| (%%) : ( x:v('a)&dbl, y:v('a)&dbl) -> v('a)&dbl
 #| (%%) : ( x:dbl1, y:dbl1) -> dbl1
+#| (^) : ( x:v('a)&dbl, y:v('a)&dbl) -> v('a)&dbl
+#| (^) : ( x:dbl1, y:dbl1) -> dbl1
 
 #| abs : (x:v('a)&dbl) -> v('a)&dbl
 #| abs : (x:dbl1) -> dbl1

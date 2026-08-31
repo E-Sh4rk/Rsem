@@ -21,7 +21,7 @@ let blank   = [' ' '\009' '\012']
    type, which [read_ty] hands over as a raw string -- so admitting it here is
    unambiguous. *)
 let id = ['a'-'z''_''A'-'Z''.']['a'-'z''A'-'Z''0'-'9''_''\'''?''!''+''-''['']''$''@''<''>''.']*
-let sym = ['+''-''['']''$''@''<''>'':''=''*''%''/''|''&''!']+
+let sym = ['+''-''['']''$''@''<''>'':''=''*''%''/''|''&''!''^''~']+
 
 rule token = parse
 | newline { enter_newline lexbuf |> token }

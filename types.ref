@@ -134,6 +134,11 @@ annot_dot_use: (() -> CHR1)<> with {  }
 
 .dot_local: (() -> dbl)<> with {  }
 
+annot_pow: ∀'a. (((x: DBL | dbl & v('a)) -> DBL | dbl & v('a)) & ((x: dbl1) ->
+ dbl1))<> with {  }
+
+annot_tilde: ((x: any, y: any) -> any)<> with {  }
+
 
 ===== Processing tests/02_simple/break-for.r =====
 break_for: ((n: dbl) -> dbl1)<> with {  }
