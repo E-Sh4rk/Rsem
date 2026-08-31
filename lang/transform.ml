@@ -10,6 +10,16 @@ module SA = Mlsem.System.Ast
 module TVar = Mlsem.Types.TVar
 module RVar = Mlsem.Types.RVar
 
+(* The primitive component of the mode an [NA] belongs to. *)
+let prim_of_na_kind = function
+  | NaLgl -> Builder.PLgl | NaInt -> Builder.PInt | NaDbl -> Builder.PDbl
+  | NaClx -> Builder.PClx | NaChr -> Builder.PChr
+
+let na_ty kind =
+  let open Builder in
+  let p = prim_of_na_kind kind in
+  TDiff (TVec (Vec.Scalar p), TVec (Vec.Scalar (PHat p)))
+
 let typeof_const c =
   let open Builder in
   let pack t =
@@ -17,7 +27,8 @@ let typeof_const c =
   in
   let nopack t = Builder.build_struct Builder.TIdMap.empty t in
   match c with
-  | CNan -> TVec (Vec.Scalar PLgl) |> pack
+  | CNan -> TVec (Vec.Scalar PDbl) |> pack
+  | CNa kind -> na_ty kind |> pack
   | CChr chr -> TVec (Vec.Scalar (PChr' chr)) |> pack
   | CDbl str ->
     begin try
@@ -31,7 +42,8 @@ let typeof_const c =
 let typeof_const_comp c =
   let open Builder in
   let exact, ty = match c with
-  | CNan -> true, TDiff (TVec (Vec.Scalar PAny), TVec (Vec.Scalar (PHat PAny)))
+  | CNan -> false, TVec (Vec.Scalar PDbl)
+  | CNa kind -> true, na_ty kind
   | CChr chr -> true, TVec (Vec.Scalar (PChr' chr))
   | CDbl str ->
     begin try

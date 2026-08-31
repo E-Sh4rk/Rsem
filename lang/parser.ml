@@ -192,6 +192,17 @@ and aux_case c tree =
     A.For (aux_param_name v, aux_e e, aux_e e')
   | "Ret" -> A.Return | "Brk" -> A.Break | "Next" -> A.Next
   | "Nan" -> A.Const (A.CNan)
+  | "Na" ->
+    let kind =
+      match tree with
+      | Case ("NA", _) -> Ast.NaLgl
+      | Case ("NA_int_", _) -> Ast.NaInt
+      | Case ("NA_real_", _) -> Ast.NaDbl
+      | Case ("NA_comp_", _) -> Ast.NaClx
+      | Case ("NA_char_", _) -> Ast.NaChr
+      | _ -> assert false
+    in
+    A.Const (A.CNa kind)
   | "Dots" -> A.Dots
   | "Dot_dot_i" -> A.DotsN (aux_dotdot tree)
   | _ -> failwith ("Unsupported token: "^c)

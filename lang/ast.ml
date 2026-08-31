@@ -11,8 +11,12 @@ TODO:
 open Mlsem.Common
 module MVariable = Mlsem.Lang.MVariable
 
+type na_kind = NaLgl | NaInt | NaDbl | NaClx | NaChr
+[@@deriving show]
+
 type const =
 | CNan
+| CNa of na_kind
 | CChr of string
 | CDbl of string
 | CInt of int

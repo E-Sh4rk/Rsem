@@ -8,6 +8,7 @@ end
 
 type const =
 | CNan
+| CNa of Ast.na_kind
 | CStr of string
 | CFloat of string
 | CInt of int
@@ -117,6 +118,7 @@ let aux_param env f p =
 let aux_const c =
   match c with
   | CNan -> Ast.CNan
+  | CNa kind -> Ast.CNa kind
   | CStr str -> Ast.CChr str
   | CFloat str -> Ast.CDbl str
   | CInt i -> Ast.CInt i
