@@ -129,6 +129,16 @@ expected: lgl
 given: 42.<> with {  }
 
 
+===== Processing tests/02_simple/break-for.r =====
+break_for: ((n: dbl) -> dbl1)<> with {  }
+
+next_for: ((n: dbl) -> dbl1)<> with {  }
+
+nested_break_for: ((n: dbl) -> dbl1)<> with {  }
+
+break_for_seq: ((l: list | vec) -> 0.<> with {  })<> with {  }
+
+
 ===== Processing tests/02_simple/empty-for.r =====
 execute: ((n: dbl) -> null)<> with {  }
 
