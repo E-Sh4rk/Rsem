@@ -140,6 +140,64 @@ annot_pow: ∀'a. (((x: DBL | dbl & v('a)) -> DBL | dbl & v('a)) & ((x: dbl1) ->
 annot_tilde: ((x: any, y: any) -> any)<> with {  }
 
 
+===== Processing tests/06_scope.r =====
+blk: 1.<> with {  }
+
+u: 1.<> with {  }
+
+use_u: (() -> 1.<> with {  })<> with {  }
+
+_: null
+
+z: (1...2.)<> with {  }
+
+use_z: (() -> (1...2.)<> with {  })<> with {  }
+
+_: null
+
+i: dbl1
+
+w: dbl1
+
+use_w: (() -> dbl1)<> with {  }
+
+use_i: (() -> dbl1)<> with {  }
+
+_: null
+
+r: { a: 1.<> with {  } } | { b: 2.<> with {  } }
+
+use_r: (() -> { a: 1.<> with {  } } | { b: 2.<> with {  } })<> with {  }
+
+_: null
+
+g: ∀'a. ((x: 'a) -> 'a)<> with {  }
+
+use_g: (() -> 1.<> with {  })<> with {  }
+
+ablk: dbl
+
+bundle: { h: (a: dbl1) -> dbl1 }
+
+use_bundle: (() -> dbl1)<> with {  }
+
+leaked: Untypeable: unbound variable
+Line 46, characters 21-27
+name: helper
+
+counter: (() -> dbl1)<> with {  }
+
+local: ∀'a. ((e: 'a) -> 'a)<> with {  }
+
+shadowed: 2.<> with {  }
+
+d: 2.<> with {  }
+
+use_d: (() -> 2.<> with {  })<> with {  }
+
+shadow_fn: (() -> 3.<> with {  })<> with {  }
+
+
 ===== Processing tests/02_simple/break-for.r =====
 break_for: ((n: dbl) -> dbl1)<> with {  }
 

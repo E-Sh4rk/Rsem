@@ -23,6 +23,9 @@ let from_toplevel env idmap =
   [ env ]
 
 let new_scope t = StrMap.empty::t
+
+(* Whether [str] is bound anywhere in [t]. *)
+let is_bound str t = List.exists (StrMap.mem str) t
 (* [annot] is the type the user has annotated [str] with, if any (cf. the
    [## fun::var : t] declarations). *)
 let add_local_binding ?annot str kind t =

@@ -62,7 +62,8 @@ let bv_param p =
 let bv_params ps =
   List.map bv_param ps |> List.fold_left StrSet.union StrSet.empty
 
-let rec bv_e (_,e) =
+let rec bv_e_ ~ls (_,e) =
+  let bv_e, bv_es = bv_e_ ~ls, bv_es_ ~ls in
   match e with
   | Return | Break | Next | Const _ | Id _ | Function _  | Dots | DotsN _ -> StrSet.empty
   | Unop (_,e) | Dollar (e, _) | At (e, _) -> bv_e e
@@ -73,6 +74,9 @@ let rec bv_e (_,e) =
     | _, _, _ -> StrSet.empty
     in
     StrSet.union res (bv_es [e1;e2])
+  (* [local(e)] gives [e] an environment of its own, so what it assigns binds
+     there and not here. Only when [local] is R's own, which is what [ls] carries. *)
+  | Call ((_, Id "local"), [Some (Unnamed _)]) when ls -> StrSet.empty
   | Call (e, args) | Subset (e, args) | Subset2 (e, args) ->
     let es = args |> List.concat_map (function
       | None  | Some (Named (_, None)) -> []
@@ -85,8 +89,19 @@ let rec bv_e (_,e) =
   | For (ArgId str, e, e') -> bv_es [e;e'] |> StrSet.add str
   | For (_, e, e') -> bv_es [e;e']
   | Braced es -> bv_es es
-and bv_es es =
-  List.map bv_e es |> List.fold_left StrSet.union StrSet.empty
+and bv_es_ ~ls es =
+  List.map (bv_e_ ~ls) es |> List.fold_left StrSet.union StrSet.empty
+
+(* The names [e] assigns, which are the variables local to the function whose
+   body it is -- or, at top level, the definitions the statement makes.
+   [local_shadowed] says whether the enclosing scope binds [local]; [e] may
+   also bind it itself, in which case it is shadowed over the whole of [e],
+   R scoping a body as a whole rather than sequentially. *)
+let bv_e ~local_shadowed e =
+  if local_shadowed then bv_e_ ~ls:false e
+  else
+    let bvs = bv_e_ ~ls:true e in
+    if StrSet.mem "local" bvs then bv_e_ ~ls:false e else bvs
 
 module StrMap = Map.Make(String)
 (* [annots] maps the name of a variable local to the top-level definition being
@@ -129,6 +144,9 @@ let aux_const c =
 let add_def env e str =
   let v = Scope.resolve str env.id in
   Eid.unique (), Ast.Declare (v, e)
+
+let add_binding annots acc str =
+  Scope.add_local_binding ?annot:(StrMap.find_opt str annots) str Scope.KAny acc
 
 let rec expr_of_left pos r l =
   let call pos r op_prefix args =
@@ -189,6 +207,17 @@ let rec aux_e env (pos,e) =
     aux_e env (pos, Call ((pos, Id "@"), [Some (Unnamed e) ; Some (Unnamed arg)])) |> snd
   | Call ((_, Return),[]) -> Ast.Return None
   | Call ((_, Return),[Some (Unnamed e)]) -> Ast.Return (Some (aux_e env e))
+  (* [local(e)] evaluates [e] in a fresh environment, so the names it assigns
+     bind there instead of in the enclosing scope -- unlike a brace, which is
+     not a scope in R. Only the one-argument form, since an explicit [envir]
+     names an environment of the caller's choosing, and only when nothing shadows [local]. *)
+  | Call ((_, Id "local"), [Some (Unnamed body)])
+    when not (Scope.is_bound "local" env.id) ->
+    let env = { env with id=Scope.new_scope env.id } in
+    let ebvs = bv_e ~local_shadowed:false body in
+    let env = { env with id=List.fold_left (add_binding env.annots) env.id
+                              (StrSet.elements ebvs) } in
+    List.fold_left (add_def env) (aux_e env body) (StrSet.elements ebvs) |> snd
   | Call (e,args) ->
     let e = aux_e env e in
     begin match args with
@@ -207,8 +236,7 @@ let rec aux_e env (pos,e) =
   | For (ArgId str, e, e') ->
     Ast.For (Some (Scope.resolve str env.id), aux_e env e, aux_e env e')
   | Function (_,params,e) ->
-    let add_binding acc str =
-      Scope.add_local_binding ?annot:(StrMap.find_opt str env.annots) str Scope.KAny acc in
+    let add_binding = add_binding env.annots in
     (* Params *)
     let env = { env with id=Scope.new_scope env.id } in
     let pbvs =
@@ -223,7 +251,7 @@ let rec aux_e env (pos,e) =
       | Some lst -> List.map (aux_param env (aux_e env)) lst
     in
     (* Body *)
-    let ebvs = bv_e e in
+    let ebvs = bv_e ~local_shadowed:(Scope.is_bound "local" env.id) e in
     let env = { env with id=List.fold_left add_binding env.id (StrSet.elements ebvs) } in
     let undeclared = StrSet.diff ebvs pbvs in
     let e = List.fold_left (add_def env) (aux_e env e) (StrSet.elements undeclared) in

@@ -70,7 +70,7 @@ let infer ctx mlast =
   let tvs, ty = System.Checker.typeof_def env anns mlast |> TyScheme.get in
   TyScheme.mk tvs (GTy.ub ty |> GTy.mk)
 
-let treat_ast v ctx ast =
+let treat_ast ?(post=Fun.id) v ctx ast =
   let open Mlsem_system.Ast in
   try
     let ctx = match VarMap.find_opt v ctx.senv with
@@ -81,7 +81,7 @@ let treat_ast v ctx ast =
       let mlast = Transform.to_mlsem { env=ctx.tenv } ast
         |> push_coercions ~duplicate_arrows:true in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
-      let ty = infer ctx mlast in
+      let ty = infer ctx mlast |> post in
       { ctx with tenv=MetaEnv.set_from_tyscheme v ty ctx.tenv }
     | Some sigs (* Type checking mode *) ->
       let mlast = Transform.to_mlsem { env=ctx.tenv } ast in
@@ -126,13 +126,71 @@ let claim_lannots ctx name end_ =
     { ctx with lannots }, annots
 
 let dummy_var = Variable.create (Some "_")
+
+let close_uninit ts =
+  let tvs, gty = TyScheme.get ts in
+  let gty = GTy.map (TVOp.bot_instance tvs) gty in
+  TyScheme.mk (MVarSet.union tvs (GTy.fv gty)) gty
+
+(* The names a top-level statement assigns from *inside* an expression, rather
+   than as a definition of its own. A brace is not a scope in R, so
+   [blk <- { u <- 1 ; u }] defines [u] just as much as [blk], and so do a
+   top-level [if] or [for]. Such a name has to be mutable.
+
+   A declared name is left out: it keeps the variable its declaration built,
+   which is mutable already and carries the type the user wrote. A name that a
+   previous statement defined is kept in, and the definition below shadows it,
+   exactly as a second top-level definition of the same name would. *)
+let hoisted_names ctx name past =
+  let bvs = PAst.bv_e ~local_shadowed:(StrMap.mem "local" ctx.idenv) past in
+  let bvs = match name with None -> bvs | Some n -> PAst.StrSet.remove n bvs in
+  bvs |> PAst.StrSet.filter (fun str ->
+    match StrMap.find_opt str ctx.idenv with
+    | None -> true
+    | Some v ->
+      (match MVariable.kind v with MVariable.AnnotMut _ -> false | _ -> true)
+      && not (VarMap.mem v ctx.senv))
+
 let treat_def ctx past =
   let name = toplevel_name past in
   let end_ = (Position.end_of_position (fst past)).Lexing.pos_cnum in
   let ctx, annots = claim_lannots ctx name end_ in
+  let hoisted = hoisted_names ctx name past in
+  let ctx = PAst.StrSet.fold (fun str ctx ->
+    { ctx with idenv =
+        StrMap.add str (MVariable.create MVariable.Mut (Some str)) ctx.idenv })
+    hoisted ctx in
   let (eid,ast) = PAst.transform
     { PAst.id = Scope.from_toplevel (MetaEnv.env ctx.tenv) ctx.idenv ; annots } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
+  let declared body =
+    PAst.StrSet.fold (fun str acc ->
+      match StrMap.find_opt str ctx.idenv with
+      | None -> acc
+      | Some v -> (Eid.unique (), Ast.Declare (v, acc))) hoisted body
+  in
+  (* The statement is what gives the hoisted names their types: each is read
+     back by sequencing the statement with the name itself. *)
+  let treat_hoisted body ctx =
+    PAst.StrSet.fold (fun str ctx ->
+      match StrMap.find_opt str ctx.idenv with
+      | None -> ctx
+      | Some v ->
+        let read = Eid.unique (), Ast.Seq (body, (Eid.unique (), Ast.Id v)) in
+        match treat_ast ~post:close_uninit v ctx (declared read) with
+        | exception Failure msg ->
+          (* A name introduced this way is a convenience, not something the file
+           asked for, so failing to type one leaves it unbound rather than
+           taking the whole run down with it. *)
+          Format.printf "%s:@? %s@.@." str msg ; ctx
+        | ctx ->
+          if not (MetaEnv.mem v ctx.tenv) then ctx
+          else
+            let v' = MVariable.create Immut (Some str) in
+            { ctx with idenv = StrMap.add str v' ctx.idenv ;
+                       tenv = MetaEnv.set_from_tyscheme v' (MetaEnv.get v ctx.tenv) ctx.tenv })
+      hoisted ctx
+  in
   match ast with
   | VarAssign (v, e) ->
     (* If v is a fresh var (i.e. if it was not declared before), add it to the idenv *)
@@ -141,8 +199,8 @@ let treat_def ctx past =
       | Some str -> { ctx with idenv = StrMap.add str v ctx.idenv }
       | None -> ctx
     in
-    treat_ast v ctx e
-  | _ -> treat_ast dummy_var ctx (eid, ast)
+    treat_ast v ctx (declared e) |> treat_hoisted e
+  | _ -> treat_ast dummy_var ctx (declared (eid, ast)) |> treat_hoisted (eid, ast)
 
 (* Conversion of a type, as written in an annotation, to a gradual type. *)
 let build_gty tidenv tye =
