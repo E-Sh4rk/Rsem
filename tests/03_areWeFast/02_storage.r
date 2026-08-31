@@ -1,6 +1,6 @@
 # source('random.r')
 
-## count : dbl1
+#| count : dbl1
 count <- 0
 
 execute <- function() {
@@ -14,7 +14,7 @@ verifyResult <- function(result, iterations) {
     return (result == 5461)
 }
 
-## buildTreeDepth : (depth: dbl1, random: any) -> tree where tree = { tree } | dbl
+#| buildTreeDepth : (depth: dbl1, random: any) -> tree where tree = { tree } | dbl
 buildTreeDepth <- function(depth, random) {
     count <<- count + 1
     if (depth == 1) {

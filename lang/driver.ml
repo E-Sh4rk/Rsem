@@ -273,14 +273,18 @@ let enclosing_def prog offset =
   | None -> None
   | Some past -> toplevel_name past
 
-(* A [##] comment written inside the definition of [f] declares the type of a
-   variable local to [f]: there, a bare [## var : t] is exactly the top-level
-   [## f::var : t]. Every other declaration is treated right away, as it is
-   visible in the whole file whatever its position. *)
+(* A [#|] comment written inside the definition of [f] declares the type of a
+   variable local to [f]: there, a bare [#| var : t] is exactly the top-level
+   [#| f::var : t]. Every other declaration is treated right away, as it is
+   visible in the whole file whatever its position.
+
+   The marker is [#|] rather than [##] so that it cannot be confused with an
+   ordinary comment: [##] is a common way of writing prose in R sources, and
+   every such line would otherwise be parsed as a declaration and rejected. *)
 let treat_extra prog ctx extra =
   match extra with
   | `Comment (loc, (_, str)) ->
-    if String.starts_with ~prefix:"##" str then
+    if String.starts_with ~prefix:"#|" str then
       let offset = Parser.start_offset_of_loc loc in
       let str = String.sub str 2 ((String.length str) - 2) in
       match enclosing_def prog offset, IO.parse_def str with
@@ -302,7 +306,7 @@ let setup () =
   Mlsem.Lang.Config.void_ty := Transform.typeof_const CNull
 
 (* Parses [fn] into the R surface AST, together with the comment extras that
-   carry the [##] type annotations. [None] if the file could not be parsed. *)
+   carry the [#|] type annotations. [None] if the file could not be parsed. *)
 let parse fn =
   let res = Parse.file fn in
   match res.program with

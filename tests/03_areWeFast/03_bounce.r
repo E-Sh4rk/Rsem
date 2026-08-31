@@ -1,6 +1,6 @@
 # source('random.r')
 
-## execute : () -> dbl
+#| execute : () -> dbl
 execute <- function () {
     ballCount <- 100
     bounces   <- 0
@@ -29,7 +29,7 @@ verifyResult <- function(result, iterations) {
     return (result == 1331);
 }
 
-## bounce : (ball: dbl) -> { dbl }
+#| bounce : (ball: dbl) -> { dbl }
 bounce <- function(ball) {
     xLimit  <- 500
     yLimit  <- 500

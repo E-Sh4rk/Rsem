@@ -14,7 +14,7 @@ int <- 42L
 dbl <- 42
 clx <- 42i
 
-## num1 : dbl1
+#| num1 : dbl1
 num1 <- 42
 
 f_succ <- function(a) a + 1
@@ -38,8 +38,8 @@ f_opt <- function(a=42){
   }
 }
 
-## f_opt_ann : ( a: dbl ) -> dbl
-## f_opt_ann : ( a: null? ) -> lgl1
+#| f_opt_ann : ( a: dbl ) -> dbl
+#| f_opt_ann : ( a: null? ) -> lgl1
 f_opt_ann <- function(a=NULL){
   if (a == NULL) {
     FALSE
@@ -64,8 +64,8 @@ ret <- function(x) {
   return(TRUE)
 }
 
-## ret_ann : (x:any) -> lgl1
-## ret_ann : (x:null) -> ff
+#| ret_ann : (x:any) -> lgl1
+#| ret_ann : (x:null) -> ff
 ret_ann <- function(x) {
   if (x == NULL)
     return(FALSE)
@@ -82,15 +82,15 @@ narrowing <- function(x) {
   return(-x)
 }
 
-## narrowing_ann : ( x: dbl ) -> dbl
-## narrowing_ann : ( x: null ) -> null
+#| narrowing_ann : ( x: dbl ) -> dbl
+#| narrowing_ann : ( x: null ) -> null
 narrowing_ann <- function(x) {
   if (x == NULL)
     return(NULL)
   return(-x)
 }
 
-## narrowing_ann2 : ( x: dbl|null ) -> dbl|null
+#| narrowing_ann2 : ( x: dbl|null ) -> dbl|null
 narrowing_ann2 <- function(x) {
   if (x == NULL)
     return(NULL)
@@ -144,7 +144,7 @@ test_lists <- function() {
   list(one=l[[1]],a=l$a,b=l$b)
 }
 
-## nested_list : (x: { a : { lgl1 }, `r} ) -> { a : { lgl1 }, `r}
+#| nested_list : (x: { a : { lgl1 }, `r} ) -> { a : { lgl1 }, `r}
 nested_list <- function(x) {
   x$a[[1]] <- FALSE
   # x <- $<-(x, a, [[]]<-(x$a, 1, FALSE))
@@ -174,12 +174,12 @@ dots_encoding <- function(...) {
   return(...)
 }
 
-## test_dots1 : (...:`r) -> {`r}
+#| test_dots1 : (...:`r) -> {`r}
 test_dots1 <- function(...) {
   return(list(...))
 }
 
-## test_dots2 : (...:'a) -> {'a}
+#| test_dots2 : (...:'a) -> {'a}
 test_dots2 <- function(...) {
   return(list(...))
 }

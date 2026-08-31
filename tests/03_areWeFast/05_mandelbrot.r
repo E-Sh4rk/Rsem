@@ -5,12 +5,12 @@
 # Contributed by Leo Osvald
 # ------------------------------------------------------------------
 
-## lim : dbl1
+#| lim : dbl1
 lim <- 2
-## iter : dbl1
+#| iter : dbl1
 iter <- 50
 
-## mandelbrot : (size:dbl1) -> dbl1
+#| mandelbrot : (size:dbl1) -> dbl1
 mandelbrot <- function(size) {
     sum = 0
     byteAcc = 0
@@ -74,7 +74,7 @@ execute <- function(n = 3000L) {
     mandelbrot(n)
 }
 
-## verifyResult : (result:dbl1, innerIterations:any) -> lgl1
+#| verifyResult : (result:dbl1, innerIterations:any) -> lgl1
 verifyResult <- function(result, innerIterations) {
     if (innerIterations == 500) { return (result == 191) }
     if (innerIterations == 750) { return (result == 50)  }
