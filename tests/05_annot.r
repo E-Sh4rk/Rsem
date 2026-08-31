@@ -1,6 +1,6 @@
 # ========== Annotations of non-top-level variables ==========
 
-# `## fun::var : t` annotates the variable `var` local to the top-level
+# `#| fun::var : t` annotates the variable `var` local to the top-level
 # function `fun`: `x` is given the type `dbl` instead of the singleton type of
 # the value it is initialized with.
 #| annot_local::x : dbl
@@ -58,4 +58,22 @@ annot_shadow <- function() { x <- TRUE ; x }
 annot_err <- function() {
   x <- 42
   x
+}
+
+# ========== Dot-prefixed names ==========
+
+# R identifiers may start with a dot, and so may the name on the left of an
+# annotation: `.Platform`, `.Machine` and the `.onLoad` hooks are exactly the
+# names a prelude needs to declare.
+#| .dot_global : dbl
+#| .dot_fun : (x:dbl) -> CHR1
+.dot_fun <- function(x) "s"
+
+annot_dot_use <- function() .dot_fun(.dot_global)
+
+# A dot-named local of a dot-named function.
+#| .dot_local::.x : dbl
+.dot_local <- function() {
+  .x <- 42
+  .x
 }

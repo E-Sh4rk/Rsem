@@ -15,7 +15,12 @@ let escaped_newline = '\\' newline
 
 let blank   = [' ' '\009' '\012']
 
-let id = ['a'-'z''_''A'-'Z']['a'-'z''A'-'Z''0'-'9''_''\'''?''!''+''-''['']''$''@''<''>''.']*
+(* R identifiers may start with a dot, and the ones that do are the ones a
+   prelude most needs: [.Platform], [.Machine], the [.onLoad] hooks. Nothing
+   else in this lexer starts with a dot -- numbers only ever occur inside a
+   type, which [read_ty] hands over as a raw string -- so admitting it here is
+   unambiguous. *)
+let id = ['a'-'z''_''A'-'Z''.']['a'-'z''A'-'Z''0'-'9''_''\'''?''!''+''-''['']''$''@''<''>''.']*
 let sym = ['+''-''['']''$''@''<''>'':''=''*''%''/''|''&''!']+
 
 rule token = parse

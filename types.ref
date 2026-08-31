@@ -128,6 +128,12 @@ Line 59, characters 7-9
 expected: lgl
 given: 42.<> with {  }
 
+.dot_fun: (x: dbl) -> CHR1
+
+annot_dot_use: (() -> CHR1)<> with {  }
+
+.dot_local: (() -> dbl)<> with {  }
+
 
 ===== Processing tests/02_simple/break-for.r =====
 break_for: ((n: dbl) -> dbl1)<> with {  }
