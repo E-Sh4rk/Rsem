@@ -109,8 +109,7 @@
 
 # ========== Lists, vectors and matrices ==========
 
-#| list : ( ...: 'a ) -> { 'a }
-#| list : ( ...: `r ) -> { `r }
+#| list : (( #l_i : 'a_i )_i, ...: 'a ) -> { ( #l_i : 'a_i )_i, 'a }
 
 #| c : ( ...: v('p) ) -> v('p)<>
 

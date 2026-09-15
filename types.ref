@@ -68,7 +68,7 @@ _: { 42.<> with {  } }
 
 _: { aa: 42.<> with {  } }
 
-test_lists: (() -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42 |
+test_lists: (() -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42L |
  ff)<> with {  } })<> with {  }
 
 nested_list: ∀`a. (x: { a: { lgl1 }, `a }) -> { a: { lgl1 }, `a }
@@ -79,11 +79,14 @@ test_classes: ∀'a. ((x: 'a<...>) -> 'a<...>)<> with {  }
 
 dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<> with {  }
 
-test_dots1: ∀`a. (...: `a) -> { `a }
+test_dots1: Untypeable: untypeable coercion
+Line 179, characters 9-18
+expected: { `r }
+given: list
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
 
-test_dots3: ∀'a. ((() -> {  }) & ((...: 'a) -> { 'a }))<> with {  }
+test_dots3: ∀'a. ((...: 'a) -> { 'a })<> with {  }
 
 
 ===== Processing tests/04_s3.r =====
