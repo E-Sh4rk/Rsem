@@ -37,6 +37,7 @@ type e' =
 | Ite of e * e * e
 | While of e * e
 | For of Variable.t option * e * e
+| Repeat of e
 | TyCheck of { e:e ; ty:Mlsem.Types.Ty.t; necessary:bool; sufficient:bool }
 | Function of param list * e
 | Seq of e * e
@@ -62,6 +63,7 @@ let map f e =
       | Ite (e,e1,e2) -> Ite (aux e, aux e1, aux e2)
       | While (e, e') -> While (aux e, aux e')
       | For (vo, e, e') -> For (vo, aux e, aux e')
+      | Repeat e -> Repeat (aux e)
       | TyCheck {e;ty;necessary;sufficient} -> TyCheck {e=aux e ; ty ; necessary ; sufficient}
       | Function (ps, e) ->
         let aux' = function

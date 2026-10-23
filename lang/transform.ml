@@ -320,6 +320,10 @@ let to_mlsem (cfg:cfg) e =
       let e' = Eid.unique (), A.Seq (assignment, e') in
       let e' = loop_body e' in
       eid, A.Let ([Ty.any], ev, e, e')
+    | Repeat e ->
+      (* The body runs at least once, but a [Loop] (any number of times) is a
+         sound approximation of it. *)
+      eid, snd (loop_body (aux e))
     | TyCheck {e;ty;necessary;sufficient} ->
       let e = aux e in
       let tt, ff = typeof_const (CLgl true) |> GTy.mk, typeof_const (CLgl false) |> GTy.mk in

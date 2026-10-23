@@ -31,6 +31,7 @@ type e' =
 | Ite of e * e * e option
 | While of e * e
 | For of arg_id * e * e
+| Repeat of e
 | Braced of e list
 | Dots | DotsN of int
 | Return | Break | Next
@@ -66,7 +67,7 @@ let rec bv_e_ ~ls (_,e) =
   let bv_e, bv_es = bv_e_ ~ls, bv_es_ ~ls in
   match e with
   | Return | Break | Next | Const _ | Id _ | Function _  | Dots | DotsN _ -> StrSet.empty
-  | Unop (_,e) | Dollar (e, _) | At (e, _) -> bv_e e
+  | Unop (_,e) | Dollar (e, _) | At (e, _) | Repeat e -> bv_e e
   | Binop (str, (e1, e2)) ->
     let res = match str, e1, e2 with
     | ("<-" | "="), (_, Id id), _ | "->", _, (_, Id id) -> StrSet.singleton id
@@ -235,6 +236,7 @@ let rec aux_e env (pos,e) =
   | For (EllipsisId, _, _) | For (EllipsisN _, _, _) -> failwith "Unexpected ellipsis."
   | For (ArgId str, e, e') ->
     Ast.For (Some (Scope.resolve str env.id), aux_e env e, aux_e env e')
+  | Repeat e -> Ast.Repeat (aux_e env e)
   | Function (_,params,e) ->
     let add_binding = add_binding env.annots in
     (* Params *)

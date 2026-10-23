@@ -90,13 +90,12 @@ test_dots3: ∀'a. ((...: 'a) -> { 'a })<> with {  }
 
 
 ===== Processing tests/04_s3.r =====
-area: ((shape: dbl1 & <circle, ...>) -> lgl1) & ((shape: dbl1 & <square, ...> &
- <~circle, ...>) -> vec1) & ((shape: dbl1 & <~circle, ...> & <~square, ...>)
- -> dbl1)
+area: ((shape: dbl1<circle, ...>) -> lgl1) & ((shape: dbl1<square, ~circle, ...>)
+ -> vec1) & ((shape: dbl1<~square, ~circle, ...>) -> dbl1)
 
-area.square: (shape: dbl1 & <square, ...>) -> vec1
+area.square: (shape: dbl1<square, ...>) -> vec1
 
-area.circle: (shape: dbl1 & <circle, ...>) -> lgl1
+area.circle: (shape: dbl1<circle, ...>) -> lgl1
 
 a_square: vec1
 
@@ -237,6 +236,14 @@ execute: ((n: dbl) -> null)<> with {  }
 
 ===== Processing tests/02_simple/matrix-for.r =====
 execute: ((n: dbl) -> null)<> with {  }
+
+
+===== Processing tests/02_simple/repeat.r =====
+break_repeat: ((n: dbl) -> DBL1)<> with {  }
+
+next_repeat: ((n: dbl) -> DBL1)<> with {  }
+
+inner_repeat: (() -> "a"<> with {  })<> with {  }
 
 
 ===== Processing tests/02_simple/scalar-for.r =====

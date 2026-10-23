@@ -135,7 +135,7 @@ let resolve_signature arg f =
 
 let set_sigs v sigs (env,senv) =
   let senv = VarMap.add v sigs senv in
-  let ty = sigs.resolved |> GTy.conj |> TyScheme.mk_poly in
+  let ty = sigs.resolved |> GTy.conj |> TyScheme.mk_poly |> simplify_tl in
   let env = Env.replace v ty env in
   env, senv
 

@@ -190,6 +190,9 @@ and aux_case c tree =
   | "For_stmt" ->
     let _,_,_,v,_,e,_,_,e' = extract9 tree in
     A.For (aux_param_name v, aux_e e, aux_e e')
+  | "Repeat_stmt" ->
+    let _,_,e = extract3 tree in
+    A.Repeat (aux_e e)
   | "Ret" -> A.Return | "Brk" -> A.Break | "Next" -> A.Next
   | "Nan" -> A.Const (A.CNan)
   | "Na" ->
