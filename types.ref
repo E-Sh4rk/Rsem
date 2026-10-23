@@ -246,8 +246,19 @@ ns_skip: (() -> "double")<> with {  }
 
 ns_no_skip: (() -> "not a function"<> with {  })<> with {  }
 
-ns_print: ∀'a. (((x: 'a & <ns_rec, ...>) -> CHR1) & ((x: 'a & <~ns_rec, ...>) ->
- 'a))<> with {  }
+ns_print: ∀'a. (((x: 'a & <ns_df, ...>) -> LGL1) & ((x: 'a & <ns_rec, ~ns_df, ...>)
+ -> CHR1) & ((x: 'a & <~ns_rec, ~ns_df, ...>) -> 'a))<> with {  }
+
+ns_method: ∀'a. (((x: 'a & <ns_df, ...>) -> LGL1) & ((x: 'a & <ns_rec, ~ns_df, ...>)
+ -> CHR1) & ((x: 'a & <~ns_rec, ~ns_df, ...>) -> 'a))<> with {  }
+
+ns_method_direct: ((x: <ns_df, ...>) -> LGL1)<> with {  }
+
+ns_area: (((s: dbl1<ns_square, ...>) -> CHR1) & ((s: dbl1<~ns_square, ...>) ->
+ dbl1))<> with {  }
+
+ns_area_global: (((s: dbl1<circle, ...>) -> lgl1) & ((s: dbl1<square, ~circle, ...>) ->
+ vec1) & ((s: dbl1<~square, ~circle, ...>) -> dbl1))<> with {  }
 
 
 ===== Processing tests/02_simple/break-for.r =====

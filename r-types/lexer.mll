@@ -35,6 +35,7 @@ rule token = parse
 | "new"   { NEW }
 | id as s { ID s }
 | '(' (sym as s) ')' { SYM s }
+| eof { EOF }
 | _ { raise (LexerError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
 
 and read_ty buf = parse

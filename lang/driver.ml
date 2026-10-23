@@ -52,8 +52,9 @@ let extend_env mlast env =
    definition of [lfun] that follows it, [loffset] being its position. *)
 type lannot = { loffset: int ; lfun: string ; lvar: string ; lty: GTy.t }
 
-(* [covl] maps the name of each declared class-overload (e.g. [print.myclass])
-   to its generic function and to the class it dispatches on. *)
+(* [covl] maps the name of each declared class-overload (e.g. [print.myclass],
+   or [base::print.data.frame] for one of a namespace, cf. [qualified]) to its
+   generic function and to the class it dispatches on. *)
 type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: MetaEnv.t ; senv: GTy.t list VarMap.t ;
                     covl: (Variable.t * string) StrMap.t ; lannots: lannot list ;
                     benv: Rstt.Builder.env ; tidenv: Ty.t Rstt.Builder.TIdMap.t }
@@ -235,6 +236,13 @@ let build_sig ctx cls tye =
       | Some cls -> MetaEnv.class_overload_ty cls gty in
     { ctx with benv }, MetaEnv.SigTy gty, Some (rigidify gty)
 
+(* Name under which the class-overload [str] of the namespace [ns] is
+   registered. A global name cannot contain [::], so it cannot clash with it. *)
+let qualified ns str =
+  match ns with
+  | None -> str
+  | Some ns -> ns^"::"^str
+
 let add_sig ctx str tye =
   let open Mlsem_common in
   (* If [str] has been declared as a class-overload, its first parameter is
@@ -283,16 +291,27 @@ let lookup ctx str =
   | Some v -> Some v
   | None -> MetaEnv.search str ctx.tenv
 
-let add_class ctx str =
+(* The generic a method of the namespace [ns] extends is looked up from that
+   namespace: in the namespace itself, and then in the search path. As in R, the
+   global definitions of the program play no part in it. *)
+let lookup_from ctx ns str =
+  match ns with
+  | None -> lookup ctx str
+  | Some ns ->
+    match MetaEnv.ns_find ns str ctx.tenv with
+    | Some v -> Some v
+    | None -> MetaEnv.search str ctx.tenv
+
+let add_class ctx ns str =
   let generic = class_overload_splits str
-    |> List.find_map (fun (g,cls) -> lookup ctx g |> Option.map (fun vg -> vg, cls)) in
+    |> List.find_map (fun (g,cls) -> lookup_from ctx ns g |> Option.map (fun vg -> vg, cls)) in
   match generic with
   | None ->
-    failwith ("Cannot declare the class-overload "^str^
+    failwith ("Cannot declare the class-overload "^(qualified ns str)^
       ": no generic function found (it must be declared before its overloads).")
   | Some (vg, cls) ->
     { ctx with tenv=MetaEnv.new_class_overload vg cls ctx.tenv ;
-               covl=StrMap.add str (vg, cls) ctx.covl }
+               covl=StrMap.add (qualified ns str) (vg, cls) ctx.covl }
 
 let add_alias ctx str tye =
   let open R_types.Types in
@@ -321,15 +340,24 @@ let add_local_sig ctx offset f x tye =
 
 (* Annotation of the name [str] of the namespace [ns]. No definition of the
    file can be checked against it, since R code cannot assign [ns::str]: it is
-   only registered, every signature of [ns::str] being one of its overloads. *)
+   only registered, every signature of [ns::str] being one of its overloads.
+   As for a global name, a declared class-overload is restricted to its class
+   and also registered as an overload of its generic. *)
 let add_ns_sig ctx ns str tye =
-  let ctx, sign, chk = build_sig ctx None tye in
+  let generic = StrMap.find_opt (qualified (Some ns) str) ctx.covl in
+  let ctx, sign, chk = build_sig ctx (Option.map snd generic) tye in
   begin match sign, chk with
   | MetaEnv.SigTy _, Some s when GTy.fv s |> MVarSet.is_empty |> not ->
     failwith "Non-functional signatures cannot have type variables"
   | _ -> ()
   end ;
-  { ctx with tenv=MetaEnv.ns_add_signature ns str sign ctx.tenv }
+  let tenv = MetaEnv.ns_add_signature ns str sign ctx.tenv in
+  let tenv =
+    match generic with
+    | None -> tenv
+    | Some (vg, _) -> MetaEnv.add_signature vg sign tenv
+  in
+  { ctx with tenv }
 
 let add_def ctx offset def =
   match def with
@@ -337,7 +365,7 @@ let add_def ctx offset def =
   | Sigs.LocalSig (f, str, tye) -> add_local_sig ctx offset f str tye
   | Sigs.NsSig (ns, str, tye) -> add_ns_sig ctx ns str tye
   | Sigs.Alias (str, tye) -> add_alias ctx str tye
-  | Sigs.NewClass str -> add_class ctx str
+  | Sigs.NewClass (ns, str) -> add_class ctx ns str
 
 (* Name of the top-level definition the offset [offset] falls into, if any. *)
 let enclosing_def prog offset =
