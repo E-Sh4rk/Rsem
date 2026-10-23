@@ -107,9 +107,8 @@ let bv_e ~local_shadowed e =
 
 module StrMap = Map.Make(String)
 (* [annots] maps the name of a variable local to the top-level definition being
-   transformed to the type the user has annotated it with. [tenv] is where the
-   names reached through a namespace ([ns::name]) are looked up. *)
-type env = { id: Scope.t ; annots: Mlsem.Types.GTy.t StrMap.t ; tenv: MetaEnv.t }
+   transformed to the type the user has annotated it with. *)
+type env = { id: Scope.t ; annots: Mlsem.Types.GTy.t StrMap.t }
 
 let aux_arg f arg =
   match arg with
@@ -186,22 +185,16 @@ let rec aux_e env (pos,e) =
   | Break -> Ast.Break | Next -> Ast.Next
   | Const c -> Ast.Const (aux_const c)
   | Id str -> Ast.Id (Scope.resolve str env.id)
-  (* Lexical scoping plays no part here. A name no signature has been declared
-     for is unbound, just like an unknown top-level name. *)
-  | Ns (ns, name) ->
-    begin match MetaEnv.ns_find ns name env.tenv with
-    | Some v -> Ast.Id v
-    | None -> Ast.Id (MVariable.create Immut (Some (ns^"::"^name)))
-    end
-  | Unop (str, e) -> Ast.Unop (Scope.resolve str env.id, aux_e env e)
+  | Ns (ns, name) -> Ast.Id (Scope.resolve_ns ns name env.id)
+  | Unop (str, e) -> Ast.Unop (Scope.resolve_call str env.id, aux_e env e)
   | Binop (str, (e1,e2)) ->
     begin match str, e1, e2 with
     | ("<-" | "="), e1, e2 | "->", e2, e1 ->
       let (id, r) = expr_of_left pos e2 e1 in
-      Ast.VarAssign (Scope.resolve id env.id, aux_e env r)
+      Ast.VarAssign (Scope.resolve_assigned id env.id, aux_e env r)
     | "<<-", (_, Id id), e2 -> Ast.VarAssign (Scope.resolve_parent id env.id, aux_e env e2)
     | "<<-", _, _ -> failwith "Invalid left value."
-    | _, _, _ -> Ast.Binop (Scope.resolve str env.id, aux_e env e1, aux_e env e2)
+    | _, _, _ -> Ast.Binop (Scope.resolve_call str env.id, aux_e env e1, aux_e env e2)
     end
   | Subset (e,args) ->
     aux_e env (pos, Call ((pos, Id "[]"), (Some (Unnamed e))::args)) |> snd
@@ -229,7 +222,10 @@ let rec aux_e env (pos,e) =
                               (StrSet.elements ebvs) } in
     List.fold_left (add_def env) (aux_e env body) (StrSet.elements ebvs) |> snd
   | Call (e,args) ->
-    let e = aux_e env e in
+    let e = match e with
+      | pos, Id str -> Eid.unique_with_pos pos, Ast.Id (Scope.resolve_call str env.id)
+      | e -> aux_e env e
+    in
     begin match args with
     | [None] -> Ast.Call (e, []) (* Empty parentheses should be read as 0 positional given *)
     | args ->
@@ -244,7 +240,7 @@ let rec aux_e env (pos,e) =
   | For (NullId, e, e') -> Ast.For (None, aux_e env e, aux_e env e')
   | For (EllipsisId, _, _) | For (EllipsisN _, _, _) -> failwith "Unexpected ellipsis."
   | For (ArgId str, e, e') ->
-    Ast.For (Some (Scope.resolve str env.id), aux_e env e, aux_e env e')
+    Ast.For (Some (Scope.resolve_assigned str env.id), aux_e env e, aux_e env e')
   | Repeat e -> Ast.Repeat (aux_e env e)
   | Function (_,params,e) ->
     let add_binding = add_binding env.annots in

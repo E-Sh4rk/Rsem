@@ -161,8 +161,7 @@ let treat_def ctx past =
         StrMap.add str (MVariable.create MVariable.Mut (Some str)) ctx.idenv })
     hoisted ctx in
   let (eid,ast) = PAst.transform
-    { PAst.id = Scope.from_toplevel (MetaEnv.env ctx.tenv) ctx.idenv ; annots ;
-      tenv = ctx.tenv } past in
+    { PAst.id = Scope.from_toplevel ctx.tenv ctx.idenv ; annots } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
   let declared body =
     PAst.StrSet.fold (fun str acc ->
@@ -277,15 +276,21 @@ let class_overload_splits str =
   |> List.filter (fun i -> i > 0 && i < n-1 && str.[i] = '.')
   |> List.rev_map (fun i -> String.sub str 0 i, String.sub str (i+1) (n-i-1))
 
+(* The variable the top-level name [str] refers to: its global definition, or
+   else the one of the search path (cf. [MetaEnv.search]). *)
+let lookup ctx str =
+  match StrMap.find_opt str ctx.idenv with
+  | Some v -> Some v
+  | None -> MetaEnv.search str ctx.tenv
+
 let add_class ctx str =
   let generic = class_overload_splits str
-    |> List.find_opt (fun (g,_) -> StrMap.mem g ctx.idenv) in
+    |> List.find_map (fun (g,cls) -> lookup ctx g |> Option.map (fun vg -> vg, cls)) in
   match generic with
   | None ->
     failwith ("Cannot declare the class-overload "^str^
       ": no generic function found (it must be declared before its overloads).")
-  | Some (g, cls) ->
-    let vg = StrMap.find g ctx.idenv in
+  | Some (vg, cls) ->
     { ctx with tenv=MetaEnv.new_class_overload vg cls ctx.tenv ;
                covl=StrMap.add str (vg, cls) ctx.covl }
 
@@ -406,7 +411,7 @@ let main (ctx, fn) =
 
 (* The type inferred (or declared) for the top-level name [str], if any. *)
 let find ctx str =
-  match StrMap.find_opt str ctx.idenv with
+  match lookup ctx str with
   | Some v when MetaEnv.mem v ctx.tenv -> Some (MetaEnv.get v ctx.tenv)
   | _ -> None
 

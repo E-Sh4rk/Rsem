@@ -211,3 +211,8 @@ let ns_add_signature ns name s t =
       v, { t with ns=StrMap.add ns (StrMap.add name v names) t.ns }
   in
   add_signature v s t
+
+(* The packages R attaches by default, in the order of its search path. *)
+let search_path = ["stats"; "graphics"; "grDevices"; "utils"; "datasets"; "methods"; "base"]
+
+let search name t = List.find_map (fun ns -> ns_find ns name t) search_path

@@ -200,6 +200,56 @@ use_d: (() -> 2.<> with {  })<> with {  }
 shadow_fn: (() -> 3.<> with {  })<> with {  }
 
 
+===== Processing tests/07_namespace.r =====
+ns_call: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<> with {  }
+
+ns_call_num: (() -> dbl1)<> with {  }
+
+ns_internal: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<> with {  }
+
+ns_value: (() -> dbl1)<> with {  }
+
+ns_string: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<> with {  }
+
+ns_shadow: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<> with {  }
+
+ns_global: ((x: { dbl }) -> dbl1)<> with {  }
+
+ns_global_ns: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<> with {  }
+
+ns_first_class: (() -> dbl1)<> with {  }
+
+ns_err: Untypeable: untypeable encoding
+Line 35, characters 21-43
+application of stats::median failed
+argument is of type @({ 1.<> with {  } })
+
+ns_unknown: Untypeable: unbound variable
+Line 38, characters 26-35
+name: stats::sd
+
+ns_search: (() -> int)<> with {  }
+
+ns_search_qualified: (() -> int)<> with {  }
+
+ns_overload: (() -> tt<>)<> with {  }
+
+xor: ((x: any, y: any) -> "redefined"<> with {  })<> with {  }
+
+ns_hidden: (() -> "redefined"<> with {  })<> with {  }
+
+ns_unhidden: (() -> tt<>)<> with {  }
+
+typeof: "not a function"<> with {  }
+
+ns_skip: (() -> "double")<> with {  }
+
+ns_no_skip: (() -> "not a function"<> with {  })<> with {  }
+
+ns_print: ∀'a. (((x: 'a & <ns_rec, ...>) -> CHR1) & ((x: 'a & <~ns_rec, ...>) ->
+ 'a))<> with {  }
+
+
 ===== Processing tests/02_simple/break-for.r =====
 break_for: ((n: dbl) -> dbl1)<> with {  }
 

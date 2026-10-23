@@ -36,3 +36,31 @@ ns_err <- function() stats::median(list(1))
 
 # A name with no declared signature is unbound.
 ns_unknown <- function(x) stats::sd(x)
+
+# ========== Search path ==========
+
+# The functions of R are declared in their namespace (cf. 00_defs.r). An
+# unqualified name that no definition binds is looked up in R's search path,
+# which ends with `base`.
+#| base::nchar : (x:CHR) -> int
+ns_search <- function() nchar("abc")
+ns_search_qualified <- function() base::nchar("abc")
+
+# Declaring another signature of a function of 00_defs.r overloads it.
+#| base::xor : (x:tt, y:ff) -> tt
+ns_overload <- function() xor(TRUE, FALSE)
+
+# A global definition hides the base function, which `base::` still reaches.
+xor <- function(x, y) "redefined"
+ns_hidden <- function() xor(TRUE, FALSE)
+ns_unhidden <- function() base::xor(TRUE, FALSE)
+
+# A call skips the global names that are not functions, as R does.
+typeof <- "not a function"
+ns_skip <- function() typeof(1)
+ns_no_skip <- function() typeof
+
+# A class-overload can extend a generic of the search path.
+#| new print.ns_rec
+#| print.ns_rec : (x:any) -> CHR1
+ns_print <- function(x) print(x)

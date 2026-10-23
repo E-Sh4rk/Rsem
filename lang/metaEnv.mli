@@ -57,3 +57,7 @@ val ns_find : string -> string -> t -> Variable.t option
 val ns_add_signature : string -> string -> signature -> t -> t
 (* [ns_add_signature ns name s t] declares [s] as a signature of [ns::name], in
    addition to the ones it already has. *)
+val search : string -> t -> Variable.t option
+(* [search name t] is the variable an unqualified [name] reaches when no
+   top-level definition binds it: the one of the first namespace of R's default
+   search path (which ends with [base]) that declares [name]. *)
