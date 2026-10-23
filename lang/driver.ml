@@ -47,7 +47,7 @@ let extend_env mlast env =
     env
 
 (* Declared type of a variable local to a top-level function (cf. the
-   [## fun::var : t] declarations). Contrarily to a top-level signature, which
+   [#| fun/var : t] declarations). Contrarily to a top-level signature, which
    is visible in the whole file, such an annotation is attached to the first
    definition of [lfun] that follows it, [loffset] being its position. *)
 type lannot = { loffset: int ; lfun: string ; lvar: string ; lty: GTy.t }
@@ -121,7 +121,7 @@ let claim_lannots ctx name end_ =
       |> List.partition (fun a -> String.equal a.lfun f && a.loffset < end_) in
     let annots = claimed |> List.fold_left (fun acc a ->
       if StrMap.mem a.lvar acc
-      then failwith ("The local variable "^f^"::"^a.lvar^" has several type annotations.") ;
+      then failwith ("The local variable "^f^"/"^a.lvar^" has several type annotations.") ;
       StrMap.add a.lvar a.lty acc) StrMap.empty in
     { ctx with lannots }, annots
 
@@ -161,7 +161,8 @@ let treat_def ctx past =
         StrMap.add str (MVariable.create MVariable.Mut (Some str)) ctx.idenv })
     hoisted ctx in
   let (eid,ast) = PAst.transform
-    { PAst.id = Scope.from_toplevel (MetaEnv.env ctx.tenv) ctx.idenv ; annots } past in
+    { PAst.id = Scope.from_toplevel (MetaEnv.env ctx.tenv) ctx.idenv ; annots ;
+      tenv = ctx.tenv } past in
   (* Format.printf "%a@.@." Ast.pp_e (id,ast) ; *)
   let declared body =
     PAst.StrSet.fold (fun str acc ->
@@ -310,13 +311,26 @@ let add_local_sig ctx offset f x tye =
   | Some lty ->
     { ctx with lannots = ctx.lannots@[{ loffset=offset ; lfun=f ; lvar=x ; lty }] }
   | None ->
-    failwith ("The annotation of the local variable "^f^"::"^x^
+    failwith ("The annotation of the local variable "^f^"/"^x^
       " cannot contain label variables.")
+
+(* Annotation of the name [str] of the namespace [ns]. No definition of the
+   file can be checked against it, since R code cannot assign [ns::str]: it is
+   only registered, every signature of [ns::str] being one of its overloads. *)
+let add_ns_sig ctx ns str tye =
+  let ctx, sign, chk = build_sig ctx None tye in
+  begin match sign, chk with
+  | MetaEnv.SigTy _, Some s when GTy.fv s |> MVarSet.is_empty |> not ->
+    failwith "Non-functional signatures cannot have type variables"
+  | _ -> ()
+  end ;
+  { ctx with tenv=MetaEnv.ns_add_signature ns str sign ctx.tenv }
 
 let add_def ctx offset def =
   match def with
   | Sigs.Sig (str, tye) -> add_sig ctx str tye
   | Sigs.LocalSig (f, str, tye) -> add_local_sig ctx offset f str tye
+  | Sigs.NsSig (ns, str, tye) -> add_ns_sig ctx ns str tye
   | Sigs.Alias (str, tye) -> add_alias ctx str tye
   | Sigs.NewClass str -> add_class ctx str
 
@@ -333,7 +347,7 @@ let enclosing_def prog offset =
 
 (* A [#|] comment written inside the definition of [f] declares the type of a
    variable local to [f]: there, a bare [#| var : t] is exactly the top-level
-   [#| f::var : t]. Every other declaration is treated right away, as it is
+   [#| f/var : t]. Every other declaration is treated right away, as it is
    visible in the whole file whatever its position.
 
    The marker is [#|] rather than [##] so that it cannot be confused with an

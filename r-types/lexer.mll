@@ -26,7 +26,10 @@ let sym = ['+''-''['']''$''@''<''>'':''=''*''%''/''|''&''!''^''~']+
 rule token = parse
 | newline { enter_newline lexbuf |> token }
 | blank   { token lexbuf }
-| "::"    { COLONCOLON }
+(* [:::] reaches the names a package does not export: as exports are not
+   tracked, it is the same as [::] here. *)
+| "::" | ":::" { COLONCOLON }
+| '/'     { SLASH }
 | ':'     { TY (read_ty (Buffer.create 17) lexbuf) }
 | '='     { TYEQ (read_ty (Buffer.create 17) lexbuf) }
 | "new"   { NEW }

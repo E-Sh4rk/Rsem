@@ -159,6 +159,17 @@ and aux_case c tree =
       At (e, a)
     | _ -> assert false
     end
+  | "Name_op" ->
+    begin match tree with
+    | Case ("Choice_str_COLONCOLON_opt_choice_str", tree)
+    | Case ("Choice_str_COLONCOLONCOLON_opt_choice_str", tree) ->
+      let ns, _, name = extract3 tree in
+      begin match aux_param ns, aux_option aux_param name with
+      | A.ArgId ns, Some (A.ArgId name) -> A.Ns (ns, name)
+      | _ -> failwith "Invalid namespace access."
+      end
+    | _ -> assert false
+    end
   | "Comp" ->
     let c, _ = extract2 tree in
     A.Const (A.CClx (aux_float c))

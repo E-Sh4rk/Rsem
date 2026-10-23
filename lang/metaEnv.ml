@@ -21,14 +21,19 @@ type fsig = {
 
 type sigs = { resolved:GTy.t list ; symbolic:fsig list }
 type signature = SigTy of GTy.t | SigFun of fsig
-type t = Env.t * sigs VarMap.t
+
+module StrMap = Map.Make(String)
+(* [ns] maps a namespace and a name to the variable R code reaches with
+   [ns::name]. Such a variable is never bound by the program itself: its type
+   only comes from the signatures declared for it. *)
+type t = { env : Env.t ; senv : sigs VarMap.t ; ns : Variable.t StrMap.t StrMap.t }
 
 let simplify_tl ty =
   let tvs, ty = ty |> TyScheme.bot_instance |> TyScheme.get in
   let ty = GTy.map Rstt.TyOp.simplify ty |> GTy.factorize in
   TyScheme.mk tvs ty
 
-let initial = Defs.initial_env, VarMap.empty
+let initial = { env=Defs.initial_env ; senv=VarMap.empty ; ns=StrMap.empty }
 let get_sigs v senv =
   match VarMap.find_opt v senv with
   | None -> { resolved=[] ; symbolic=[] }
@@ -133,33 +138,33 @@ let resolve_signature arg f =
 
 (* ===== Registration of the signatures ===== *)
 
-let set_sigs v sigs (env,senv) =
-  let senv = VarMap.add v sigs senv in
+let set_sigs v sigs t =
+  let senv = VarMap.add v sigs t.senv in
   let ty = sigs.resolved |> GTy.conj |> TyScheme.mk_poly |> simplify_tl in
-  let env = Env.replace v ty env in
-  env, senv
+  let env = Env.replace v ty t.env in
+  { t with env ; senv }
 
-let add_signature v s (env,senv) =
-  let sigs = get_sigs v senv in
+let add_signature v s t =
+  let sigs = get_sigs v t.senv in
   let sigs =
     match s with
     | SigTy ty -> { sigs with resolved=ty::sigs.resolved }
     | SigFun f when is_resolved f -> { sigs with resolved=(fsig_ty f)::sigs.resolved }
     | SigFun f -> { sigs with symbolic=f::sigs.symbolic }
   in
-  set_sigs v sigs (env,senv)
+  set_sigs v sigs t
 
 (* Declares a new class-overload for the generic [v]: every signature already
    registered for [v] only applies when its first parameter is not of class
    [cls] (so that the overloads added later for [cls] take precedence). *)
-let new_class_overload v cls (env,senv) =
+let new_class_overload v cls t =
   let sigs =
-    match VarMap.find_opt v senv with
+    match VarMap.find_opt v t.senv with
     | Some sigs -> sigs
     (* [v] has no registered signature: its type has been inferred, so we turn
        it into the initial overload instead of dropping it. *)
     | None ->
-      match Env.find_opt v env |> Option.map (fun ts -> TyScheme.get ts |> snd) with
+      match Env.find_opt v t.env |> Option.map (fun ts -> TyScheme.get ts |> snd) with
       | Some ty -> { resolved=[ty] ; symbolic=[] }
       | None -> { resolved=[] ; symbolic=[] }
   in
@@ -169,21 +174,40 @@ let new_class_overload v cls (env,senv) =
       "Cannot declare a class-overload for %a: it is not a function." Variable.pp v) ;
   let sigs = { resolved=List.map (restrict_first_param ~present:false cls) sigs.resolved ;
                symbolic=List.map (restrict_sig ~present:false cls) sigs.symbolic } in
-  set_sigs v sigs (env,senv)
+  set_sigs v sigs t
 
 (* Restriction to register for the method of the class [cls]: its first
    parameter is restricted to the values of class [cls]. *)
 let class_overload_sig cls f = restrict_sig ~present:true cls f
 let class_overload_ty cls ty = restrict_first_param ~present:true cls ty
 
-let set_from_tyscheme v ts (env,senv) =
+let set_from_tyscheme v ts t =
   if TyScheme.fv ts |> MVarSet.is_empty |> not then
     failwith "Top-level definitions cannot contain monomorphic type variables." ;
   let ts = simplify_tl ts in
-  let env, senv = Env.rm v env, VarMap.remove v senv in
-  Env.add v ts env, senv
+  let env, senv = Env.rm v t.env, VarMap.remove v t.senv in
+  { t with env=Env.add v ts env ; senv }
 
-let mem v (env, _) = Env.mem v env
-let env (env, _) = env
-let get v (env,_) = Env.find v env
-let get_signatures v (_, senv) = VarMap.find_opt v senv
+let mem v t = Env.mem v t.env
+let env t = t.env
+let get v t = Env.find v t.env
+let get_signatures v t = VarMap.find_opt v t.senv
+
+(* ===== Namespaces ===== *)
+
+let ns_find ns name t =
+  StrMap.find_opt ns t.ns |> Option.map (StrMap.find_opt name) |> Option.join
+
+(* The successive signatures of a same name are its overloads: contrarily to a
+   top-level name, a namespaced one is never redefined by the program, so a new
+   signature cannot be shadowing the previous ones. *)
+let ns_add_signature ns name s t =
+  let v, t =
+    match ns_find ns name t with
+    | Some v -> v, t
+    | None ->
+      let v = Mlsem.Lang.MVariable.create Immut (Some (ns^"::"^name)) in
+      let names = StrMap.find_opt ns t.ns |> Option.value ~default:StrMap.empty in
+      v, { t with ns=StrMap.add ns (StrMap.add name v names) t.ns }
+  in
+  add_signature v s t

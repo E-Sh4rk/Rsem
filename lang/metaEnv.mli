@@ -50,3 +50,10 @@ val get_signatures : Variable.t -> t -> sigs option
 val resolve_signature : Ty.t -> fsig -> GTy.t option
 (* [resolve_signature arg s] resolves the label variables of [s] using the type
    [arg] of the argument the function is applied to. *)
+
+val ns_find : string -> string -> t -> Variable.t option
+(* [ns_find ns name t] is the variable R code reaches with [ns::name], if a
+   signature has been declared for it. *)
+val ns_add_signature : string -> string -> signature -> t -> t
+(* [ns_add_signature ns name s t] declares [s] as a signature of [ns::name], in
+   addition to the ones it already has. *)
