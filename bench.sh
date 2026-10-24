@@ -32,17 +32,17 @@ compare_output () {
 if [ "$1" = "perf" ]
 then
     opam exec -- dune build bin/main.exe
-    perf record --call-graph=dwarf -- _build/default/bin/main.exe tests/*.r tests/**/*.r >/dev/null 2>&1
+    perf record --call-graph=dwarf -- _build/default/bin/main.exe sigs/*.R tests/*.r tests/**/*.r >/dev/null 2>&1
 elif [ "$1" = "report" ]
 then
     perf report
 elif [ "$1" = "ref" ]
 then
-    opam exec -- dune exec -- main tests/*.r tests/**/*.r  > "$REF_FILE"
+    opam exec -- dune exec -- main sigs/*.R tests/*.r tests/**/*.r  > "$REF_FILE"
     exit 0
 elif [ "$1" = "diff" ]
 then
-     opam exec -- dune exec --display=quiet -- main tests/*.r tests/**/*.r > "$TMP_DIR"/types.tmp
+     opam exec -- dune exec --display=quiet -- main sigs/*.R tests/*.r tests/**/*.r > "$TMP_DIR"/types.tmp
      compare_output "$REF_FILE" "$TMP_DIR"/types.tmp || exit 1
      exit 0
 elif [ "$1" = "clean" ]

@@ -220,7 +220,7 @@ let rec aux_e env (pos,e) =
     let ebvs = bv_e ~local_shadowed:false body in
     let env = { env with id=List.fold_left (add_binding env.annots) env.id
                               (StrSet.elements ebvs) } in
-    List.fold_left (add_def env) (aux_e env body) (StrSet.elements ebvs) |> snd
+    Ast.Local (List.fold_left (add_def env) (aux_e env body) (StrSet.elements ebvs))
   | Call (e,args) ->
     let e = match e with
       | pos, Id str -> Eid.unique_with_pos pos, Ast.Id (Scope.resolve_call str env.id)

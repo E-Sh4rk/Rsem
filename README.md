@@ -30,6 +30,12 @@ make deps
 make
 ```
 
+## Signatures of base R
+
+The signatures of the functions of base R live in [sigs/base.R](sigs/base.R),
+in the `base` namespace. They are processed before the tests (`make test`), and
+[TypR](https://github.com/PRL-PRG/typr) uses them as its prelude.
+
 ## Acknowledgments
 
 This work is supported by the Czech Ministry of Education, Youth and Sports under program ERC-CZ, grant agreement LL2325, as well as by the Czech Science Foundation Grant No. 23-07580X.

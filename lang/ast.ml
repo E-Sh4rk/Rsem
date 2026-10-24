@@ -42,6 +42,10 @@ type e' =
 | Function of param list * e
 | Seq of e * e
 | Return of e option | Break | Next
+(* A body that [return] leaves, as the one of [local]: it is evaluated by [eval],
+   which [return] returns from, without being a function. Contrarily to the body
+   of a loop, [break] and [next] cannot leave it. *)
+| Local of e
 | Dots | DotsN of int
 [@@deriving show]
 and param = NoDefault of Variable.t | Default of Variable.t * e | Ellipsis
@@ -74,6 +78,7 @@ let map f e =
         Function (List.map aux' ps, aux e)
       | Seq (e1,e2) -> Seq (aux e1, aux e2)
       | Return eo -> Return (Option.map aux eo)
+      | Local e -> Local (aux e)
     in
     f (id,e)
   in

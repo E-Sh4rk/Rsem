@@ -5,10 +5,10 @@ build:
 	dune build
 
 run:
-	dune exec main tests/*.r tests/**/*.r
+	dune exec main sigs/*.R tests/*.r tests/**/*.r
 
 record:
-	dune exec -- main -record tests/*.r
+	dune exec -- main -record sigs/*.R tests/*.r
 
 test:
 	./bench.sh diff
@@ -23,5 +23,5 @@ deps:
 	opam install . --deps-only
 
 perf:
-	sudo perf record --call-graph=dwarf -- ./_build/default/bin/main.exe tests/*.r tests/**/*.r
+	sudo perf record --call-graph=dwarf -- ./_build/default/bin/main.exe sigs/*.R tests/*.r tests/**/*.r
 	sudo perf report

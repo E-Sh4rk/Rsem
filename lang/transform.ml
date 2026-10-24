@@ -390,6 +390,11 @@ let to_mlsem (cfg:cfg) e =
         (CCustom { cname="cattr" ; cgen=true ; cdom=AttrConstr.cdom ; cons=AttrConstr.cons }, [lambda])
     | Seq (e1, e2) -> eid, A.Seq (aux e1, aux e2)
     | Return e -> eid, A.Return (match e with Some e -> aux e | None -> Eid.unique (), A.Void)
+    | Local e ->
+      (* Neither [return] nor [break]/[next] cross it: [break] and [next] are an
+         error there, which the [BLoop] block makes them (they yield no value). *)
+      let e = Eid.unique (), A.Block (A.BLoop, aux e) in
+      eid, A.Block (A.BFun, e)
     | Break -> eid, A.Break | Next -> eid, A.Break
     | Dots -> eid, A.Var ellipsis_var
     | DotsN _ ->

@@ -1,4 +1,6 @@
 
+===== Processing sigs/base.R =====
+
 ===== Processing tests/00_defs.r =====
 
 ===== Processing tests/01_test.r =====
@@ -16,7 +18,7 @@ _: DBL1
 
 _: (DBL | LGL)<>
 
-_: (DBL | LGL)<>
+_: (DBL | LGL) | null
 
 int: 42L<> with {  }
 
@@ -136,8 +138,7 @@ annot_dot_use: (() -> CHR1)<> with {  }
 
 .dot_local: (() -> dbl)<> with {  }
 
-annot_pow: ∀'a. (((x: DBL | dbl & v('a)) -> DBL | dbl & v('a)) & ((x: dbl1) ->
- dbl1))<> with {  }
+annot_pow: (((x: dbl) -> DBL) & ((x: dbl1) -> DBL1))<> with {  }
 
 annot_tilde: ((x: any, y: any) -> any)<> with {  }
 
@@ -157,13 +158,13 @@ use_z: (() -> (1...2.)<> with {  })<> with {  }
 
 _: null
 
-i: dbl1
+i: DBL1 | INT1
 
-w: dbl1
+w: DBL1 | INT1
 
-use_w: (() -> dbl1)<> with {  }
+use_w: (() -> DBL1 | INT1)<> with {  }
 
-use_i: (() -> dbl1)<> with {  }
+use_i: (() -> DBL1 | INT1)<> with {  }
 
 _: null
 
@@ -188,6 +189,21 @@ Line 46, characters 21-27
 name: helper
 
 counter: (() -> dbl1)<> with {  }
+
+counter_unannot: (() -> DBL1)<> with {  }
+
+top_lapply: { DBL1 }<>
+
+f_ret: (() -> DBL1)<> with {  }
+
+top_ret: 1.<> with {  }
+
+cond_ret: (((b: any) -> ("a" | 1.)<> with {  }) & ((b: ff) -> "a"<> with {  }) &
+ ((b: tt) -> 1.<> with {  }))<> with {  }
+
+brk_cond: (((b: any) -> 1.<> with {  }) & ((b: tt) -> empty))<> with {  }
+
+loop_in_local: DBL1 | INT1
 
 local: ∀'a. ((e: 'a) -> 'a)<> with {  }
 
@@ -228,9 +244,9 @@ ns_unknown: Untypeable: unbound variable
 Line 38, characters 26-35
 name: stats::sd
 
-ns_search: (() -> int)<> with {  }
+ns_search: (() -> INT1<>)<> with {  }
 
-ns_search_qualified: (() -> int)<> with {  }
+ns_search_qualified: (() -> INT1<>)<> with {  }
 
 ns_overload: (() -> tt<>)<> with {  }
 
@@ -242,7 +258,7 @@ ns_unhidden: (() -> tt<>)<> with {  }
 
 typeof: "not a function"<> with {  }
 
-ns_skip: (() -> "double")<> with {  }
+ns_skip: (() -> "double"<>)<> with {  }
 
 ns_no_skip: (() -> "not a function"<> with {  })<> with {  }
 
@@ -262,11 +278,11 @@ ns_area_global: (((s: dbl1<circle, ...>) -> lgl1) & ((s: dbl1<square, ~circle, .
 
 
 ===== Processing tests/02_simple/break-for.r =====
-break_for: ((n: dbl) -> dbl1)<> with {  }
+break_for: ((n: dbl) -> DBL1 | INT1)<> with {  }
 
-next_for: ((n: dbl) -> dbl1)<> with {  }
+next_for: ((n: dbl) -> DBL1 | INT1)<> with {  }
 
-nested_break_for: ((n: dbl) -> dbl1)<> with {  }
+nested_break_for: ((n: dbl) -> DBL1 | INT1)<> with {  }
 
 break_for_seq: ((l: list | vec) -> 0.<> with {  })<> with {  }
 
@@ -276,7 +292,7 @@ execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/empty-while.r =====
-execute: ((n: dbl) -> null)<> with {  }
+execute: ((n: vec) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/lapply-dots.r =====
@@ -284,7 +300,7 @@ execute: (n: dbl) -> { dbl }
 
 
 ===== Processing tests/02_simple/lapply.r =====
-execute: ((n: dbl) -> { dbl1 })<> with {  }
+execute: ((n: dbl) -> { DBL1 | INT1 }<>)<> with {  }
 
 
 ===== Processing tests/02_simple/list-for.r =====
@@ -292,17 +308,17 @@ execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/list-while.r =====
-execute: ((n: dbl) -> null)<> with {  }
+execute: ((n: vec) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/matrix-for.r =====
-execute: ((n: dbl) -> null)<> with {  }
+execute: ((n: dbl1) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/repeat.r =====
-break_repeat: ((n: dbl) -> DBL1)<> with {  }
+break_repeat: ((n: vec) -> DBL1)<> with {  }
 
-next_repeat: ((n: dbl) -> DBL1)<> with {  }
+next_repeat: ((n: vec) -> DBL1)<> with {  }
 
 inner_repeat: (() -> "a"<> with {  })<> with {  }
 
@@ -312,19 +328,19 @@ execute: ((n: dbl) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/scalar-while.r =====
-execute: ((n: dbl) -> null)<> with {  }
+execute: ((n: vec) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/super-while.r =====
-execute: ((n: dbl) -> null)<> with {  }
+execute: ((n: vec) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/vector-for.r =====
-execute: ((n: dbl) -> null)<> with {  }
+execute: ((n: dbl1) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/vector-while.r =====
-execute: ((n: dbl) -> null)<> with {  }
+execute: ((n: dbl1) -> null)<> with {  }
 
 
 ===== Processing tests/03_areWeFast/01_random.r =====

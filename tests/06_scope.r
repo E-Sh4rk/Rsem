@@ -53,6 +53,22 @@ counter <- local({
   function() { n <<- n + 1 ; n }
 })
 
+# Without the annotation, the instance of `+` in the closure is left
+# unconstrained, and the block cannot be generalized (value restriction). As
+# nothing that comes later can constrain it, it is instantiated rather than
+# rejected. The same for a top-level application.
+counter_unannot <- local({ n <- 0 ; function() { n <<- n + 1 ; n } })
+top_lapply <- lapply(c(1, 2), function(x) x + 1)
+
+# `local(e)` evaluates `e` with `eval`, which `return` returns from: it leaves
+# the block, not the enclosing function (`x` is 1, and `f_ret()` is 2). `break`
+# and `next` cannot leave it: they are an error there.
+f_ret <- function() { x <- local({ return(1) ; "a" }) ; x + 1 }
+top_ret <- local({ return(1) ; "a" })
+cond_ret <- function(b) local({ if (b) return(1) ; "a" })
+brk_cond <- function(b) { for (i in 1:3) { x <- local({ if (b) next ; 1 }) } ; x }
+loop_in_local <- local({ s <- 0 ; for (i in 1:3) { if (i > 1) break ; s <- i } ; s })
+
 # A package defining its own `local` gets an ordinary call, so what the braces
 # assign binds in the enclosing scope -- here, at top level. What decides it is
 # the scope, in `bv_e` as much as in `aux_e`: were the two to disagree, `d`

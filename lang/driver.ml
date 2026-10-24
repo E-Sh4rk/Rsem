@@ -71,6 +71,22 @@ let infer ctx mlast =
   let tvs, ty = System.Checker.typeof_def env anns mlast |> TyScheme.get in
   TyScheme.mk tvs (GTy.ub ty |> GTy.mk)
 
+(* A top-level definition that cannot be generalized (value restriction) may
+   still contain type variables that reconstruction left unconstrained ("weak"
+   variables, e.g. the instance of a signature applied in the body of a closure
+   that [local] returns). Nothing that comes later can constrain them, so they
+   are instantiated: any instance is sound, typing being stable by substitution
+   and the top-level environment closed, whereas generalizing them would not be.
+   The variables of a single polarity get their extremal instance (as in
+   [close_uninit]), the others [empty]. *)
+let instantiate_weak ts =
+  let tvs, gty = TyScheme.get ts in
+  let gty = GTy.map (TVOp.bot_instance tvs) gty in
+  let weak = MVarSet.diff (GTy.fv gty) tvs in
+  let s1 = MVarSet.elements1 weak |> List.map (fun v -> v, Ty.empty) in
+  let s2 = MVarSet.elements2 weak |> List.map (fun v -> v, Row.empty) in
+  TyScheme.mk tvs (GTy.substitute (Subst.of_list s1 s2) gty)
+
 let treat_ast ?(post=Fun.id) v ctx ast =
   let open Mlsem_system.Ast in
   try
@@ -82,7 +98,7 @@ let treat_ast ?(post=Fun.id) v ctx ast =
       let mlast = Transform.to_mlsem { env=ctx.tenv } ast
         |> push_coercions ~duplicate_arrows:true in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
-      let ty = infer ctx mlast |> post in
+      let ty = infer ctx mlast |> post |> instantiate_weak in
       { ctx with tenv=MetaEnv.set_from_tyscheme v ty ctx.tenv }
     | Some sigs (* Type checking mode *) ->
       let mlast = Transform.to_mlsem { env=ctx.tenv } ast in
