@@ -117,6 +117,12 @@
 #| base::([[]]<-) : (x:{'a}, ...: chr, v:'a) -> {'a}
 #| base::([[]]<-) : (x:{ #k:any?, `r}, k: #k, v:'b) -> { #k:'b, `r}
 
+# `[[` without method dispatch.
+#| base::.subset2 : (x:v('a), ...: dbl|CHR) -> v1('a)
+#| base::.subset2 : (x:{'a}, ...: dbl) -> 'a
+#| base::.subset2 : (x:{'a}, ...: CHR) -> 'a|null
+#| base::.subset2 : (x:{ #k:'a, any }, k: #k) -> 'a
+
 # ========== Classes and attributes ==========
 
 #| base::class : (x:any) -> CHR<>
@@ -131,6 +137,8 @@
 
 # The attribute is selected by a literal name, so the label is polymorphic.
 #| base::attr : (x:any with { #k:'b, any }, which: #k, exact:lgl1?) -> 'b
+
+#| base::attributes : (x:any) -> { any }<> | null
 
 # The attributes it sets, the class among them, are not tracked: the result has
 # the type of `.Data` with any attributes.
@@ -161,6 +169,31 @@
 #| base::is.numeric : (x:(DBL|INT)<~factor, ~Date, ~POSIXt, ~difftime, ...>) -> tt<>
 #| base::is.numeric : (x:~(DBL|INT)) -> ff<>
 #| base::is.numeric : (x:DBL|INT) -> LGL1<>
+#| base::is.list : (x:list) -> tt<>
+#| base::is.list : (x:any) -> LGL1<>
+#| base::is.environment : (x:env) -> tt<>
+#| base::is.environment : (x:~env) -> ff<>
+#| base::is.function : (x:any) -> LGL1<>
+#| base::is.factor : (x:any) -> LGL1<>
+#| base::is.matrix : (x:any) -> LGL1<>
+#| base::is.nan : (x:vec1) -> LGL1<>
+#| base::is.nan : (x:any) -> LGL<>
+#| base::is.logical : (x:LGL) -> tt<>
+#| base::is.logical : (x:~LGL) -> ff<>
+#| base::is.finite : (x:vec1) -> LGL1<>
+#| base::is.finite : (x:any) -> LGL<>
+#| base::is.infinite : (x:vec1) -> LGL1<>
+#| base::is.infinite : (x:any) -> LGL<>
+#| base::isTRUE : (x:~lgl) -> ff<>
+#| base::isTRUE : (x:any) -> LGL1<>
+#| base::isFALSE : (x:~lgl) -> ff<>
+#| base::isFALSE : (x:any) -> LGL1<>
+#| base::identical : (x:any, y:any, ...: any) -> LGL1<>
+#| base::(%in%) : (x:vec1, table:vec|null) -> LGL1<>
+#| base::(%in%) : (x:vec|null, table:vec|null) -> LGL<>
+# Like `!`, they coerce numbers.
+#| base::all : (...: dbl, na.rm:lgl1?) -> LGL1<>
+#| base::any : (...: dbl, na.rm:lgl1?) -> LGL1<>
 
 # ========== Vectors and lists ==========
 
@@ -183,6 +216,30 @@
 #| base::rev : (x:{'a}) -> {'a}
 #| base::rev : (x:null) -> null
 #| base::seq_along : (along.with:any) -> INT<>
+#| base::seq_len : (length.out:dbl1) -> INT<>
+#| base::which : (x:lgl, arr.ind:lgl1?, useNames:lgl1?) -> INT<>
+#| base::nrow : (x:any) -> INT1<> | null
+#| base::ncol : (x:any) -> INT1<> | null
+
+# `rep` is generic; its methods (e.g. for factors) keep the class.
+#| base::rep : (x:v('a), ...: any) -> v('a)
+#| base::rep : (x:{'a}, ...: any) -> {'a}
+#| base::rep : (x:null, ...: any) -> null
+
+#| base::as.list : (x:{'a}, ...: any) -> {'a}
+#| base::as.list : (x:v('a), ...: any) -> { v1('a) }<>
+#| base::as.list : (x:any, ...: any) -> { any }<>
+
+#| base::logical : (length:dbl1?) -> LGL<>
+#| base::integer : (length:dbl1?) -> INT<>
+#| base::double : (length:dbl1?) -> DBL<>
+#| base::numeric : (length:dbl1?) -> DBL<>
+#| base::character : (length:dbl1?) -> CHR<>
+
+# The set operations drop the attributes of their arguments.
+#| base::union : (x:v('a)|null, y:v('a)|null) -> v('a)<>
+#| base::intersect : (x:v('a)|null, y:v('a)|null) -> v('a)<>
+#| base::setdiff : (x:v('a)|null, y:vec|null) -> v('a)<>
 
 # Factors are the only class `unlist` keeps.
 #| base::unlist : (x:{v('a)<~factor, ...>}) -> v('a)<>
@@ -310,6 +367,10 @@
 #| base::formatC : (x:vec1, ...: any) -> CHR1<>
 #| base::formatC : (x:any, ...: any) -> CHR<>
 #| base::strsplit : (x:chr, split:chr, fixed:lgl1?, perl:lgl1?) -> { CHR<> }<>
+#| base::file.path : (...: chr1, fsep:chr1?) -> CHR1<>
+#| base::file.path : (...: chr, fsep:chr1?) -> CHR<>
+#| base::normalizePath : (path:chr1, winslash:chr1?, mustWork:lgl1?) -> CHR1<>
+#| base::normalizePath : (path:chr, winslash:chr1?, mustWork:lgl1?) -> CHR<>
 
 # ========== Regular expressions ==========
 
@@ -330,11 +391,17 @@
 # ========== Input and output ==========
 
 #| base::identity : ( x:'a ) -> 'a
+# Since R 4.4.0.
+#| base::(%||%) : ( x:null, y:'b ) -> 'b
+#| base::(%||%) : ( x:~null & 'a, y:any ) -> 'a
 #| base::print : ( x:'a, ...: any ) -> 'a
 #| base::invisible : ( x:'a ) -> 'a
 #| base::invisible : () -> null
 #| base::stdout : () -> INT1<terminal, connection>
 #| base::write : ( x:any, file:(<connection, ...>|chr1)? ) -> null
+#| base::cat : ( ...: any, file:any?, sep:chr?, fill:any?, labels:chr?, append:lgl1? ) -> null
+#| base::sink : ( file:any?, append:lgl1?, type:chr1?, split:lgl1? ) -> null
+#| base::close : ( con:<connection, ...>, ...: any ) -> null
 
 # ========== Session and environment ==========
 
@@ -346,6 +413,30 @@
 #| base::options : (...: any) -> { any }<>
 #| base::l10n_info : () -> { any }<>
 #| base::interactive : () -> LGL1<>
+#| base::Sys.getlocale : (category:chr1?) -> CHR1<>
+#| base::Sys.setlocale : (category:chr1?, locale:chr1?) -> CHR1<>
+#| base::capabilities : (what:chr?, ...: any) -> LGL<>
+#| base::tempdir : (check:lgl1?) -> CHR1<>
+#| base::tempfile : (pattern:chr?, tmpdir:chr?, fileext:chr?) -> CHR<>
+#| base::getwd : () -> CHR1<>
+# Returns the previous working directory (invisibly).
+#| base::setwd : (dir:chr1) -> CHR1<>
+#| base::.libPaths : (new:chr?, include.site:lgl1?) -> CHR<>
+#| base::requireNamespace : (package:chr1, ...: any, quietly:lgl1?) -> LGL1<>
+#| base::asNamespace : (ns:chr1|env, base.OK:lgl1?) -> env
+
+# Environments. `environment()` of a primitive is `NULL`.
+#| base::parent.frame : (n:dbl1?) -> env
+#| base::environment : (fun:null?) -> env
+#| base::environment : (fun:any) -> env | null
+#| base::new.env : (hash:lgl1?, parent:env?, size:dbl1?) -> env
+#| base::emptyenv : () -> env
+#| base::globalenv : () -> env
+#| base::topenv : (envir:env?, matchThisEnv:env?) -> env
+# A pairlist of the frames of the calls on the stack, `NULL` at top level.
+#| base::sys.frames : () -> { env }<> | null
+#| base::ls : (name:any?, ...: any) -> CHR<>
+#| base::get : (x:chr1, ...: any) -> any
 
 #| base::.Platform : { OS.type: CHR1, file.sep: CHR1, path.sep: CHR1, GUI: CHR1, any }<>
 #| base::.Machine : { integer.max: INT1, double.eps: DBL1, double.xmax: DBL1, any }<>
@@ -354,5 +445,16 @@
 
 #| base::stop : (...: any) -> empty
 #| base::stopifnot : (...: any) -> null
+# One of the choices (several with `several.ok = TRUE`). The default
+# `choices` are the caller's formals, which a signature cannot see.
+#| base::match.arg : (arg:chr|null, choices:chr?, several.ok:ff?) -> CHR1<>
+#| base::match.arg : (arg:chr|null, choices:chr?, several.ok:lgl1) -> CHR<>
+
+# Its argument is the name of a formal, not evaluated.
+#| base::missing : (x:any) -> LGL1<>
+# The alternatives are evaluated lazily: the result is one of them, or `NULL`
+# (invisibly) when none matches and there is no default.
+#| base::switch : (EXPR:chr1|dbl1, ...: 'a) -> 'a | null
+#| base::do.call : (what:any, args:{ any }, quote:lgl1?, envir:env?) -> any
 # Returns the message (invisibly), unless the warning is turned into an error.
 #| base::warning : (...: any) -> CHR1<>
