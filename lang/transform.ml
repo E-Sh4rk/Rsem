@@ -380,7 +380,10 @@ let to_mlsem (cfg:cfg) e =
         then
           let pos_tl = TVar.mk KInfer (Some "_ell") |> TVar.typ |> Ty.O.optional |> Ty.F.mk_descr in
           let named_tl = RVar.mk KInfer (Some "_ell") |> RVar.fty in
-          let ellty = Arg.mk' {pos'=[];named'=[];pos_tl'=pos_tl;named_tl'=named_tl} in
+          (* [...] never holds a named argument matching a formal: excluding them keeps
+             the named part of [ellty] depending on [named_tl] at the same labels as [pty]. *)
+          let named' = (pos_named@named) |> List.map (fun (str,_) -> str, Ty.F.mk_descr Ty.O.absent) in
+          let ellty = Arg.mk' {pos'=[];named';pos_tl'=pos_tl;named_tl'=named_tl} in
           pos_tl, named_tl, add_let ellipsis_var (A.Value (GTy.mk ellty)) e
         else let abs = Ty.F.mk_descr Ty.O.absent in abs, abs, e
       in

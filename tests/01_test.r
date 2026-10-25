@@ -187,3 +187,16 @@ test_dots2 <- function(...) {
 test_dots3 <- function(...) {
   return(list(..1))
 }
+
+
+
+
+print.R6 <- function(x, ...) {
+  if (is.function(.subset2(x, "print"))) {
+    .subset2(x, "print")(...)
+  } else {
+    cat(format(x, ...), sep = "\n")
+  }
+
+  invisible(x)
+}

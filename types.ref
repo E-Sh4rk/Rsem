@@ -90,6 +90,9 @@ test_dots2: ∀'a. (...: 'a) -> { 'a }
 
 test_dots3: ∀'a. ((...: 'a) -> { 'a })<> with {  }
 
+print.R6: ∀'a,'b,`a. ((x: 'a & { print: @(...: ('b, empty? | `a)) ->
+ any, any }, ...: ('b, `a)) -> 'a)<> with {  }
+
 
 ===== Processing tests/04_s3.r =====
 area: ((shape: dbl1<circle, ...>) -> lgl1) & ((shape: dbl1<square, ~circle, ...>)
