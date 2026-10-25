@@ -182,6 +182,14 @@ and aux_case c tree =
     A.Unop (op, arg)
   | "Bin_op" ->
     let op, arg = aux_binary tree in
+    (* The target of a plain assignment may be written as a string:
+       ["f" <- function(x) ...] binds [f] (older packages, e.g. pwr, define
+       their functions so). Only there: ["x"$a <- v] is an error in R. *)
+    let arg = match op, arg with
+      | ("<-" | "=" | "<<-"), ((pos, A.Const (A.CStr s)), r) -> ((pos, A.Id s), r)
+      | ("->" | "->>"), (l, (pos, A.Const (A.CStr s))) -> (l, (pos, A.Id s))
+      | _ -> arg
+    in
     A.Binop (op, arg)
   | "Func_defi" ->
     let k,_,params,_,e = extract5 tree in
