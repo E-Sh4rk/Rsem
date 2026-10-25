@@ -35,6 +35,9 @@ rule token = parse
 | "new"   { NEW }
 | id as s { ID s }
 | '(' (sym as s) ')' { SYM s }
+(* A user-defined infix operator: [%] and anything but [%] up to the next [%]
+   ([%in%], [%o%]). *)
+| '(' ('%' [^'%' '\n']* '%' as s) ')' { SYM s }
 | eof { EOF }
 | _ { raise (LexerError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
 
