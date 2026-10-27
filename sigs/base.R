@@ -29,28 +29,45 @@
 # ========== Arithmetic ==========
 
 # The mode of the result is the one of the operands (which tallying unifies),
-# and its length is the one of the longest operand.
-# This is technically unsound: logical operands give an integer (`TRUE + TRUE`
-# is `2L`), whereas these signatures say a logical. Overloads per mode (e.g.
-# `int -> INT` and `DBL -> DBL`) would be sound, but none of them covers a
-# `v('a)&dbl` argument alone, which Rsem needs when the argument still contains
-# inference variables (see above).
-#| base::(-) : ( e1:v('a)&dbl ) -> v('a)&dbl
+# and its length is the one of the longest operand. Logical operands are the
+# exception: they give an integer (`TRUE + TRUE` is `2L`).
+# Overloads per mode (e.g. `int -> INT` and `DBL -> DBL`) would say so, but
+# none of them covers a `v('a)&dbl` argument alone, which Rsem needs when the
+# argument still contains inference variables (see above). So the vector
+# overload covers every operand, with the integer result of logicals added to
+# the mode of the others (`dbl\lgl`, double and integer: lowercase `lgl` is
+# also raw). The `DBL1` overloads restore the double of scalar arithmetic with
+# a double operand. The same for vectors (`DBL`) would make the result of
+# double vectors exact too, but costs as much inference time as a second
+# vector overload per mode: arithmetic in loops got 1.6x slower.
+#| base::(-) : ( e1:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
 #| base::(-) : ( e1:dbl1 ) -> dbl1
-#| base::(-) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&dbl
+#| base::(-) : ( e1:DBL1 ) -> DBL1
+#| base::(-) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
 #| base::(-) : ( e1:dbl1, e2:dbl1 ) -> dbl1
+#| base::(-) : ( e1:DBL1, e2:dbl1 ) -> DBL1
+#| base::(-) : ( e1:dbl1, e2:DBL1 ) -> DBL1
 
-#| base::(+) : ( e1:v('a)&dbl ) -> v('a)&dbl
+#| base::(+) : ( e1:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
 #| base::(+) : ( e1:dbl1 ) -> dbl1
-#| base::(+) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&dbl
+#| base::(+) : ( e1:DBL1 ) -> DBL1
+#| base::(+) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
 #| base::(+) : ( e1:dbl1, e2:dbl1 ) -> dbl1
+#| base::(+) : ( e1:DBL1, e2:dbl1 ) -> DBL1
+#| base::(+) : ( e1:dbl1, e2:DBL1 ) -> DBL1
 
-#| base::(*) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&dbl
+#| base::(*) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
 #| base::(*) : ( e1:dbl1, e2:dbl1 ) -> dbl1
-#| base::(%%) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&dbl
+#| base::(*) : ( e1:DBL1, e2:dbl1 ) -> DBL1
+#| base::(*) : ( e1:dbl1, e2:DBL1 ) -> DBL1
+#| base::(%%) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
 #| base::(%%) : ( e1:dbl1, e2:dbl1 ) -> dbl1
-#| base::(%/%) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&dbl
+#| base::(%%) : ( e1:DBL1, e2:dbl1 ) -> DBL1
+#| base::(%%) : ( e1:dbl1, e2:DBL1 ) -> DBL1
+#| base::(%/%) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
 #| base::(%/%) : ( e1:dbl1, e2:dbl1 ) -> dbl1
+#| base::(%/%) : ( e1:DBL1, e2:dbl1 ) -> DBL1
+#| base::(%/%) : ( e1:dbl1, e2:DBL1 ) -> DBL1
 
 # Always a double, even for integer operands (`1L / 2L` is `0.5`).
 #| base::(/) : ( e1:dbl, e2:dbl ) -> DBL
@@ -236,10 +253,21 @@
 #| base::numeric : (length:dbl1?) -> DBL<>
 #| base::character : (length:dbl1?) -> CHR<>
 
-# The set operations drop the attributes of their arguments.
-#| base::union : (x:v('a)|null, y:v('a)|null) -> v('a)<>
-#| base::intersect : (x:v('a)|null, y:v('a)|null) -> v('a)<>
-#| base::setdiff : (x:v('a)|null, y:vec|null) -> v('a)<>
+# The set operations drop the attributes of their arguments. A `NULL` gives
+# `NULL`: `intersect` when either argument is one, `setdiff` when `x` is,
+# `union` when both are. The first overload of each covers all the arguments
+# alone (see the conventions above); the others make the result precise.
+#| base::union : (x:v('a)|null, y:v('a)|null) -> v('a)<> | null
+#| base::union : (x:v('a), y:v('a)|null) -> v('a)<>
+#| base::union : (x:v('a)|null, y:v('a)) -> v('a)<>
+#| base::union : (x:null, y:null) -> null
+#| base::intersect : (x:v('a)|null, y:v('a)|null) -> v('a)<> | null
+#| base::intersect : (x:v('a), y:v('a)) -> v('a)<>
+#| base::intersect : (x:null, y:vec|null) -> null
+#| base::intersect : (x:vec|null, y:null) -> null
+#| base::setdiff : (x:v('a)|null, y:vec|null) -> v('a)<> | null
+#| base::setdiff : (x:v('a), y:vec|null) -> v('a)<>
+#| base::setdiff : (x:null, y:vec|null) -> null
 
 # Factors are the only class `unlist` keeps.
 #| base::unlist : (x:{v('a)<~factor, ...>}) -> v('a)<>
@@ -305,8 +333,10 @@
 # ========== Maths ==========
 
 # The functions of the `Math` group keep the class of their argument.
-#| base::abs : (x:v('a)&dbl) -> v('a)&dbl
+# Like arithmetic: a logical gives an integer, a double a double.
+#| base::abs : (x:v('a)&dbl) -> v('a)&(dbl\lgl) | INT
 #| base::abs : (x:dbl1) -> dbl1
+#| base::abs : (x:DBL1) -> DBL1
 #| base::round : (x:dbl1, digits:dbl1?) -> dbl1
 #| base::round : (x:dbl, digits:dbl1?) -> dbl
 #| base::signif : (x:dbl1, digits:dbl1?) -> dbl1

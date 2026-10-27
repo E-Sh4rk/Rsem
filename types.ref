@@ -28,16 +28,17 @@ clx: CLX1<> with {  }
 
 num1: dbl1
 
-f_succ: ∀'a. (((a: DBL | dbl & v('a)) -> DBL | dbl & v('a)) & ((a: dbl1) ->
- dbl1))<> with {  }
+f_succ: (((a: dbl) -> DBL | INT) & ((a: dbl1) -> DBL1))<> with {  }
 
-f_succ_succ: ∀'a. (((a: DBL | dbl & v('a)) -> DBL | dbl & v('a)) & ((a: dbl1) ->
- dbl1))<> with {  }
+f_succ_succ: (((a: dbl) -> DBL | INT) & ((a: dbl1) -> DBL1))<> with {  }
 
-f_req: ∀'a. (((a: dbl & v('a)) -> dbl & v('a)) & ((a: dbl1) -> dbl1))<> with {  }
+f_req: ∀'a,'b. (((a: 'a & DBL1) -> DBL1) & ((a: 'a & dbl1) -> dbl1) & ((a: 'a &
+ (dbl & v('b))) -> ((DBL | INT) & v('b) | INT) | (INT | dbl & v('b)) &
+ 'a))<> with {  }
 
-f_opt: ∀'a. (((a: (DBL | dbl & v('a))?) -> DBL | dbl & v('a)) & ((a: dbl1?) ->
- dbl1))<> with {  }
+f_opt: ∀'a,'b. (((a: ('a & DBL1)?) -> DBL1) & ((a: ('a & dbl1)?) -> dbl1) &
+ ((a: ('a & (DBL | dbl & v('b)))?) -> (DBL | INT) | ((DBL | INT) | lgl &
+ v('b)) & 'a))<> with {  }
 
 f_opt_ann: ((a: dbl) -> dbl) & ((a: null?) -> lgl1)
 
@@ -48,15 +49,18 @@ ret: (((x: 0) | (x: ff) | (x: null) -> ff<> with {  }) & ((x: ~((0 | ff) | null)
 
 ret_ann: ((x: any) -> lgl1) & ((x: null) -> ff)
 
-narrowing: ∀'a. (((x: dbl & v('a)) -> dbl & v('a)) & ((x: dbl1) -> dbl1) & ((x: null)
- -> null))<> with {  }
+narrowing: ∀'a. (((x: DBL1) -> DBL1) & ((x: dbl & v('a)) -> (DBL | INT) & v('a) |
+ INT) & ((x: dbl1) -> dbl1) & ((x: null) -> null))<> with {  }
 
 narrowing_ann: ((x: dbl) -> dbl) & ((x: null) -> null)
 
 narrowing_ann2: (x: dbl | null) -> dbl | null
 
-loop_break: ∀'a,'b. (((x: 'a & null) -> null & 'a) & ((x: DBL | dbl & v('b)) -> DBL |
- dbl & v('b)) & ((x: dbl1) -> dbl1))<> with {  }
+loop_break: ∀'a,'b. (((x: 'a & null) -> null & 'a) & ((x: (DBL | INT) | 'a & ((DBL |
+ INT) | dbl & v('b))) -> (DBL | INT) | ((DBL | INT) | dbl & v('b)) & 'a) &
+ ((x: DBL1 | 'a & dbl1) -> DBL1 | dbl1 & 'a) & ((x: DBL1 | 'a & (DBL1 | dbl1
+ & v1('b))) -> DBL1 | (DBL1 | dbl1 & v1('b)) & 'a) & ((x: DBL1) ->
+ DBL1))<> with {  }
 
 cases: ((x: DBL) -> 0.<> with {  })<> with {  }
 
@@ -303,7 +307,7 @@ execute: (n: dbl) -> { dbl }
 
 
 ===== Processing tests/02_simple/lapply.r =====
-execute: ((n: dbl) -> { DBL1 | INT1 }<>)<> with {  }
+execute: ((n: dbl) -> { DBL1 }<>)<> with {  }
 
 
 ===== Processing tests/02_simple/list-for.r =====
