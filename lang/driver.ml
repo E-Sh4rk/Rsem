@@ -92,8 +92,7 @@ let instantiate_weak ts =
    variable now has, also when it was checked against a signature;
    [Untypeable] the checker's error and the position it is about ([dummy]
    when it has none); [Failed] the message of a name [treat_def] hoists out of
-   a statement, whose typing raised [Failure]. Each is printed as before;
-   [on_outcome], which does nothing by default, is called right after. *)
+   a statement, whose typing raised [Failure]. *)
 type outcome =
   | Typed of TyScheme.t
   | Untypeable of System.Checker.error * Position.t
