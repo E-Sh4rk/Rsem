@@ -87,6 +87,19 @@ let instantiate_weak ts =
   let s2 = MVarSet.elements2 weak |> List.map (fun v -> v, Row.empty) in
   TyScheme.mk tvs (GTy.substitute (Subst.of_list s1 s2) gty)
 
+(* What became of a variable [treat_def] typed, for an embedder (TypR) that
+   wants it structured rather than printed. [Typed] carries the type the
+   variable now has, also when it was checked against a signature;
+   [Untypeable] the checker's error and the position it is about ([dummy]
+   when it has none); [Failed] the message of a name [treat_def] hoists out of
+   a statement, whose typing raised [Failure]. *)
+type outcome =
+  | Typed of TyScheme.t
+  | Untypeable of System.Checker.error * Position.t
+  | Failed of string
+
+let on_outcome : (Variable.t -> outcome -> unit) ref = ref (fun _ _ -> ())
+
 let treat_ast ?(post=Fun.id) v ctx ast =
   let open Mlsem_system.Ast in
   try
@@ -110,13 +123,16 @@ let treat_ast ?(post=Fun.id) v ctx ast =
     in
     let ty = MetaEnv.get v ctx.tenv in
     Format.printf "%a:@? @[%a@]@.@." Variable.pp v TyScheme.pp_short ty ;
+    !on_outcome v (Typed ty) ;
     ctx
   with System.Checker.Untypeable (err) ->
     Format.printf "%a:@? Untypeable: %s@." Variable.pp v err.title ;
     let loc = Eid.loc err.eid in
     if loc <> Position.dummy then Format.printf "%s@." (Position.string_of_pos loc) ;
     err.descr |> Option.iter (Format.printf "%s@.") ;
-    Format.printf "@." ; ctx
+    Format.printf "@." ;
+    !on_outcome v (Untypeable (err, loc)) ;
+    ctx
 
 (* Name of the variable a top-level definition binds, if any. It is the name
    under which the annotations of its local variables are registered. *)
@@ -199,7 +215,9 @@ let treat_def ctx past =
           (* A name introduced this way is a convenience, not something the file
            asked for, so failing to type one leaves it unbound rather than
            taking the whole run down with it. *)
-          Format.printf "%s:@? %s@.@." str msg ; ctx
+          Format.printf "%s:@? %s@.@." str msg ;
+          !on_outcome v (Failed msg) ;
+          ctx
         | ctx ->
           if not (MetaEnv.mem v ctx.tenv) then ctx
           else
