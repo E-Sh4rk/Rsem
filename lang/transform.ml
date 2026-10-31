@@ -283,30 +283,32 @@ let to_mlsem (cfg:cfg) e =
               ogen=false }, arg)
             ) in
           let n = List.length alts_resolved + List.length alts_symbolic in
+          let amask_check = true::List.init n (Fun.const false) in
+          let amask_infer = false::List.init n (Fun.const true) in
           let amask env =
             let open Mlsem_types in
             let arg = if Env.mem varg env then Env.find varg env else TyScheme.mk_mono GTy.any in
             if MVarSet.subset (TyScheme.fv arg) (TVOp.all_vars KNoInfer)
-            then true::List.init n (Fun.const false)
-            else false::List.init n (Fun.const true)
+            then amask_check
+            else amask_infer
           in
           let name = Format.asprintf "%a" Variable.pp v in
           let aerror env =
             let ty = Env.find varg env in
             Format.asprintf "application of %s failed\nargument is of type @[<h>%a@]" name TyScheme.pp ty
           in
-          let settings = { SA.aname=name ; aerror ; amask } in
+          let settings = { SA.aname=name ; aerror ; amask ; amask_default=amask_check } in
           Eid.refresh eid, A.Alt (settings, alt_default::alts_resolved@alts_symbolic)
       in
       eid, A.Let ([], varg, arg_def, e)
     | Ite (e, e1, e2) ->
       let e = aux e in
       let e = Eid.refresh (fst e), A.Operation (Defs.tobool_op, e) in
-      eid, A.Ite (e, GTy.mk Defs.test_type, aux e1, aux e2)
+      eid, A.Ite (e, Defs.test_type, aux e1, aux e2)
     | While (e, e') ->
       let e = aux e in
       let e = Eid.refresh (fst e), A.Operation (Defs.tobool_op, e) in
-      eid, A.While (e, GTy.mk Defs.test_type, aux e')
+      eid, A.While (e, Defs.test_type, aux e')
     | For (None, e, e') ->
       let e, e' = aux e, aux e' in
       let e' = loop_body e' in
@@ -330,7 +332,7 @@ let to_mlsem (cfg:cfg) e =
       let bb = Eid.unique (), A.Value (GTy.cup tt ff) in
       let tt = Eid.unique (), A.Value tt in
       let ff = Eid.unique (), A.Value ff in
-      eid, A.Ite (e, GTy.mk ty, (if sufficient then tt else bb), (if necessary then ff else bb))
+      eid, A.Ite (e, ty, (if sufficient then tt else bb), (if necessary then ff else bb))
     | Function (ps, e) ->
       let has_ell = List.mem Ellipsis ps in
       let rec treat_params only_nopos ps =

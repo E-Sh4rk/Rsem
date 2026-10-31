@@ -132,7 +132,7 @@ let treat_ast ?(post=Fun.id) v ctx ast =
     err.descr |> Option.iter (Format.printf "%s@.") ;
     Format.printf "@." ;
     !on_outcome v (Untypeable (err, loc)) ;
-    ctx
+    { ctx with senv=VarMap.remove v ctx.senv } (* Do not keep a failed signature pending *)
 
 (* Name of the variable a top-level definition binds, if any. It is the name
    under which the annotations of its local variables are registered. *)
@@ -439,6 +439,7 @@ let setup () =
   Mlsem_types.PrinterCfg.set_descr_printer Rstt.Pp.print_descr_ctx ;
   Mlsem_types.PrinterCfg.set_printer Rstt.Pp.print ;
   Mlsem_types.PrinterCfg.add_printer_param (Rstt.Pp.printer_params ()) ;
+  (* Mlsem_system.Config.reexplore_failed_domains := false ; *)
   Mlsem_system.Config.normalization_fun := Fun.id ;
   Mlsem_system.Config.subst_normalization_fun :=
     (fun _ cs -> cs |> List.filter_map Rstt.TyOp.normalize_subst) ;
