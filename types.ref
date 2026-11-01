@@ -37,8 +37,8 @@ f_req: ∀'a,'b. (((a: 'a & DBL1) -> DBL1) & ((a: 'a & dbl1) -> dbl1) & ((a: 'a 
  'a))<> with {  }
 
 f_opt: ∀'a,'b. (((a: ('a & DBL1)?) -> DBL1) & ((a: ('a & dbl1)?) -> dbl1) &
- ((a: ('a & (DBL | dbl & v('b)))?) -> (DBL | INT) | ((DBL | INT) | lgl &
- v('b)) & 'a))<> with {  }
+ ((a: ('a & (DBL | dbl & v('b)))?) -> (DBL | INT) | ((DBL | INT) | (DBL | dbl
+ & v('b))) & 'a))<> with {  }
 
 f_opt_ann: ((a: dbl) -> dbl) & ((a: null?) -> lgl1)
 

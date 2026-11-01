@@ -92,15 +92,10 @@
 #| base::(!=) : ( e1:vec1, e2:vec1 ) -> LGL1<>
 #| base::(!=) : ( e1:vec, e2:vec ) -> LGL<>
 
-#| base::(&&) : ( x:lgl, y:lgl ) -> LGL1<>
-#| base::(&&) : ( x:tt, y:tt ) -> tt<>
-#| base::(&&) : ( x:ff, y:lgl ) -> ff<>
-#| base::(&&) : ( x:lgl, y:ff ) -> ff<>
-
-#| base::(||) : ( x:lgl, y:lgl ) -> LGL1<>
-#| base::(||) : ( x:ff, y:ff ) -> ff<>
-#| base::(||) : ( x:tt, y:lgl ) -> tt<>
-#| base::(||) : ( x:lgl, y:tt ) -> tt<>
+# `&&` and `||` have no signature: being short-circuiting, they are not typed
+# as applications but encoded as conditionals (cf. `encode_short_circuit` in
+# lang/transform.ml): `x && y` is `if (x) y else FALSE`, and `x || y` is
+# `if (x) TRUE else y`.
 
 # `!`, `&`, `|` and `xor` also take numbers (`!0` is `TRUE`), and are bitwise
 # on raw vectors, hence a result of type `lgl` rather than `LGL`.

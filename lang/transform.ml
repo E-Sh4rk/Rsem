@@ -197,6 +197,19 @@ let recognize_const_comparison e =
   in
   map f e
 
+(* [e1 && e2] is [if (e1) e2 else FALSE], and [e1 || e2] is [if (e1) TRUE else e2].
+   The coercion of [e2] to a logical scalar is not modelled. *)
+let encode_short_circuit e =
+  let f e =
+    match e with
+    | id, Binop (v, e1, e2) when Variable.equal v Defs.BuiltinOp.and_ ->
+      id, Ite (e1, e2, (Eid.unique (), Const (CLgl false)))
+    | id, Binop (v, e1, e2) when Variable.equal v Defs.BuiltinOp.or_ ->
+      id, Ite (e1, (Eid.unique (), Const (CLgl true)), e2)
+    | e -> e
+  in
+  map f e
+
 (* Conversion to Mlsem AST *)
 
 let rec rem_n_first n lst =
@@ -410,5 +423,6 @@ let to_mlsem (cfg:cfg) e =
 
 let to_mlsem cfg e =
   e |> recognize_const_comparison
+    |> encode_short_circuit
     |> to_mlsem cfg
     |> Mlsem.Lang.Transform.transform
