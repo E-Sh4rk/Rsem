@@ -1,5 +1,16 @@
 # ========== S3 dispatch ==========
 
+# The class-overloads are declared first, as they define the class hierarchy:
+# `new area @ square` makes `square` a subclass of the method class `@area`,
+# and must come before any type mentions `square`. They also restrict the
+# signatures of `area`: the first parameter of a signature of `area` excludes
+# the classes of the class-overloads that take precedence over it (all of them
+# for the generic itself, the ones declared later for a class-overload), and
+# the signature of the method `area.square` is also added as an overload of
+# `area`, whose first parameter is restricted to the values of class `square`.
+#| new area @ square
+#| new area @ circle
+
 # Constructors of classed values (signature only).
 #| sq_new : () -> dbl1<square>
 #| ci_new : () -> dbl1<circle>
@@ -8,15 +19,9 @@
 #| area : ( shape:dbl1 ) -> dbl1
 area <- function(shape) 0
 
-# `new area.square` removes the values of class `square` from the domain of the
-# first parameter of every overload declared so far for `area`, and the
-# signature below is added as a new overload of `area` whose first parameter is
-# restricted to the values of class `square`.
-#| new area.square
 #| area.square : ( shape:dbl1 ) -> chr1
 area.square <- function(shape) "square"
 
-#| new area.circle
 #| area.circle : ( shape:dbl1 ) -> lgl1
 area.circle <- function(shape) TRUE
 

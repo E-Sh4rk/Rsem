@@ -17,9 +17,12 @@ type local_sig_def = string * string * annot
    of the namespace, the name, and its type. *)
 type ns_sig_def = string * string * annot
 type alias_def = string * (string,string,string) Builder.t
-(* Declaration of a new class-overload (S3 dispatch): the namespace of the
-   method, if any, and its name, for instance [print.myclass]. *)
-type class_def = string option * string
+(* Declaration of a new class-overload (S3 dispatch), written
+   [new generic @ class]: the namespace of the method, if any, the name of the
+   generic and the class, for instance [print] and [myclass] for the method
+   [print.myclass]. The generic is given explicitly, as the name of a method
+   cannot be split unambiguously (e.g. [as.data.frame.foo]). *)
+type class_def = string option * string * string
 
 type t =
 | Sig of sig_def
