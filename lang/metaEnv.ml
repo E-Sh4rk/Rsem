@@ -23,17 +23,23 @@ type sigs = { resolved:GTy.t list ; symbolic:fsig list }
 type signature = SigTy of GTy.t | SigFun of fsig
 
 module StrMap = Map.Make(String)
+module StrSet = Set.Make(String)
 (* [ns] maps a namespace and a name to the variable R code reaches with
    [ns::name]. Such a variable is never bound by the program itself: its type
-   only comes from the signatures declared for it. *)
-type t = { env : Env.t ; senv : sigs VarMap.t ; ns : Variable.t StrMap.t StrMap.t }
+   only comes from the signatures declared for it.
+   [ovl] lists the declared class-overloads (generic name, class), in their
+   order of declaration, and [bound] the names that have been given a type
+   (whose class-overloads can thus no longer be declared). *)
+type t = { env : Env.t ; senv : sigs VarMap.t ; ns : Variable.t StrMap.t StrMap.t ;
+           ovl : (string * string) list ; bound : StrSet.t }
 
 let simplify_tl ty =
   let tvs, ty = ty |> TyScheme.bot_instance |> TyScheme.get in
   let ty = GTy.map Rstt.TyOp.simplify ty |> GTy.factorize in
   TyScheme.mk tvs ty
 
-let initial = { env=Defs.initial_env ; senv=VarMap.empty ; ns=StrMap.empty }
+let initial = { env=Defs.initial_env ; senv=VarMap.empty ; ns=StrMap.empty ;
+                ovl=[] ; bound=StrSet.empty }
 let get_sigs v senv =
   match VarMap.find_opt v senv with
   | None -> { resolved=[] ; symbolic=[] }
@@ -136,6 +142,64 @@ let resolve_signature arg f =
   try Some (Rstt.FunSig.specialize f.decl arg |> instance_ty f)
   with Invalid_argument _ -> None
 
+(* ===== Class-overloads ===== *)
+
+(* Declares the class-overload of the generic [m] for the class [cls]. The
+   class hierarchy and the restrictions of the signatures are derived from the
+   class-overloads, so they must all be declared before [cls] is used and
+   before [m] is given a type. Declaring the same class-overload again does
+   nothing. *)
+let new_class_overload m cls t =
+  if List.mem (m,cls) t.ovl then t
+  else begin
+    if Rstt.Classes.is_defined cls then
+      failwith (Printf.sprintf "Cannot declare the class-overload %s @ %s: \
+        the class %s has already been used." m cls cls) ;
+    if StrSet.mem m t.bound then
+      failwith (Printf.sprintf "Cannot declare the class-overload %s @ %s: \
+        %s has already been given a type." m cls m) ;
+    { t with ovl=t.ovl@[m,cls] }
+  end
+
+(* Defines the class [cls], if it is not yet, with the method classes of the
+   generics it has a class-overload for as its superclasses. The hierarchy of
+   a class is fixed as soon as a type mentions it (an undefined class is
+   implicitly defined with no superclass), so this must be called before. *)
+let define_class t cls =
+  if Rstt.Classes.is_defined cls |> not then
+    match t.ovl |> List.filter_map (fun (m,c) -> if String.equal c cls then Some m else None) with
+    | [] -> ()
+    | ms ->
+      let mcs = List.map Rstt.Classes.class_of_method ms in
+      mcs |> List.iter (fun mc ->
+        if Rstt.Classes.is_defined mc |> not then Rstt.Classes.define_class mc ~subclass:[]) ;
+      Rstt.Classes.define_class cls ~subclass:mcs
+let define_classes clss t = List.iter (define_class t) clss
+
+(* Classes of the class-overloads of the generic [m] that take precedence over
+   a signature of [m]: those declared after the class-overload for [cls] if
+   the signature is the one of that class-overload, and all of them otherwise.
+   Class-overloads are matched with the generics by name only, as the method
+   classes are: those of two distinct generics with the same name (e.g. a
+   global one and the one of a namespace) are mixed together.
+   TODO: improve *)
+let overloads_after ?cls m t =
+  let clss = t.ovl |> List.filter_map (fun (m',c) -> if String.equal m m' then Some c else None) in
+  let rec after clss =
+    match clss, cls with
+    | [], _ -> []
+    | c::clss, Some cls when String.equal c cls -> clss
+    | _::clss, _ -> after clss
+  in
+  let clss = match cls with None -> clss | Some _ -> after clss in
+  define_classes clss t ; clss
+
+(* Restrictions of the signature of the class-overload of a generic for the
+   class [cls]: its first parameter is restricted to the values of class
+   [cls]. *)
+let class_overload_sig t cls f = define_class t cls ; restrict_sig ~present:true cls f
+let class_overload_ty t cls ty = define_class t cls ; restrict_first_param ~present:true cls ty
+
 (* ===== Registration of the signatures ===== *)
 
 let set_sigs v sigs t =
@@ -144,7 +208,14 @@ let set_sigs v sigs t =
   let env = Env.replace v ty t.env in
   { t with env ; senv }
 
-let add_signature v s t =
+(* A signature of [name] does not apply to the values whose class has a
+   class-overload of [name] taking precedence over it (cf. [overloads_after]). *)
+let add_signature ?cls ~name v s t =
+  let s = overloads_after ?cls name t |> List.fold_left (fun s c ->
+    match s with
+    | SigTy ty -> SigTy (restrict_first_param ~present:false c ty)
+    | SigFun f -> SigFun (restrict_sig ~present:false c f)) s in
+  let t = { t with bound=StrSet.add name t.bound } in
   let sigs = get_sigs v t.senv in
   let sigs =
     match s with
@@ -154,36 +225,23 @@ let add_signature v s t =
   in
   set_sigs v sigs t
 
-(* Declares a new class-overload for the generic [v]: every signature already
-   registered for [v] only applies when its first parameter is not of class
-   [cls] (so that the overloads added later for [cls] take precedence). *)
-let new_class_overload v cls t =
-  let sigs =
-    match VarMap.find_opt v t.senv with
-    | Some sigs -> sigs
-    (* [v] has no registered signature: its type has been inferred, so we turn
-       it into the initial overload instead of dropping it. *)
-    | None ->
-      match Env.find_opt v t.env |> Option.map (fun ts -> TyScheme.get ts |> snd) with
-      | Some ty -> { resolved=[ty] ; symbolic=[] }
-      | None -> { resolved=[] ; symbolic=[] }
-  in
-  if (List.is_empty sigs.resolved && List.is_empty sigs.symbolic)
-  || List.for_all is_fun_sig sigs.resolved |> not then
-    failwith (Format.asprintf
-      "Cannot declare a class-overload for %a: it is not a function." Variable.pp v) ;
-  let sigs = { resolved=List.map (restrict_first_param ~present:false cls) sigs.resolved ;
-               symbolic=List.map (restrict_sig ~present:false cls) sigs.symbolic } in
-  set_sigs v sigs t
-
-(* Restriction to register for the method of the class [cls]: its first
-   parameter is restricted to the values of class [cls]. *)
-let class_overload_sig cls f = restrict_sig ~present:true cls f
-let class_overload_ty cls ty = restrict_first_param ~present:true cls ty
-
+(* An inferred type is restricted as a signature would be. *)
 let set_from_tyscheme v ts t =
   if TyScheme.fv ts |> MVarSet.is_empty |> not then
     failwith "Top-level definitions cannot contain monomorphic type variables." ;
+  let ts, t =
+    match Variable.get_name v with
+    | None -> ts, t
+    | Some name ->
+      let t = { t with bound=StrSet.add name t.bound } in
+      match overloads_after name t with
+      | [] -> ts, t
+      | clss ->
+        let tvs, ty = TyScheme.get ts in
+        let ty = clss |> List.fold_left
+          (fun ty c -> restrict_first_param ~present:false c ty) ty in
+        TyScheme.mk tvs ty, t
+  in
   let ts = simplify_tl ts in
   let env, senv = Env.rm v t.env, VarMap.remove v t.senv in
   { t with env=Env.add v ts env ; senv }
@@ -210,7 +268,7 @@ let ns_add_signature ns name s t =
       let names = StrMap.find_opt ns t.ns |> Option.value ~default:StrMap.empty in
       v, { t with ns=StrMap.add ns (StrMap.add name v names) t.ns }
   in
-  add_signature v s t
+  add_signature ~name v s t
 
 (* The packages R attaches by default, in the order of its search path. *)
 let search_path = ["stats"; "graphics"; "grDevices"; "utils"; "datasets"; "methods"; "base"]

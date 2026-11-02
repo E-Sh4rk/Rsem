@@ -52,11 +52,12 @@ let extend_env mlast env =
    definition of [lfun] that follows it, [loffset] being its position. *)
 type lannot = { loffset: int ; lfun: string ; lvar: string ; lty: GTy.t }
 
-(* [covl] maps the name of each declared class-overload (e.g. [print.myclass],
-   or [base::print.data.frame] for one of a namespace, cf. [qualified]) to its
-   generic function and to the class it dispatches on. *)
+(* [covl] maps the name of the method of each declared class-overload (e.g.
+   [print.myclass], or [base::print.data.frame] for one of a namespace, cf.
+   [qualified]) to the name of its generic function and to the class it
+   dispatches on. *)
 type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: MetaEnv.t ; senv: GTy.t list VarMap.t ;
-                    covl: (Variable.t * string) StrMap.t ; lannots: lannot list ;
+                    covl: (string * string) StrMap.t ; lannots: lannot list ;
                     benv: Rstt.Builder.env ; tidenv: Ty.t Rstt.Builder.TIdMap.t }
 let initial_ctx = { benv=Rstt.Builder.empty_env ; tidenv=Rstt.Builder.TIdMap.empty ;
                     idenv=StrMap.empty ; tenv=MetaEnv.initial ; senv=VarMap.empty ;
@@ -256,7 +257,7 @@ let build_sig ctx cls tye =
     let fsig = MetaEnv.mk_fsig (build_gty ctx.tidenv) fsig in
     let fsig = match cls with
       | None -> fsig
-      | Some cls -> MetaEnv.class_overload_sig cls fsig in
+      | Some cls -> MetaEnv.class_overload_sig ctx.tenv cls fsig in
     let chk =
       if MetaEnv.is_resolved fsig
       then Some (MetaEnv.fsig_ty ~polymorphic:true fsig |> rigidify)
@@ -267,7 +268,7 @@ let build_sig ctx cls tye =
     let gty = build_gty ctx.tidenv tye in
     let gty = match cls with
       | None -> gty
-      | Some cls -> MetaEnv.class_overload_ty cls gty in
+      | Some cls -> MetaEnv.class_overload_ty ctx.tenv cls gty in
     { ctx with benv }, MetaEnv.SigTy gty, Some (rigidify gty)
 
 (* Name under which the class-overload [str] of the namespace [ns] is
@@ -276,6 +277,40 @@ let qualified ns str =
   match ns with
   | None -> str
   | Some ns -> ns^"::"^str
+
+(* The variable the top-level name [str] refers to: its global definition, or
+   else the one of the search path (cf. [MetaEnv.search]). *)
+let lookup ctx str =
+  match StrMap.find_opt str ctx.idenv with
+  | Some v -> Some v
+  | None -> MetaEnv.search str ctx.tenv
+
+(* The generic a method of the namespace [ns] extends is looked up from that
+   namespace: in the namespace itself, and then in the search path. As in R, the
+   global definitions of the program play no part in it. *)
+let lookup_from ctx ns str =
+  match ns with
+  | None -> lookup ctx str
+  | Some ns ->
+    match MetaEnv.ns_find ns str ctx.tenv with
+    | Some v -> Some v
+    | None -> MetaEnv.search str ctx.tenv
+
+(* The variable of the generic [m] that the method of the namespace [ns] is
+   registered in (cf. [lookup_from]). *)
+let generic_of ctx ns m cls =
+  match lookup_from ctx ns m with
+  | Some vg -> vg
+  | None ->
+    failwith ("Cannot add the signature of the class-overload "^(qualified ns (m^"."^cls))^
+      ": no generic function found (it must be declared before its overloads).")
+
+(* Registers the signature [sign] of the method [str] of the namespace [ns] as
+   an overload of its generic, if [str] has been declared as a class-overload. *)
+let add_to_generic ctx ns str sign tenv =
+  match StrMap.find_opt (qualified ns str) ctx.covl with
+  | None -> tenv
+  | Some (m, cls) -> MetaEnv.add_signature ~cls ~name:m (generic_of ctx ns m cls) sign tenv
 
 let add_sig ctx str tye =
   let open Mlsem_common in
@@ -299,53 +334,14 @@ let add_sig ctx str tye =
       then failwith "Non-functional signatures cannot have type variables" ;
       MVariable.create (AnnotMut s) (Some str), [s]
   in
+  let tenv = MetaEnv.add_signature ~name:str v sign ctx.tenv |> add_to_generic ctx None str sign in
   let idenv = StrMap.add str v ctx.idenv in
-  let tenv = MetaEnv.add_signature v sign ctx.tenv in
-  let tenv =
-    match generic with
-    | None -> tenv
-    | Some (vg, _) -> MetaEnv.add_signature vg sign tenv
-  in
   let senv = VarMap.add v sigs ctx.senv in
   { ctx with idenv ; tenv ; senv }
 
-(* Splits [str] into a generic function name and a class name, on each of its
-   dots, longest generic first (e.g. [print.data.frame] yields
-   [("print.data","frame") ; ("print","data.frame")]). *)
-let class_overload_splits str =
-  let n = String.length str in
-  List.init n Fun.id
-  |> List.filter (fun i -> i > 0 && i < n-1 && str.[i] = '.')
-  |> List.rev_map (fun i -> String.sub str 0 i, String.sub str (i+1) (n-i-1))
-
-(* The variable the top-level name [str] refers to: its global definition, or
-   else the one of the search path (cf. [MetaEnv.search]). *)
-let lookup ctx str =
-  match StrMap.find_opt str ctx.idenv with
-  | Some v -> Some v
-  | None -> MetaEnv.search str ctx.tenv
-
-(* The generic a method of the namespace [ns] extends is looked up from that
-   namespace: in the namespace itself, and then in the search path. As in R, the
-   global definitions of the program play no part in it. *)
-let lookup_from ctx ns str =
-  match ns with
-  | None -> lookup ctx str
-  | Some ns ->
-    match MetaEnv.ns_find ns str ctx.tenv with
-    | Some v -> Some v
-    | None -> MetaEnv.search str ctx.tenv
-
-let add_class ctx ns str =
-  let generic = class_overload_splits str
-    |> List.find_map (fun (g,cls) -> lookup_from ctx ns g |> Option.map (fun vg -> vg, cls)) in
-  match generic with
-  | None ->
-    failwith ("Cannot declare the class-overload "^(qualified ns str)^
-      ": no generic function found (it must be declared before its overloads).")
-  | Some (vg, cls) ->
-    { ctx with tenv=MetaEnv.new_class_overload vg cls ctx.tenv ;
-               covl=StrMap.add (qualified ns str) (vg, cls) ctx.covl }
+let add_class ctx ns m cls =
+  { ctx with tenv=MetaEnv.new_class_overload m cls ctx.tenv ;
+             covl=StrMap.add (qualified ns (m^"."^cls)) (m, cls) ctx.covl }
 
 let add_alias ctx str tye =
   let open R_types.Types in
@@ -385,21 +381,51 @@ let add_ns_sig ctx ns str tye =
     failwith "Non-functional signatures cannot have type variables"
   | _ -> ()
   end ;
-  let tenv = MetaEnv.ns_add_signature ns str sign ctx.tenv in
-  let tenv =
-    match generic with
-    | None -> tenv
-    | Some (vg, _) -> MetaEnv.add_signature vg sign tenv
-  in
+  let tenv = MetaEnv.ns_add_signature ns str sign ctx.tenv
+    |> add_to_generic ctx (Some ns) str sign in
   { ctx with tenv }
 
+(* The classes the declaration [def] mentions. *)
+let classes_of_def def =
+  let open Rstt in
+  let acc = ref [] in
+  let rec line (Classes.L (cls, sub)) = acc := cls::!acc ; List.iter line sub in
+  let classes c =
+    begin match c with
+    | Builder.CClasses { pos ; neg ; unk ; _ } -> List.iter line (pos@neg@unk)
+    | Builder.CAny | Builder.CNoClass -> ()
+    end ; c
+  in
+  let ty t = Builder.map Fun.id Fun.id classes t |> ignore in
+  let rec fty t =
+    match t with
+    | FunSig.FLVar _ | FunSig.FGVar _ -> ()
+    | FunSig.FRegular t -> ty t
+    | FunSig.FList a -> Lst.map_atom Fun.id fty a |> ignore
+    | FunSig.FAttr a -> Attr.map_atom fty classes a |> ignore
+  in
+  let annot a =
+    match a with
+    | Sigs.ATy t -> ty t
+    | Sigs.AFun { dom ; ret } -> Arg.map_atom Fun.id fty dom |> ignore ; fty ret
+  in
+  begin match def with
+  | Sigs.Sig (_, a) | Sigs.LocalSig (_, _, a) | Sigs.NsSig (_, _, a) -> annot a
+  | Sigs.Alias (_, t) -> ty t
+  | Sigs.NewClass _ -> ()
+  end ;
+  !acc
+
+(* The classes a declaration mentions are defined before it is treated, so that
+   they get the superclasses their class-overloads give them. *)
 let add_def ctx offset def =
+  MetaEnv.define_classes (classes_of_def def) ctx.tenv ;
   match def with
   | Sigs.Sig (str, tye) -> add_sig ctx str tye
   | Sigs.LocalSig (f, str, tye) -> add_local_sig ctx offset f str tye
   | Sigs.NsSig (ns, str, tye) -> add_ns_sig ctx ns str tye
   | Sigs.Alias (str, tye) -> add_alias ctx str tye
-  | Sigs.NewClass (ns, str) -> add_class ctx ns str
+  | Sigs.NewClass (ns, m, cls) -> add_class ctx ns m cls
 
 (* Name of the top-level definition the offset [offset] falls into, if any. *)
 let enclosing_def prog offset =
@@ -420,16 +446,19 @@ let enclosing_def prog offset =
    The marker is [#|] rather than [##] so that it cannot be confused with an
    ordinary comment: [##] is a common way of writing prose in R sources, and
    every such line would otherwise be parsed as a declaration and rejected. *)
-let treat_extra prog ctx extra =
+let annotation extra =
   match extra with
-  | `Comment (loc, (_, str)) ->
-    if String.starts_with ~prefix:"#|" str then
-      let offset = Parser.start_offset_of_loc loc in
-      let str = String.sub str 2 ((String.length str) - 2) in
-      match enclosing_def prog offset, IO.parse_def str with
-      | Some f, Sigs.Sig (x, tye) -> add_local_sig ctx offset f x tye
-      | _, def -> add_def ctx offset def
-    else ctx
+  | `Comment (loc, (_, str)) when String.starts_with ~prefix:"#|" str ->
+    Some (Parser.start_offset_of_loc loc, String.sub str 2 ((String.length str) - 2))
+  | _ -> None
+
+let treat_extra prog ctx extra =
+  match annotation extra with
+  | None -> ctx
+  | Some (offset, str) ->
+    match enclosing_def prog offset, IO.parse_def str with
+    | Some f, Sigs.Sig (x, tye) -> add_def ctx offset (Sigs.LocalSig (f, x, tye))
+    | _, def -> add_def ctx offset def
 
 (* ===== ENTRY POINTS ===== *)
 
@@ -454,6 +483,20 @@ let parse fn =
   | Some prog ->
     let tree = Boilerplate.map_program () prog in
     Some (Parser.of_parser tree, res.extras)
+
+(* Declares the class-overloads of an already-parsed program, and nothing
+   else. As they determine the class hierarchy and the restrictions of the
+   signatures, they must be known before any signature is treated: when
+   several programs are checked together, this is called on all of them before
+   [process] is called on the first. Declaring them again in [process] has then
+   no effect. An annotation that cannot be parsed is skipped here, [process]
+   reports it. *)
+let declare_overloads ctx (_, extras) =
+  extras |> List.fold_left (fun ctx extra ->
+    match annotation extra |> Option.map (fun (_, str) -> IO.parse_def str) with
+    | Some (Sigs.NewClass (ns, m, cls)) -> add_class ctx ns m cls
+    | _ | exception _ -> ctx
+  ) ctx
 
 (* Type-checks an already-parsed program. This is the half of [main] that does
    not touch the file system, so a caller that has parsed the file itself (or

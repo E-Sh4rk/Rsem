@@ -38,11 +38,28 @@ type t
 (* val simplify_tl : TyScheme.t -> TyScheme.t *)
 
 val initial : t
-val add_signature : Variable.t -> signature -> t -> t
-val new_class_overload : Variable.t -> string -> t -> t
-val class_overload_sig : string -> fsig -> fsig
-val class_overload_ty : string -> GTy.t -> GTy.t
+val add_signature : ?cls:string -> name:string -> Variable.t -> signature -> t -> t
+(* [add_signature ~name v s t] adds the signature [s] to [v], a variable named
+   [name]. The first parameter of [s] is restricted to the values whose class
+   has no class-overload of [name] taking precedence over [s]: none if [s] is
+   the signature of the class-overload of [name] for [cls], none declared
+   after it otherwise. *)
 val set_from_tyscheme : Variable.t -> TyScheme.t -> t -> t
+(* The type of [v] is restricted as a signature of its name would be. *)
+
+val new_class_overload : string -> string -> t -> t
+(* [new_class_overload m cls t] declares the class-overload of the generic
+   named [m] for the class [cls], after the ones already declared. It has no
+   effect if it already is.
+   @raise Failure if [cls] has already been used or [m] given a type. *)
+val define_classes : string list -> t -> unit
+(* Defines the classes that are not yet, with the method classes of their
+   class-overloads as superclasses. It must be called before any type mentions
+   them. *)
+val class_overload_sig : t -> string -> fsig -> fsig
+val class_overload_ty : t -> string -> GTy.t -> GTy.t
+(* Restriction of the signature of a class-overload for the class [cls]: its
+   first parameter is restricted to the values of class [cls]. *)
 val mem : Variable.t -> t -> bool
 val env : t -> Env.t
 val get : Variable.t -> t -> TyScheme.t

@@ -23,11 +23,17 @@ let () =
   let open Mlsem.Types in
   if !record then Recording.start_recording () ;
 
-  let ctx, penv = ref Driver.initial_ctx, ref PEnv.empty in
-  List.rev !input_files |> List.iter (fun fn ->
+  (* The class-overloads of every file are declared before any file is
+     processed (cf. [Driver.declare_overloads]). *)
+  let files = List.rev !input_files |> List.map (fun fn -> fn, Driver.parse fn) in
+  let ctx = files |> List.fold_left (fun ctx (_, parsed) ->
+      Option.fold ~none:ctx ~some:(Driver.declare_overloads ctx) parsed) Driver.initial_ctx in
+  let ctx, penv = ref ctx, ref PEnv.empty in
+  files |> List.iter (fun (fn, parsed) ->
       Format.printf "@.@{<bold>===== Processing %s =====@}@." fn ;
       Recording.clear () ;
-      let ctx', penv' = PEnv.sequential_handler !penv Driver.main (!ctx, fn) in
+      let process (ctx, parsed) = Option.fold ~none:ctx ~some:(Driver.process ctx) parsed in
+      let ctx', penv' = PEnv.sequential_handler !penv process (!ctx, parsed) in
       ctx := ctx' ; penv := penv' ;
       if !record then Recording.save_to_file fn (Recording.tally_calls ())
   )
