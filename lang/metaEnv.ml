@@ -144,37 +144,29 @@ let resolve_signature arg f =
 
 (* ===== Class-overloads ===== *)
 
-(* Declares the class-overload of the generic [m] for the class [cls]. The
-   class hierarchy and the restrictions of the signatures are derived from the
-   class-overloads, so they must all be declared before [cls] is used and
-   before [m] is given a type. Declaring the same class-overload again does
-   nothing. *)
+(* Declares the class-overload of the generic [m] for the class [cls]: [cls]
+   becomes a subclass of the method class of [m]. The class hierarchy and the
+   restrictions of the signatures are derived from the class-overloads, so they
+   must all be declared before the class lattice is built (i.e. before any type
+   mentions a class, cf. [build_lattice]) and before [m] is given a type.
+   Declaring the same class-overload again does nothing. *)
 let new_class_overload m cls t =
   if List.mem (m,cls) t.ovl then t
   else begin
-    if Rstt.Classes.is_defined cls then
-      failwith (Printf.sprintf "Cannot declare the class-overload %s @ %s: \
-        the class %s has already been used." m cls cls) ;
-    if StrSet.mem m t.bound then
-      failwith (Printf.sprintf "Cannot declare the class-overload %s @ %s: \
-        %s has already been given a type." m cls m) ;
+    let error reason =
+      failwith (Printf.sprintf "Cannot declare the class-overload %s @ %s: %s." m cls reason) in
+    if StrSet.mem m t.bound then error (m^" has already been given a type") ;
+    begin try Rstt.Classes.add_relation cls ~supers:[Rstt.Classes.class_of_method m]
+    with Invalid_argument _ ->
+      error "class-overloads must be declared before any type annotation"
+    end ;
     { t with ovl=t.ovl@[m,cls] }
   end
 
-(* Defines the class [cls], if it is not yet, with the method classes of the
-   generics it has a class-overload for as its superclasses. The hierarchy of
-   a class is fixed as soon as a type mentions it (an undefined class is
-   implicitly defined with no superclass), so this must be called before. *)
-let define_class t cls =
-  if Rstt.Classes.is_defined cls |> not then
-    match t.ovl |> List.filter_map (fun (m,c) -> if String.equal c cls then Some m else None) with
-    | [] -> ()
-    | ms ->
-      let mcs = List.map Rstt.Classes.class_of_method ms in
-      mcs |> List.iter (fun mc ->
-        if Rstt.Classes.is_defined mc |> not then Rstt.Classes.define_class mc ~subclass:[]) ;
-      Rstt.Classes.define_class cls ~subclass:mcs
-let define_classes clss t = List.iter (define_class t) clss
+(* Freezes the class hierarchy declared by the class-overloads. It must be
+   called before any type mentioning a class is built. Calling it again does
+   nothing. *)
+let build_lattice () = Rstt.Classes.build_lattice ()
 
 (* Classes of the class-overloads of the generic [m] that take precedence over
    a signature of [m]: those declared after the class-overload for [cls] if
@@ -191,14 +183,13 @@ let overloads_after ?cls m t =
     | c::clss, Some cls when String.equal c cls -> clss
     | _::clss, _ -> after clss
   in
-  let clss = match cls with None -> clss | Some _ -> after clss in
-  define_classes clss t ; clss
+  match cls with None -> clss | Some _ -> after clss
 
 (* Restrictions of the signature of the class-overload of a generic for the
    class [cls]: its first parameter is restricted to the values of class
    [cls]. *)
-let class_overload_sig t cls f = define_class t cls ; restrict_sig ~present:true cls f
-let class_overload_ty t cls ty = define_class t cls ; restrict_first_param ~present:true cls ty
+let class_overload_sig cls f = restrict_sig ~present:true cls f
+let class_overload_ty cls ty = restrict_first_param ~present:true cls ty
 
 (* ===== Registration of the signatures ===== *)
 

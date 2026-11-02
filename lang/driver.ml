@@ -257,7 +257,7 @@ let build_sig ctx cls tye =
     let fsig = MetaEnv.mk_fsig (build_gty ctx.tidenv) fsig in
     let fsig = match cls with
       | None -> fsig
-      | Some cls -> MetaEnv.class_overload_sig ctx.tenv cls fsig in
+      | Some cls -> MetaEnv.class_overload_sig cls fsig in
     let chk =
       if MetaEnv.is_resolved fsig
       then Some (MetaEnv.fsig_ty ~polymorphic:true fsig |> rigidify)
@@ -268,7 +268,7 @@ let build_sig ctx cls tye =
     let gty = build_gty ctx.tidenv tye in
     let gty = match cls with
       | None -> gty
-      | Some cls -> MetaEnv.class_overload_ty ctx.tenv cls gty in
+      | Some cls -> MetaEnv.class_overload_ty cls gty in
     { ctx with benv }, MetaEnv.SigTy gty, Some (rigidify gty)
 
 (* Name under which the class-overload [str] of the namespace [ns] is
@@ -385,41 +385,10 @@ let add_ns_sig ctx ns str tye =
     |> add_to_generic ctx (Some ns) str sign in
   { ctx with tenv }
 
-(* The classes the declaration [def] mentions. *)
-let classes_of_def def =
-  let open Rstt in
-  let acc = ref [] in
-  let rec line (Classes.L (cls, sub)) = acc := cls::!acc ; List.iter line sub in
-  let classes c =
-    begin match c with
-    | Builder.CClasses { pos ; neg ; unk ; _ } -> List.iter line (pos@neg@unk)
-    | Builder.CAny | Builder.CNoClass -> ()
-    end ; c
-  in
-  let ty t = Builder.map Fun.id Fun.id classes t |> ignore in
-  let rec fty t =
-    match t with
-    | FunSig.FLVar _ | FunSig.FGVar _ -> ()
-    | FunSig.FRegular t -> ty t
-    | FunSig.FList a -> Lst.map_atom Fun.id fty a |> ignore
-    | FunSig.FAttr a -> Attr.map_atom fty classes a |> ignore
-  in
-  let annot a =
-    match a with
-    | Sigs.ATy t -> ty t
-    | Sigs.AFun { dom ; ret } -> Arg.map_atom Fun.id fty dom |> ignore ; fty ret
-  in
-  begin match def with
-  | Sigs.Sig (_, a) | Sigs.LocalSig (_, _, a) | Sigs.NsSig (_, _, a) -> annot a
-  | Sigs.Alias (_, t) -> ty t
-  | Sigs.NewClass _ -> ()
-  end ;
-  !acc
-
-(* The classes a declaration mentions are defined before it is treated, so that
-   they get the superclasses their class-overloads give them. *)
+(* Every declaration but a class-overload may build types that mention
+   classes: the class lattice must be built first. *)
 let add_def ctx offset def =
-  MetaEnv.define_classes (classes_of_def def) ctx.tenv ;
+  begin match def with Sigs.NewClass _ -> () | _ -> MetaEnv.build_lattice () end ;
   match def with
   | Sigs.Sig (str, tye) -> add_sig ctx str tye
   | Sigs.LocalSig (f, str, tye) -> add_local_sig ctx offset f str tye
@@ -506,6 +475,7 @@ let process ctx (prog, extras) =
   let ctx = { ctx with lannots =
     ctx.lannots |> List.map (fun a -> { a with loffset = min_int }) } in
   let ctx = List.fold_left (treat_extra prog) ctx extras in
+  MetaEnv.build_lattice () ;
   List.fold_left treat_def ctx prog
 
 let main (ctx, fn) =

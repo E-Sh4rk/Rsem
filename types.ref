@@ -56,11 +56,7 @@ narrowing_ann: ((x: dbl) -> dbl) & ((x: null) -> null)
 
 narrowing_ann2: (x: dbl | null) -> dbl | null
 
-loop_break: ∀'a,'b. (((x: 'a & null) -> null & 'a) & ((x: (DBL | INT) | 'a & ((DBL |
- INT) | dbl & v('b))) -> (DBL | INT) | ((DBL | INT) | dbl & v('b)) & 'a) &
- ((x: DBL1 | 'a & dbl1) -> DBL1 | dbl1 & 'a) & ((x: DBL1 | 'a & (DBL1 | dbl1
- & v1('b))) -> DBL1 | (DBL1 | dbl1 & v1('b)) & 'a) & ((x: DBL1) ->
- DBL1))<> with {  }
+loop_break: ∀'a. ((x: 'a & null) -> null & 'a)<> with {  }
 
 cases: ((x: DBL) -> 0.<> with {  })<> with {  }
 
@@ -99,8 +95,9 @@ print.R6: ∀'a,'b,`a. ((x: 'a & { print: @(...: ('b, empty? | `a)) ->
 
 
 ===== Processing tests/04_s3.r =====
-area: ((shape: dbl1<circle, ...>) -> lgl1) & ((shape: dbl1<square, ~circle, ...>)
- -> vec1) & ((shape: dbl1<~square, ~circle, ...>) -> dbl1)
+area: ((shape: dbl1<circle, ~ns_square, ...>) -> lgl1) &
+ ((shape: dbl1<square, ~circle, ~ns_square, ...>) -> vec1) &
+ ((shape: dbl1<~square, ~circle, ~ns_square, ...>) -> dbl1)
 
 area.square: (shape: dbl1<square, ...>) -> vec1
 
@@ -243,12 +240,12 @@ ns_global_ns: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<> with {  }
 ns_first_class: (() -> dbl1)<> with {  }
 
 ns_err: Untypeable: untypeable encoding
-Line 35, characters 21-43
+Line 41, characters 21-43
 application of stats::median failed
 argument is of type @({ 1.<> with {  } })
 
 ns_unknown: Untypeable: unbound variable
-Line 38, characters 26-35
+Line 44, characters 26-35
 name: stats::sd
 
 ns_search: (() -> INT1<>)<> with {  }
@@ -277,11 +274,12 @@ ns_method: ∀'a. (((x: 'a & <ns_df, ...>) -> LGL1) & ((x: 'a & <ns_rec, ~ns_df,
 
 ns_method_direct: ((x: <ns_df, ...>) -> LGL1)<> with {  }
 
-ns_area: (((s: dbl1<ns_square, ...>) -> CHR1) & ((s: dbl1<~ns_square, ...>) ->
- dbl1))<> with {  }
+ns_area: (((s: dbl1<ns_square, ...>) -> CHR1) &
+ ((s: dbl1<~square, ~circle, ~ns_square, ...>) -> dbl1))<> with {  }
 
-ns_area_global: (((s: dbl1<circle, ...>) -> lgl1) & ((s: dbl1<square, ~circle, ...>) ->
- vec1) & ((s: dbl1<~square, ~circle, ...>) -> dbl1))<> with {  }
+ns_area_global: (((s: dbl1<circle, ~ns_square, ...>) -> lgl1) &
+ ((s: dbl1<square, ~circle, ~ns_square, ...>) -> vec1) &
+ ((s: dbl1<~square, ~circle, ~ns_square, ...>) -> dbl1))<> with {  }
 
 
 ===== Processing tests/02_simple/break-for.r =====
