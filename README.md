@@ -1,11 +1,11 @@
 # Rsem
 
 Rsem is a work-in-progress static type-checker for the R language.
-See [Typr](https://github.com/PRL-PRG/typr) for more info.
+See [tyr](https://github.com/PRL-PRG/tyr) for more info.
 
 ## Install
 
-We plan to integrate Rsem into the [Typr](https://github.com/PRL-PRG/typr) package.
+We plan to integrate Rsem into the [tyr](https://github.com/PRL-PRG/tyr) package.
 
 For now, it must be installed in standalone by following these instructions (only tested on Linux).
 
@@ -34,7 +34,7 @@ make
 
 The signatures of the functions of base R live in [sigs/base.R](sigs/base.R),
 in the `base` namespace. They are processed before the tests (`make test`), and
-[TypR](https://github.com/PRL-PRG/typr) uses them as its prelude.
+[tyr](https://github.com/PRL-PRG/tyr) uses them as its prelude.
 
 ## Acknowledgments
 
