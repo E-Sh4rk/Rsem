@@ -76,6 +76,30 @@ let resolved_conj =
       let ty = resolved |> List.map (GTy.map Rstt.Attr.proj_content) |> GTy.conj in
       cache := (resolved, ty)::!cache ; ty
 
+(* [has_open_classes arg] tells whether an argument of the call-site type
+   [arg] may have classes that are left unknown (e.g. [dbl], i.e.
+   [dbl<...>], or a class row variable). The signatures of a generic with
+   class-overloads cannot cover such an argument: a class record need not
+   respect the class hierarchy, so that the restriction [<~c, ...>] of the
+   defaults and the domain [<c, ...>] of the method of [c] do not cover a
+   record having [c] without its superclasses. This is tested with a class
+   that nothing mentions, and so that only a value of unknown classes may
+   have. *)
+let has_open_classes =
+  let probe = lazy (
+    let open Rstt in
+    let classes = Classes.mk { pos=[Classes.L ("\000unknown", [])] ; neg=[] ; unk=[] ;
+                               tail=Classes.Unknown } in
+    Attr.mk { content=Ty.any ; classes ; attrs=Ty.any })
+  in
+  fun arg ->
+    let probe = Lazy.force probe in
+    let admits f = Ty.F.get_descr f |> Ty.O.get |> fst |> Ty.disjoint probe |> not in
+    Rstt.Arg.destruct arg |> List.exists (function
+      | Rstt.Arg.CallSite { pos' ; pos_tl' ; named' ; named_tl' } ->
+        List.exists admits (pos_tl'::named_tl'::pos'@List.map snd named')
+      | Rstt.Arg.DefSite _ -> false)
+
 (* Arguments builder / Attr projector *)
 
 module ArgBuilder = struct
@@ -370,7 +394,15 @@ let to_mlsem (cfg:cfg) e =
           let name = Format.asprintf "%a" Variable.pp v in
           let aerror env =
             let ty = Env.find varg env in
-            Format.asprintf "application of %s failed\nargument is of type @[<h>%a@]" name TyScheme.pp ty
+            let hint =
+              if sigs.methods <> [] && has_open_classes (TyScheme.get ty |> snd |> GTy.ub)
+              then "\nhint: its classes are unknown, which the signatures of a generic \
+                    with class-overloads cannot cover (cf. [has_open_classes]): give \
+                    it a class, or none with `<>`"
+              else ""
+            in
+            Format.asprintf "application of %s failed\nargument is of type @[<h>%a@]%s"
+              name TyScheme.pp ty hint
           in
           let settings = { SA.aname=name ; aerror ; amask ; amask_default=amask_check } in
           Eid.refresh eid, A.Alt (settings, alt_default::alts_resolved@alts_symbolic)

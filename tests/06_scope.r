@@ -36,7 +36,7 @@ ablk <- { au <- 1 ; au }
 # so what it assigns is scoped to the block. An inner name can be annotated,
 # being an ordinary scoped local.
 bundle <- local({
-  #| helper : (a:dbl1) -> dbl1
+  #| helper : (a:dbl1<>) -> dbl1
   helper <- function(a) a + 1
   list(h = helper)
 })
@@ -48,7 +48,7 @@ leaked <- function() helper
 # `local` together with `<<-`, the counter idiom: the block's names are
 # mutable locals, so the closure it returns can assign them.
 counter <- local({
-  #| n : dbl1
+  #| n : dbl1<>
   n <- 0
   function() { n <<- n + 1 ; n }
 })

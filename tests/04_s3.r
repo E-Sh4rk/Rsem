@@ -38,12 +38,21 @@ a_direct <- area.square(sq_new())
 # ========== Method classes ==========
 
 # `@area` stands for the values whose class implements `area`: here, `square`
-# and `circle`. A function can ask for one of them.
+# and `circle`. A function can ask for one of them (`m_default` is expected to
+# fail).
+#| some_shape : (s: dbl1<@area, ...>) -> dbl1<@area, ...>
+some_shape <- function(s) s
+m_square <- some_shape(sq_new())
+m_circle <- some_shape(ci_new())
+m_default <- some_shape(0)
+
+# But such a value cannot be given to `area` (it is expected to fail): its
+# other classes are unknown, and the class records do not respect the class
+# hierarchy, so that `<@area, ...>` has values of neither `square` nor
+# `circle` that the default signature of `area` does not accept (cf.
+# `has_open_classes` in lang/transform.ml).
 #| any_shape : (s: dbl1<@area, ...>) -> vec1
 any_shape <- function(s) area(s)
-m_square <- any_shape(sq_new())
-m_circle <- any_shape(ci_new())
-m_default <- any_shape(0)
 
 # The default signature of `area` excludes `@area`.
 #| default_area : (s: dbl1<~@area, ...>) -> dbl1
@@ -90,11 +99,13 @@ plain_sub <- c(1, 2)[1]
 plain_list <- list(a = 1, b = "b")[["b"]]
 plain_round <- round(plain)
 
-# A value of unknown class may have any of the classes with methods: each
-# method gives its own result.
+# A value of unknown class cannot be given to a generic with class-overloads
+# (it is expected to fail, cf. `has_open_classes` in lang/transform.ml): the
+# class records do not respect the class hierarchy, which the signatures of
+# the generic cannot cover. Its classes must be given, or none with `<>`.
 #| next_val : (x: dbl1) -> dbl1
 next_val <- function(x) x + 1
-#| scaled : (x: dbl) -> dbl
+#| scaled : (x: dbl<>) -> dbl
 scaled <- function(x) x * 2
 
 # Time series, from sigs/stats.R: their arithmetic keeps the class, and a

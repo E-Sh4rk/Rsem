@@ -159,7 +159,7 @@
 # ========== Lookups ==========
 
 #| base::($) : (x:{ #k:'a, any}, k: #k) -> 'a
-#| base::($<-) : (x:{ #k:any?, `r}, k: #k, v:'b) -> { #k:'b, `r}
+#| base::($<-) : (x:{ #k:any?, `r}<`c>, k: #k, v:'b) -> { #k:'b, `r}<`c>
 
 # The default subsets drop the class (the classes whose methods keep it
 # overload them, cf. "S3 methods"), and so does `[[` of an atomic vector. A
@@ -175,7 +175,7 @@
 #| base::([[]]) : (x:{ #k:'a, any }, k: #k) -> 'a
 #| base::([[]]<-) : (x:v('a)<`c>, ...: dbl|CHR, v:v('a)) -> v('a)<`c>
 #| base::([[]]<-) : (x:{'a}<`c>, ...: chr, v:'a) -> {'a}<`c>
-#| base::([[]]<-) : (x:{ #k:any?, `r}, k: #k, v:'b) -> { #k:'b, `r}
+#| base::([[]]<-) : (x:{ #k:any?, `r}<`c>, k: #k, v:'b) -> { #k:'b, `r}<`c>
 
 # `[[` without method dispatch.
 #| base::.subset2 : (x:v('a), ...: dbl|CHR) -> v1('a)
@@ -339,10 +339,14 @@
 
 # ========== Functionals ==========
 
-# The extra arguments are passed along to `FUN`.
+# The extra arguments are passed along to `FUN`. The elements of a vector
+# without class have none either, which the first signature says, for `FUN`
+# to only accept values without class.
+#| base::lapply : (X:v('a)<>, FUN:@(v1('a)<>, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}<>
 #| base::lapply : (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}<>
 #| base::lapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}<>
 
+#| base::vapply : (X:v('a)<>, FUN:@(v1('a)<>, X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<>
 #| base::vapply : (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<>
 #| base::vapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<>
 
@@ -521,6 +525,7 @@
 # class of the result is `Date` whatever the classes of the operands. The
 # difference of two dates is a `difftime`. Adding two dates, or negating one,
 # is an error.
+#| base::(+.Date) : (e1:dbl1<Date, ...>) -> dbl1<Date, ...>
 #| base::(+.Date) : (e1:dbl<Date, ...>) -> dbl<Date, ...>
 #| base::(+.Date) : (e1:DBL1<Date, ...>, e2:dbl1) -> date1
 #| base::(+.Date) : (e1:DBL<Date, ...>, e2:dbl) -> date
@@ -543,6 +548,8 @@
 # The same for the date-times (`POSIXct`, and the list-based `POSIXlt`, which
 # is converted), a number being a number of seconds. The result is a
 # `POSIXct`.
+#| base::(+.POSIXt) : (e1:dbl1<POSIXt, ...>) -> dbl1<POSIXt, ...>
+#| base::(+.POSIXt) : (e1:dbl<POSIXt, ...>) -> dbl<POSIXt, ...>
 #| base::(+.POSIXt) : (e1:<POSIXt, ...>) -> <POSIXt, ...>
 #| base::(+.POSIXt) : (e1:DBL1<POSIXct, POSIXt, ...>, e2:dbl1) -> posixct1
 #| base::(+.POSIXt) : (e1:DBL<POSIXct, POSIXt, ...>, e2:dbl) -> posixct

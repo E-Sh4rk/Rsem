@@ -5,14 +5,29 @@
 # Contributed by Leo Osvald
 # ------------------------------------------------------------------
 
-#| lim : dbl1
+#| lim : dbl1<>
 lim <- 2
-#| iter : dbl1
+#| iter : dbl1<>
 iter <- 50
 
 # The numbers have no class: one of unknown class could be of a class with
-# methods for the arithmetic, which would all have to be considered.
+# methods for the arithmetic, which would all have to be considered. The
+# local numbers are annotated as well, as inferring their types in the loops
+# is slow.
 #| mandelbrot : (size:dbl1<>) -> dbl1
+#| mandelbrot/sum : dbl1<>
+#| mandelbrot/byteAcc : dbl1<>
+#| mandelbrot/bitNum : dbl1<>
+#| mandelbrot/y : dbl1<>
+#| mandelbrot/x : dbl1<>
+#| mandelbrot/z : dbl1<>
+#| mandelbrot/ci : dbl1<>
+#| mandelbrot/cr : dbl1<>
+#| mandelbrot/zr : dbl1<>
+#| mandelbrot/zi : dbl1<>
+#| mandelbrot/zrzr : dbl1<>
+#| mandelbrot/zizi : dbl1<>
+#| mandelbrot/escape : dbl1<>
 mandelbrot <- function(size) {
     sum = 0
     byteAcc = 0

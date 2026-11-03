@@ -27,9 +27,9 @@ annot_inside <- function() {
 annot_param <- function(a) a
 
 # The annotation widens a variable assigned in a loop.
-#| annot_loop/acc : dbl
+#| annot_loop/acc : dbl<>
 annot_loop <- function(n) {
-  #| i : dbl
+  #| i : dbl<>
   i <- n
   acc <- 0
   while (i > 0) {
@@ -40,7 +40,7 @@ annot_loop <- function(n) {
 }
 
 # A local variable holding a function can be annotated as well.
-#| annot_fun/inner : (x:dbl) -> dbl
+#| annot_fun/inner : (x:dbl<>) -> dbl
 annot_fun <- function() {
   inner <- function(x) x + 1
   inner(2)

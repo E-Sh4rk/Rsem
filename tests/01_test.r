@@ -23,6 +23,9 @@ num1 <- 42
 f_succ <- function(a) a + 1
 f_succ_succ <- function(a) f_succ(f_succ(a))
 
+# The parameter is annotated, as inferring the type of `-a` for an unknown
+# `a` is slow (cf. `loop_break`).
+#| f_req/a : dbl<>
 f_req <- function(a){
   if (a > 0) {
     a
@@ -79,13 +82,14 @@ ret_ann <- function(x) {
   return(TRUE)
 }
 
+#| narrowing/x : dbl<> | null
 narrowing <- function(x) {
   if (x == NULL)
     return(NULL)
   return(-x)
 }
 
-#| narrowing_ann : ( x: dbl ) -> dbl
+#| narrowing_ann : ( x: dbl<> ) -> dbl
 #| narrowing_ann : ( x: null ) -> null
 narrowing_ann <- function(x) {
   if (x == NULL)
@@ -93,13 +97,15 @@ narrowing_ann <- function(x) {
   return(-x)
 }
 
-#| narrowing_ann2 : ( x: dbl|null ) -> dbl|null
+#| narrowing_ann2 : ( x: dbl<>|null ) -> dbl|null
 narrowing_ann2 <- function(x) {
   if (x == NULL)
     return(NULL)
   return(-x)
 }
 
+# Annotated, as inferring the type of `i + 1` for an unknown `i` is slow.
+#| loop_break/i : dbl<> | null
 loop_break <- function(x) {
   i <- x
   while (i != NULL) {

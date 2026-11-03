@@ -1,7 +1,9 @@
 
 # The numbers have no class (cf. 05_mandelbrot.r).
 #| execute : () -> dbl
-#| execute/balls : { dbl<> }
+#| execute/balls : { dbl<> }<>
+#| execute/seed : dbl1<>
+#| execute/bounces : dbl1<>
 execute <- function () {
     seed <- NaN
 
@@ -40,7 +42,7 @@ verifyResult <- function(result, iterations) {
     return (result == 1331);
 }
 
-#| bounce : (ball: dbl<>) -> { dbl<> }
+#| bounce : (ball: dbl<>) -> { dbl<> }<>
 bounce <- function(ball) {
     xLimit  <- 500
     yLimit  <- 500
