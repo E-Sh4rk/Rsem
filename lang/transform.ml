@@ -197,15 +197,21 @@ let recognize_const_comparison e =
   in
   map f e
 
-(* [e1 && e2] is [if (e1) e2 else FALSE], and [e1 || e2] is [if (e1) TRUE else e2].
-   The coercion of [e2] to a logical scalar is not modelled. *)
+(* [e1 && e2] is [if (e1) (if (e2) TRUE else FALSE) else FALSE], and
+   [e1 || e2] is [if (e1) TRUE else (if (e2) TRUE else FALSE)]: the inner [if]
+   coerces [e2] to a logical scalar.
+   Limitation: [NA] is not modelled. [tobool] maps it to [TRUE | FALSE], so e.g.
+   [TRUE && NA] gets type [TRUE | FALSE] while R evaluates it to [NA]. *)
 let encode_short_circuit e =
   let f e =
+    let tt () = Eid.unique (), Const (CLgl true) in
+    let ff () = Eid.unique (), Const (CLgl false) in
+    let coerce e = Eid.unique (), Ite (e, tt (), ff ()) in
     match e with
     | id, Binop (v, e1, e2) when Variable.equal v Defs.BuiltinOp.and_ ->
-      id, Ite (e1, e2, (Eid.unique (), Const (CLgl false)))
+      id, Ite (e1, coerce e2, ff ())
     | id, Binop (v, e1, e2) when Variable.equal v Defs.BuiltinOp.or_ ->
-      id, Ite (e1, (Eid.unique (), Const (CLgl true)), e2)
+      id, Ite (e1, tt (), coerce e2)
     | e -> e
   in
   map f e
