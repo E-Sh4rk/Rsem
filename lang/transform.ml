@@ -332,9 +332,7 @@ let to_mlsem (cfg:cfg) e =
              their results) blow up: they are summarised by a single
              alternative, the arrow from the union of their domains to the
              union of their results. It is a supertype of their intersection,
-             so this only loses precision on the values of their classes. It
-             requires the signatures to be static (the construction is not
-             monotonic), they are kept apart otherwise. *)
+             so this only loses precision on the values of their classes. *)
           let is_method ty = List.memq ty sigs.methods in
           let summary =
             let open Mlsem_types in
@@ -344,9 +342,9 @@ let to_mlsem (cfg:cfg) e =
             in
             match sigs.methods with
             | [] -> []
-            | methods when List.for_all GTy.non_gradual methods ->
-              [ methods |> List.map (GTy.map Rstt.Attr.proj_content) |> GTy.mapl summarise ]
-            | methods -> List.map (GTy.map Rstt.Attr.proj_content) methods
+            | methods ->
+              let methods = List.map GTy.ub methods in (* summarise is not monotonic *)
+              [ methods |> List.map Rstt.Attr.proj_content |> summarise |> GTy.mk ]
           in
           let alts_resolved =
             (sigs.resolved |> List.filter (fun ty -> is_method ty |> not)
