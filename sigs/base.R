@@ -92,15 +92,10 @@
 #| base::(!=) : ( e1:vec1, e2:vec1 ) -> LGL1<>
 #| base::(!=) : ( e1:vec, e2:vec ) -> LGL<>
 
-#| base::(&&) : ( x:lgl, y:lgl ) -> LGL1<>
-#| base::(&&) : ( x:tt, y:tt ) -> tt<>
-#| base::(&&) : ( x:ff, y:lgl ) -> ff<>
-#| base::(&&) : ( x:lgl, y:ff ) -> ff<>
-
-#| base::(||) : ( x:lgl, y:lgl ) -> LGL1<>
-#| base::(||) : ( x:ff, y:ff ) -> ff<>
-#| base::(||) : ( x:tt, y:lgl ) -> tt<>
-#| base::(||) : ( x:lgl, y:tt ) -> tt<>
+# `&&` and `||` have no signature: being short-circuiting, they are not typed
+# as applications but encoded as conditionals (cf. `encode_short_circuit` in
+# lang/transform.ml): `x && y` is `if (x) y else FALSE`, and `x || y` is
+# `if (x) TRUE else y`.
 
 # `!`, `&`, `|` and `xor` also take numbers (`!0` is `TRUE`), and are bitwise
 # on raw vectors, hence a result of type `lgl` rather than `LGL`.
@@ -284,8 +279,8 @@
 #| base::vector : (mode: "raw", length: dbl1?) -> RAW<>
 #| base::vector : (mode: "list", length: dbl1?) -> { null&dyn }<>
 
-#| base::matrix : (data: absent, nrow: dbl1?, ncol: dbl1?, byrow: lgl1?) -> LGL<>
-#| base::matrix : (data: v('a), nrow: dbl1?, ncol: dbl1?, byrow: lgl1?) -> v('a)<>
+#| base::matrix : (data: absent, nrow: dbl1?, ncol: dbl1?, byrow: lgl1?, dimnames: list | null?) -> LGL<>
+#| base::matrix : (data: v('a), nrow: dbl1?, ncol: dbl1?, byrow: lgl1?, dimnames: list | null?) -> v('a)<>
 
 # ========== Functionals ==========
 

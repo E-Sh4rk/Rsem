@@ -1,6 +1,7 @@
 # source('random.r')
 
 #| execute : () -> dbl
+#| execute/balls : { dbl }
 execute <- function () {
     ballCount <- 100
     bounces   <- 0

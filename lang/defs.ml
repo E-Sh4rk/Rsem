@@ -13,8 +13,17 @@ let gen ty = Mlsem_types.GTy.mk ty |> Mlsem_types.TyScheme.mk_poly
 module BuiltinOp = struct
   let eq = MVariable.create Immut (Some "==")
   let neq = MVariable.create Immut (Some "!=")
+  (* [&&] and [||] are short-circuiting: their applications are encoded as an
+     [Ite] (cf. [encode_short_circuit] in transform.ml): their types are
+     only used when they are referred to as values. *)
+  let and_ = MVariable.create Immut (Some "&&")
+  let or_ = MVariable.create Immut (Some "||")
   let ty_comp = ty "(a:any, b:any) -> ^lgl1" |> gen
-  let all = [ eq, ty_comp ; neq, ty_comp ]
+  let ty_and = ty "((x:lgl, y:lgl) -> LGL1<>) & ((x:tt, y:tt) -> tt<>)
+    & ((x:ff, y:lgl) -> ff<>) & ((x:lgl, y:ff) -> ff<>)" |> gen
+  let ty_or = ty "((x:lgl, y:lgl) -> LGL1<>) & ((x:ff, y:ff) -> ff<>)
+    & ((x:tt, y:lgl) -> tt<>) & ((x:lgl, y:tt) -> tt<>)" |> gen
+  let all = [ eq, ty_comp ; neq, ty_comp ; and_, ty_and ; or_, ty_or ]
   let find_builtin str =
     let f (v,_) =
       match Variable.get_name v with

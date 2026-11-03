@@ -15,6 +15,7 @@ verifyResult <- function(result, iterations) {
 }
 
 #| buildTreeDepth : (depth: dbl1, random: any) -> tree where tree = { tree } | dbl
+#| buildTreeDepth/array : { t } where t = { t } | dbl
 buildTreeDepth <- function(depth, random) {
     count <<- count + 1
     if (depth == 1) {

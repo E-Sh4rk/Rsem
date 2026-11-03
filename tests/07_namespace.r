@@ -1,5 +1,11 @@
 # ========== Namespaces ==========
 
+# The class-overloads used below (cf. 04_s3.r). For a method of a namespace,
+# the namespace is written before the generic, as in `base::print.ns_df`.
+#| new print @ ns_rec
+#| new base::print @ ns_df
+#| new shapes::area @ ns_square
+
 # `#| ns::name : t` declares the type of the name `name` of the namespace `ns`,
 # as R code reaches it with `ns::name` (or `ns:::name`).
 #| stats::median : (x:dbl) -> dbl1
@@ -61,14 +67,12 @@ ns_skip <- function() typeof(1)
 ns_no_skip <- function() typeof
 
 # A class-overload can extend a generic of the search path.
-#| new print.ns_rec
 #| print.ns_rec : (x:any) -> CHR1
 ns_print <- function(x) print(x)
 
 # A class-overload can also be declared in a namespace, as the methods of R's
 # packages are (e.g. `base::print.data.frame`). It extends the generic of the
 # search path, and is reachable through its namespace.
-#| new base::print.ns_df
 #| base::print.ns_df : (x:any) -> LGL1
 ns_method <- function(x) print(x)
 ns_method_direct <- function(x) base::print.ns_df(x)
@@ -76,7 +80,6 @@ ns_method_direct <- function(x) base::print.ns_df(x)
 # The generic of a namespaced method is first looked up in its own namespace:
 # here `shapes::area`, and not the global `area` of 04_s3.r.
 #| shapes::area : (shape:dbl1) -> dbl1
-#| new shapes::area.ns_square
 #| shapes::area.ns_square : (shape:dbl1) -> CHR1
 ns_area <- function(s) shapes::area(s)
 ns_area_global <- function(s) area(s)

@@ -30,6 +30,9 @@ rule token = parse
    tracked, it is the same as [::] here. *)
 | "::" | ":::" { COLONCOLON }
 | '/'     { SLASH }
+(* [@] cannot start an identifier: it must be surrounded by blanks in
+   [new generic @ class]. *)
+| '@'     { AT }
 | ':'     { TY (read_ty (Buffer.create 17) lexbuf) }
 | '='     { TYEQ (read_ty (Buffer.create 17) lexbuf) }
 | "new"   { NEW }

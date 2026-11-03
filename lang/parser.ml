@@ -92,6 +92,13 @@ let aux_tok tree  =
   match tree with
   | Token (_ (* loc *), str) -> str
   | _ -> assert false
+(* A quoted identifier (`...`) denotes the name between the backticks. *)
+let aux_id tree =
+  let str = aux_tok tree in
+  let n = String.length str in
+  if n >= 2 && str.[0] = '`' && str.[n-1] = '`'
+  then String.sub str 1 (n - 2)
+  else str
 let aux_dotdot tree =
   let str = aux_tok tree in
   String.sub str 2 (String.length str - 2) |> int_of_string
@@ -143,7 +150,7 @@ and aux_case c tree =
     let e1 = aux_e t1 in
     let e2 = aux_subset t2 in
     A.Subset2 (e1, e2)
-  | "Id" -> A.Id (aux_tok tree)
+  | "Id" -> A.Id (aux_id tree)
   | "Str" -> A.Const (A.CStr (aux_string tree))
   | "Float" -> A.Const (A.CFloat (aux_float tree))
   | "Int" ->
@@ -313,7 +320,7 @@ and aux_param_name (* map_parameter_name *) tree =
   match tree with
   | Case ("Dots", _) -> EllipsisId
   | Case ("Dot_dot_i", tree) -> EllipsisN (aux_dotdot tree)
-  | Case ("Id", tree) -> ArgId (aux_tok tree)
+  | Case ("Id", tree) -> ArgId (aux_id tree)
   | _ -> assert false
 
 and aux_string (* map_string_ *) tree =

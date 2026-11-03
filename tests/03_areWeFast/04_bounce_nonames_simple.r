@@ -1,5 +1,6 @@
 
 #| execute : () -> dbl
+#| execute/balls : { dbl }
 execute <- function () {
     seed <- NaN
 
