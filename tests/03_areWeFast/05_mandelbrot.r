@@ -10,7 +10,9 @@ lim <- 2
 #| iter : dbl1
 iter <- 50
 
-#| mandelbrot : (size:dbl1) -> dbl1
+# The numbers have no class: one of unknown class could be of a class with
+# methods for the arithmetic, which would all have to be considered.
+#| mandelbrot : (size:dbl1<>) -> dbl1
 mandelbrot <- function(size) {
     sum = 0
     byteAcc = 0

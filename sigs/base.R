@@ -9,9 +9,13 @@
 # Conventions:
 # - A function returning a value that never carries a class (or only one that
 #   does not matter, such as the class R gives to a `ts`) says so with `<>`.
-#   A function whose result may keep the class of its argument (arithmetic,
-#   `[`, ...) does not: whether it does depends on methods this file does not
-#   declare.
+#   One whose result keeps the classes of its arguments (arithmetic, the
+#   `Math` group, the replacements, ...) says so with a class row variable,
+#   e.g. `dbl1<`c> -> dbl1<`c>`. The classes whose methods behave otherwise
+#   overload them (cf. "Class-overloads"). Results of unknown class should be
+#   avoided: a value of unknown class may have any of the classes that
+#   overload a generic, so applying the generic to it has to consider all of
+#   its methods.
 # - The overloads of a function are intersected, so that the result of a call
 #   is the intersection of the results of all the overloads that accept its
 #   arguments. Overloads with overlapping domains must thus have compatible
@@ -24,6 +28,43 @@
 #   cover them alone, which is why arithmetic uses `v('a)&dbl`.
 # - An elementwise function is length-preserving, which the algebra cannot say:
 #   it gets one overload for scalars, and one for vectors of any length.
+
+# ========== Class-overloads ==========
+
+# The S3 methods `base` defines for its own classes. They are declared before
+# any other annotation, as they define the class hierarchy (each class
+# implements the method classes of its generics, e.g. `Date` implements
+# `@"+"`) that types are built with. Their signatures are in the "S3 methods" section.
+#
+# A class-overload of a generic takes precedence over its other signatures:
+# they no longer apply to a first argument of that class. R dispatches the
+# operators on both operands (`1 + d` calls `+.Date` too), but only the first
+# one is taken into account here: `1 + d` keeps the type the default
+# signatures give it, which does not say that the result is a `Date`.
+#
+# R defines the arithmetic of `factor` and `difftime` as methods of the `Ops`
+# group generic, which stands for each operator: they are declared per
+# operator. The comparisons are not overloaded, the default signatures giving
+# the right type.
+#| new base::(+) @ Date
+#| new base::(-) @ Date
+#| new base::([]) @ Date
+#| new base::([[]]) @ Date
+#| new base::(+) @ POSIXt
+#| new base::(-) @ POSIXt
+#| new base::([]) @ POSIXct
+#| new base::([[]]) @ POSIXct
+#| new base::(+) @ difftime
+#| new base::(-) @ difftime
+#| new base::(*) @ difftime
+#| new base::(/) @ difftime
+#| new base::([]) @ difftime
+#| new base::(+) @ factor
+#| new base::(-) @ factor
+#| new base::(*) @ factor
+#| new base::(/) @ factor
+#| new base::([]) @ factor
+#| new base::([[]]) @ factor
 
 
 # ========== Arithmetic ==========
@@ -40,40 +81,44 @@
 # a double operand. The same for vectors (`DBL`) would make the result of
 # double vectors exact too, but costs as much inference time as a second
 # vector overload per mode: arithmetic in loops got 1.6x slower.
-#| base::(-) : ( e1:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
-#| base::(-) : ( e1:dbl1 ) -> dbl1
-#| base::(-) : ( e1:DBL1 ) -> DBL1
-#| base::(-) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
-#| base::(-) : ( e1:dbl1, e2:dbl1 ) -> dbl1
-#| base::(-) : ( e1:DBL1, e2:dbl1 ) -> DBL1
-#| base::(-) : ( e1:dbl1, e2:DBL1 ) -> DBL1
+# The result keeps the classes of the operands (those of `e1` if it has some,
+# and those of `e2` otherwise): each operand has its own class row variable,
+# and the result their union. With a single one for both, `x + 1` would not
+# keep the classes of `x`, as the literal has none.
+#| base::(-) : ( e1:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(-) : ( e1:dbl1<`c> ) -> dbl1<`c>
+#| base::(-) : ( e1:DBL1<`c> ) -> DBL1<`c>
+#| base::(-) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`d> ) -> (v('a)&(dbl\lgl) | INT)<`c | `d>
+#| base::(-) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> dbl1<`c | `d>
+#| base::(-) : ( e1:DBL1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
+#| base::(-) : ( e1:dbl1<`c>, e2:DBL1<`d> ) -> DBL1<`c | `d>
 
-#| base::(+) : ( e1:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
-#| base::(+) : ( e1:dbl1 ) -> dbl1
-#| base::(+) : ( e1:DBL1 ) -> DBL1
-#| base::(+) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
-#| base::(+) : ( e1:dbl1, e2:dbl1 ) -> dbl1
-#| base::(+) : ( e1:DBL1, e2:dbl1 ) -> DBL1
-#| base::(+) : ( e1:dbl1, e2:DBL1 ) -> DBL1
+#| base::(+) : ( e1:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(+) : ( e1:dbl1<`c> ) -> dbl1<`c>
+#| base::(+) : ( e1:DBL1<`c> ) -> DBL1<`c>
+#| base::(+) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`d> ) -> (v('a)&(dbl\lgl) | INT)<`c | `d>
+#| base::(+) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> dbl1<`c | `d>
+#| base::(+) : ( e1:DBL1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
+#| base::(+) : ( e1:dbl1<`c>, e2:DBL1<`d> ) -> DBL1<`c | `d>
 
-#| base::(*) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
-#| base::(*) : ( e1:dbl1, e2:dbl1 ) -> dbl1
-#| base::(*) : ( e1:DBL1, e2:dbl1 ) -> DBL1
-#| base::(*) : ( e1:dbl1, e2:DBL1 ) -> DBL1
-#| base::(%%) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
-#| base::(%%) : ( e1:dbl1, e2:dbl1 ) -> dbl1
-#| base::(%%) : ( e1:DBL1, e2:dbl1 ) -> DBL1
-#| base::(%%) : ( e1:dbl1, e2:DBL1 ) -> DBL1
-#| base::(%/%) : ( e1:v('a)&dbl, e2:v('a)&dbl ) -> v('a)&(dbl\lgl) | INT
-#| base::(%/%) : ( e1:dbl1, e2:dbl1 ) -> dbl1
-#| base::(%/%) : ( e1:DBL1, e2:dbl1 ) -> DBL1
-#| base::(%/%) : ( e1:dbl1, e2:DBL1 ) -> DBL1
+#| base::(*) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`d> ) -> (v('a)&(dbl\lgl) | INT)<`c | `d>
+#| base::(*) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> dbl1<`c | `d>
+#| base::(*) : ( e1:DBL1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
+#| base::(*) : ( e1:dbl1<`c>, e2:DBL1<`d> ) -> DBL1<`c | `d>
+#| base::(%%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`d> ) -> (v('a)&(dbl\lgl) | INT)<`c | `d>
+#| base::(%%) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> dbl1<`c | `d>
+#| base::(%%) : ( e1:DBL1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
+#| base::(%%) : ( e1:dbl1<`c>, e2:DBL1<`d> ) -> DBL1<`c | `d>
+#| base::(%/%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`d> ) -> (v('a)&(dbl\lgl) | INT)<`c | `d>
+#| base::(%/%) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> dbl1<`c | `d>
+#| base::(%/%) : ( e1:DBL1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
+#| base::(%/%) : ( e1:dbl1<`c>, e2:DBL1<`d> ) -> DBL1<`c | `d>
 
 # Always a double, even for integer operands (`1L / 2L` is `0.5`).
-#| base::(/) : ( e1:dbl, e2:dbl ) -> DBL
-#| base::(/) : ( e1:dbl1, e2:dbl1 ) -> DBL1
-#| base::(^) : ( e1:dbl, e2:dbl ) -> DBL
-#| base::(^) : ( e1:dbl1, e2:dbl1 ) -> DBL1
+#| base::(/) : ( e1:dbl<`c>, e2:dbl<`d> ) -> DBL<`c | `d>
+#| base::(/) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
+#| base::(^) : ( e1:dbl<`c>, e2:dbl<`d> ) -> DBL<`c | `d>
+#| base::(^) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
 
 # ========== Comparisons and Boolean operators ==========
 
@@ -116,17 +161,20 @@
 #| base::($) : (x:{ #k:'a, any}, k: #k) -> 'a
 #| base::($<-) : (x:{ #k:any?, `r}, k: #k, v:'b) -> { #k:'b, `r}
 
-#| base::([]) : (x:v('a), ...: dbl|CHR) -> v('a)
-#| base::([]) : (x:{'a}, ...: dbl|CHR) -> {'a}
-#| base::([]<-) : (x:v('a), ...: dbl|CHR, v:v('a)) -> v('a)
-#| base::([]<-) : (x:{'a}, ...: dbl|CHR, v:{'a}) -> {'a}
+# The default subsets drop the class (the classes whose methods keep it
+# overload them, cf. "S3 methods"), and so does `[[` of an atomic vector. A
+# replacement keeps the attributes of `x`, its class among them.
+#| base::([]) : (x:v('a), ...: dbl|CHR) -> v('a)<>
+#| base::([]) : (x:{'a}, ...: dbl|CHR) -> {'a}<>
+#| base::([]<-) : (x:v('a)<`c>, ...: dbl|CHR, v:v('a)) -> v('a)<`c>
+#| base::([]<-) : (x:{'a}<`c>, ...: dbl|CHR, v:{'a}) -> {'a}<`c>
 
-#| base::([[]]) : (x:v('a), ...: dbl|CHR) -> v1('a)
+#| base::([[]]) : (x:v('a), ...: dbl|CHR) -> v1('a)<>
 #| base::([[]]) : (x:{'a}, ...: dbl) -> 'a
 #| base::([[]]) : (x:{'a}, ...: CHR) -> 'a|null
 #| base::([[]]) : (x:{ #k:'a, any }, k: #k) -> 'a
-#| base::([[]]<-) : (x:v('a), ...: dbl|CHR, v:v('a)) -> v('a)
-#| base::([[]]<-) : (x:{'a}, ...: chr, v:'a) -> {'a}
+#| base::([[]]<-) : (x:v('a)<`c>, ...: dbl|CHR, v:v('a)) -> v('a)<`c>
+#| base::([[]]<-) : (x:{'a}<`c>, ...: chr, v:'a) -> {'a}<`c>
 #| base::([[]]<-) : (x:{ #k:any?, `r}, k: #k, v:'b) -> { #k:'b, `r}
 
 # `[[` without method dispatch.
@@ -211,7 +259,7 @@
 
 # The named elements are matched by name only, hence after `...`: before it,
 # they would also take positional arguments, `list(1, ok = TRUE)$ok` being `1`.
-#| base::list : (...: 'a, ( #l_i : 'a_i )_i ) -> { ( #l_i : 'a_i )_i, 'a }
+#| base::list : (...: 'a, ( #l_i : 'a_i )_i ) -> { ( #l_i : 'a_i )_i, 'a }<>
 
 # `c()` of nothing but `NULL`s (or of nothing at all) is `NULL`. The overloads
 # that exclude it need a first argument `x`: it is not in R's signature of `c`,
@@ -336,23 +384,23 @@
 
 # The functions of the `Math` group keep the class of their argument.
 # Like arithmetic: a logical gives an integer, a double a double.
-#| base::abs : (x:v('a)&dbl) -> v('a)&(dbl\lgl) | INT
-#| base::abs : (x:dbl1) -> dbl1
-#| base::abs : (x:DBL1) -> DBL1
-#| base::round : (x:dbl1, digits:dbl1?) -> dbl1
-#| base::round : (x:dbl, digits:dbl1?) -> dbl
-#| base::signif : (x:dbl1, digits:dbl1?) -> dbl1
-#| base::signif : (x:dbl, digits:dbl1?) -> dbl
-#| base::floor : (x:dbl1) -> dbl1
-#| base::floor : (x:dbl) -> dbl
-#| base::ceiling : (x:dbl1) -> dbl1
-#| base::ceiling : (x:dbl) -> dbl
-#| base::trunc : (x:dbl1, ...: any) -> dbl1
-#| base::trunc : (x:dbl, ...: any) -> dbl
-#| base::log : (x:dbl1, base:dbl1?) -> DBL1
-#| base::log : (x:dbl, base:dbl1?) -> DBL
-#| base::log10 : (x:dbl1) -> DBL1
-#| base::log10 : (x:dbl) -> DBL
+#| base::abs : (x:(v('a)&dbl)<`c>) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::abs : (x:dbl1<`c>) -> dbl1<`c>
+#| base::abs : (x:DBL1<`c>) -> DBL1<`c>
+#| base::round : (x:dbl1<`c>, digits:dbl1?) -> dbl1<`c>
+#| base::round : (x:dbl<`c>, digits:dbl1?) -> dbl<`c>
+#| base::signif : (x:dbl1<`c>, digits:dbl1?) -> dbl1<`c>
+#| base::signif : (x:dbl<`c>, digits:dbl1?) -> dbl<`c>
+#| base::floor : (x:dbl1<`c>) -> dbl1<`c>
+#| base::floor : (x:dbl<`c>) -> dbl<`c>
+#| base::ceiling : (x:dbl1<`c>) -> dbl1<`c>
+#| base::ceiling : (x:dbl<`c>) -> dbl<`c>
+#| base::trunc : (x:dbl1<`c>, ...: any) -> dbl1<`c>
+#| base::trunc : (x:dbl<`c>, ...: any) -> dbl<`c>
+#| base::log : (x:dbl1<`c>, base:dbl1?) -> DBL1<`c>
+#| base::log : (x:dbl<`c>, base:dbl1?) -> DBL<`c>
+#| base::log10 : (x:dbl1<`c>) -> DBL1<`c>
+#| base::log10 : (x:dbl<`c>) -> DBL<`c>
 
 # Of an integer (or logical) vector, the result is an integer.
 #| base::max : (...: int, na.rm:lgl1?) -> INT1
@@ -430,6 +478,130 @@
 #| base::regexpr : (pattern:chr1, text:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> INT<> with { match.length: INT, any }
 #| base::regexpr : (pattern:chr1, text:chr1, ignore.case:lgl1?, perl:tt, fixed:lgl1?) -> INT1<> with { match.length: INT1, capture.start: INT, capture.length: INT, capture.names: CHR, any }
 #| base::regexpr : (pattern:chr1, text:chr, ignore.case:lgl1?, perl:tt, fixed:lgl1?) -> INT<> with { match.length: INT, capture.start: INT, capture.length: INT, capture.names: CHR, any }
+
+# ========== S3 methods ==========
+
+# The classes of `base` built on numbers. The time classes are made of
+# doubles, and a factor of the integer codes of its `levels`.
+#| date = DBL<Date>
+#| date1 = DBL1<Date>
+#| posixct = DBL<POSIXct, POSIXt>
+#| posixct1 = DBL1<POSIXct, POSIXt>
+#| difftime = DBL<difftime> with { units: CHR1, any }
+#| difftime1 = DBL1<difftime> with { units: CHR1, any }
+
+#| base::Sys.Date : () -> date1
+#| base::as.Date : (x:chr1, ...: any) -> date1
+#| base::as.Date : (x:chr|date, ...: any) -> date
+#| base::as.POSIXct : (x:chr1, ...: any) -> posixct1
+#| base::as.POSIXct : (x:chr|posixct, ...: any) -> posixct
+#| base::difftime : (time1:date1|posixct1, time2:date1|posixct1, tz:chr1?, units:chr1?) -> difftime1
+#| base::difftime : (time1:date|posixct, time2:date|posixct, tz:chr1?, units:chr1?) -> difftime
+#| base::as.difftime : (tim:dbl1, format:chr1?, units:chr1?, tz:chr1?) -> difftime1
+#| base::as.difftime : (tim:dbl, format:chr1?, units:chr1?, tz:chr1?) -> difftime
+#| base::units : (x:<difftime, ...> with { units: 'u, any }) -> 'u
+
+# The class of a factor is `factor`, or `ordered` and `factor` for an ordered
+# one: its methods keep it, whichever it is.
+#| base::factor : (x:vec|null?, levels:vec?, labels:chr?, ordered:ff?, ...: any) -> INT<factor> with { levels: CHR, any }
+#| base::factor : (x:vec|null?, levels:vec?, labels:chr?, ordered:tt, ...: any) -> INT<ordered, factor> with { levels: CHR, any }
+#| base::levels : (x:<factor, ...> with { levels: 'l, any }) -> 'l
+#| base::levels : (x:any) -> CHR<> | null
+#| base::nlevels : (x:any) -> INT1<>
+
+# A method covers every value of its class that the default signatures of its
+# generic would accept, so that a value whose class is unknown can be given a
+# type: such a value may have any of these classes. Some of the cases are
+# errors in R: they are given the type `empty`, as `stop`. The methods of the
+# arithmetic have no type variables: they are summarised by a single arrow to
+# infer the type of an application to an unknown argument (cf.
+# lang/transform.ml), whose inference is much slower with variables.
+#
+# A date plus (or minus) a number of days, or a `difftime`, is a date: the
+# class of the result is `Date` whatever the classes of the operands. The
+# difference of two dates is a `difftime`. Adding two dates, or negating one,
+# is an error.
+#| base::(+.Date) : (e1:dbl<Date, ...>) -> dbl<Date, ...>
+#| base::(+.Date) : (e1:DBL1<Date, ...>, e2:dbl1) -> date1
+#| base::(+.Date) : (e1:DBL<Date, ...>, e2:dbl) -> date
+#| base::(+.Date) : (e1:dbl1<Date, ...>, e2:dbl1) -> (DBL1|INT1)<Date>
+#| base::(+.Date) : (e1:dbl<Date, ...>, e2:dbl) -> (DBL|INT)<Date>
+#| base::(+.Date) : (e1:<Date, ...>, e2:<Date, ...>) -> empty
+#| base::(-.Date) : (e1:<Date, ...>) -> empty
+#| base::(-.Date) : (e1:DBL1<Date, ...>, e2:dbl1<~Date, ...>) -> date1
+#| base::(-.Date) : (e1:DBL<Date, ...>, e2:dbl<~Date, ...>) -> date
+#| base::(-.Date) : (e1:DBL1<Date, ...>, e2:DBL1<Date, ...>) -> difftime1
+#| base::(-.Date) : (e1:dbl<Date, ...>, e2:dbl<Date, ...>) -> difftime
+#| base::(-.Date) : (e1:dbl1<Date, ...>, e2:dbl1) -> (DBL1|INT1)<Date> | difftime1
+#| base::(-.Date) : (e1:dbl<Date, ...>, e2:dbl) -> (DBL|INT)<Date> | difftime
+# The subsets keep the classes of `x`.
+#| base::([].Date) : (x:v('a)<Date, `c>, ...: dbl|CHR) -> v('a)<Date, `c>
+#| base::([].Date) : (x:{any}<Date, ...>, ...: dbl|CHR) -> any
+#| base::([[]].Date) : (x:v('a)<Date, `c>, ...: dbl|CHR) -> v1('a)<Date, `c>
+#| base::([[]].Date) : (x:{any}<Date, ...>, ...: dbl|CHR) -> any
+
+# The same for the date-times (`POSIXct`, and the list-based `POSIXlt`, which
+# is converted), a number being a number of seconds. The result is a
+# `POSIXct`.
+#| base::(+.POSIXt) : (e1:<POSIXt, ...>) -> <POSIXt, ...>
+#| base::(+.POSIXt) : (e1:DBL1<POSIXct, POSIXt, ...>, e2:dbl1) -> posixct1
+#| base::(+.POSIXt) : (e1:DBL<POSIXct, POSIXt, ...>, e2:dbl) -> posixct
+#| base::(+.POSIXt) : (e1:dbl1<POSIXt, ...>, e2:dbl1) -> (DBL1|INT1)<POSIXct, POSIXt>
+#| base::(+.POSIXt) : (e1:<POSIXt, ...>, e2:dbl) -> (DBL|INT)<POSIXct, POSIXt>
+#| base::(+.POSIXt) : (e1:<POSIXt, ...>, e2:<POSIXt, ...>) -> empty
+#| base::(-.POSIXt) : (e1:<POSIXt, ...>) -> empty
+#| base::(-.POSIXt) : (e1:DBL1<POSIXct, POSIXt, ...>, e2:dbl1<~POSIXt, ...>) -> posixct1
+#| base::(-.POSIXt) : (e1:DBL<POSIXct, POSIXt, ...>, e2:dbl<~POSIXt, ...>) -> posixct
+#| base::(-.POSIXt) : (e1:DBL1<POSIXct, POSIXt, ...>, e2:DBL1<POSIXct, POSIXt, ...>) -> difftime1
+#| base::(-.POSIXt) : (e1:<POSIXt, ...>, e2:<POSIXt, ...>) -> difftime
+#| base::(-.POSIXt) : (e1:dbl1<POSIXt, ...>, e2:dbl1) -> (DBL1|INT1)<POSIXct, POSIXt> | difftime1
+#| base::(-.POSIXt) : (e1:<POSIXt, ...>, e2:dbl) -> (DBL|INT)<POSIXct, POSIXt> | difftime
+#| base::([].POSIXct) : (x:v('a)<POSIXct, `c>, ...: dbl|CHR) -> v('a)<POSIXct, `c>
+#| base::([].POSIXct) : (x:{any}<POSIXct, ...>, ...: dbl|CHR) -> any
+#| base::([[]].POSIXct) : (x:v('a)<POSIXct, `c>, ...: dbl|CHR) -> v1('a)<POSIXct, `c>
+#| base::([[]].POSIXct) : (x:{any}<POSIXct, ...>, ...: dbl|CHR) -> any
+
+# A `difftime` can be negated, added to and scaled by numbers: the result is
+# a `difftime` in the units of the operand. Multiplying two of them, or
+# dividing by one, is an error.
+#| base::(+.difftime) : (e1:difftime1, e2:dbl1?) -> difftime1
+#| base::(+.difftime) : (e1:difftime, e2:dbl?) -> difftime
+#| base::(+.difftime) : (e1:dbl1<difftime, ...>, e2:dbl1?) -> (DBL1|INT1)<difftime>
+#| base::(+.difftime) : (e1:dbl<difftime, ...>, e2:dbl?) -> (DBL|INT)<difftime>
+#| base::(-.difftime) : (e1:difftime1, e2:dbl1?) -> difftime1
+#| base::(-.difftime) : (e1:difftime, e2:dbl?) -> difftime
+#| base::(-.difftime) : (e1:dbl1<difftime, ...>, e2:dbl1?) -> (DBL1|INT1)<difftime>
+#| base::(-.difftime) : (e1:dbl<difftime, ...>, e2:dbl?) -> (DBL|INT)<difftime>
+#| base::(*.difftime) : (e1:difftime1, e2:dbl1) -> difftime1
+#| base::(*.difftime) : (e1:difftime, e2:dbl) -> difftime
+#| base::(*.difftime) : (e1:dbl1<difftime, ...>, e2:dbl1) -> (DBL1|INT1)<difftime>
+#| base::(*.difftime) : (e1:dbl<difftime, ...>, e2:dbl) -> (DBL|INT)<difftime>
+#| base::(*.difftime) : (e1:<difftime, ...>, e2:<difftime, ...>) -> empty
+#| base::(/.difftime) : (e1:difftime1, e2:dbl1) -> difftime1
+#| base::(/.difftime) : (e1:difftime, e2:dbl) -> difftime
+#| base::(/.difftime) : (e1:dbl1<difftime, ...>, e2:dbl1) -> DBL1<difftime>
+#| base::(/.difftime) : (e1:dbl<difftime, ...>, e2:dbl) -> DBL<difftime>
+#| base::(/.difftime) : (e1:<difftime, ...>, e2:<difftime, ...>) -> empty
+#| base::([].difftime) : (x:v('a)<difftime, `c> with { units: 'u, any }, ...: dbl|CHR) -> v('a)<difftime, `c> with { units: 'u, any }
+#| base::([].difftime) : (x:v('a)<difftime, `c>, ...: dbl|CHR) -> v('a)<difftime, `c>
+#| base::([].difftime) : (x:{any}<difftime, ...>, ...: dbl|CHR) -> any
+
+# The arithmetic of factors is not meaningful: it gives `NA` (with a warning),
+# as long as the longest operand. Their subsets keep their classes and levels.
+#| base::(+.factor) : (e1:vec1<factor, ...>, e2:vec1?) -> LGL1<>
+#| base::(+.factor) : (e1:<factor, ...>, e2:any?) -> LGL<>
+#| base::(-.factor) : (e1:vec1<factor, ...>, e2:vec1?) -> LGL1<>
+#| base::(-.factor) : (e1:<factor, ...>, e2:any?) -> LGL<>
+#| base::(*.factor) : (e1:vec1<factor, ...>, e2:vec1) -> LGL1<>
+#| base::(*.factor) : (e1:<factor, ...>, e2:any) -> LGL<>
+#| base::(/.factor) : (e1:vec1<factor, ...>, e2:vec1) -> LGL1<>
+#| base::(/.factor) : (e1:<factor, ...>, e2:any) -> LGL<>
+#| base::([].factor) : (x:v('a)<factor, `c> with { levels: 'l, any }, ...: dbl|CHR, drop:lgl1?) -> v('a)<factor, `c> with { levels: 'l, any }
+#| base::([].factor) : (x:v('a)<factor, `c>, ...: dbl|CHR, drop:lgl1?) -> v('a)<factor, `c>
+#| base::([].factor) : (x:{any}<factor, ...>, ...: dbl|CHR, drop:lgl1?) -> any
+#| base::([[]].factor) : (x:v('a)<factor, `c> with { levels: 'l, any }, ...: dbl|CHR) -> v1('a)<factor, `c> with { levels: 'l, any }
+#| base::([[]].factor) : (x:v('a)<factor, `c>, ...: dbl|CHR) -> v1('a)<factor, `c>
+#| base::([[]].factor) : (x:{any}<factor, ...>, ...: dbl|CHR) -> any
 
 # ========== Input and output ==========
 

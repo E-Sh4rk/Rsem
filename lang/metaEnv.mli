@@ -24,9 +24,10 @@ val fsig_ty : ?polymorphic:bool -> fsig -> GTy.t
    matched with the argument of any definition.
    @raise Invalid_argument if [is_resolved] is false. *)
 
-type sigs = { resolved:GTy.t list ; symbolic:fsig list }
+type sigs = { resolved:GTy.t list ; methods:GTy.t list ; symbolic:fsig list }
 (* Signatures declared for a variable: those that could be converted to a type,
-   and the function signatures that still contain label variables. *)
+   and the function signatures that still contain label variables. [methods]
+   are those of [resolved] that come from its class-overloads. *)
 type signature = SigTy of GTy.t | SigFun of fsig
 
 type label = string

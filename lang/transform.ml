@@ -63,6 +63,19 @@ let sigs_of_fun env e =
     MetaEnv.get_signatures v env |> Option.map (fun sigs -> v, sigs)
   | _ -> None
 
+(* The intersection of the resolved signatures of a function, projected on
+   their content. It is computed once for each set of signatures (they are
+   compared physically), rather than for each application: intersecting the
+   many signatures of a generic with class-overloads (e.g. [+]) is expensive. *)
+let resolved_conj =
+  let cache = ref [] in
+  fun (resolved:GTy.t list) ->
+    match List.assq_opt resolved !cache with
+    | Some ty -> ty
+    | None ->
+      let ty = resolved |> List.map (GTy.map Rstt.Attr.proj_content) |> GTy.conj in
+      cache := (resolved, ty)::!cache ; ty
+
 (* Arguments builder / Attr projector *)
 
 module ArgBuilder = struct
@@ -287,13 +300,58 @@ let to_mlsem (cfg:cfg) e =
               MetaEnv.resolve_signature aty fsig
               |> Option.map (GTy.map Rstt.Attr.proj_content)
           in
+          (* The signatures whose domain is disjoint from the type of the
+             argument play no part in the application: they are left out of
+             the intersection, which makes the applications of a generic with
+             class-overloads to an argument of known class much faster. If
+             none is left, the application fails: all are kept, for the
+             error to be reported. *)
+          let resolved env =
+            let applicable =
+              match Env.find_opt varg env with
+              | None -> resolved_tys
+              | Some ts ->
+                let aty = TyScheme.get ts |> snd |> GTy.ub in
+                resolved_tys |> List.filter (fun ty ->
+                  Ty.cap (GTy.lb ty |> Mlsem_types.Arrow.domain) aty |> Ty.is_empty |> not)
+            in
+            if List.length applicable = List.length resolved_tys || applicable = []
+            then resolved_conj sigs.resolved
+            else GTy.conj applicable
+          in
           let alt_default =
             Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=(fun env ->
               let resolved_tys' = List.filter_map (resolve_ty env) sigs.symbolic in
-              resolved_tys@resolved_tys' |> GTy.conj |> TyScheme.mk_poly
+              (resolved env)::resolved_tys' |> GTy.conj |> TyScheme.mk_poly
               ) ; ogen=false }, arg)
           in
-          let alts_resolved = resolved_tys |> List.map TyScheme.mk_poly |> List.map (fun ty ->
+          (* In inference mode ([amask_infer]), each signature is an
+             alternative of its own. The signatures of the methods of a generic
+             with class-overloads are many, which makes inference of the
+             applications to an unknown argument (and of the functions using
+             their results) blow up: they are summarised by a single
+             alternative, the arrow from the union of their domains to the
+             union of their results. It is a supertype of their intersection,
+             so this only loses precision on the values of their classes. It
+             requires the signatures to be static (the construction is not
+             monotonic), they are kept apart otherwise. *)
+          let is_method ty = List.memq ty sigs.methods in
+          let summary =
+            let open Mlsem_types in
+            let summarise tys =
+              let arrows = tys |> List.concat_map (fun ty -> Arrow.dnf ty |> List.concat) in
+              Arrow.mk (List.map fst arrows |> Ty.disj) (List.map snd arrows |> Ty.disj)
+            in
+            match sigs.methods with
+            | [] -> []
+            | methods when List.for_all GTy.non_gradual methods ->
+              [ methods |> List.map (GTy.map Rstt.Attr.proj_content) |> GTy.mapl summarise ]
+            | methods -> List.map (GTy.map Rstt.Attr.proj_content) methods
+          in
+          let alts_resolved =
+            (sigs.resolved |> List.filter (fun ty -> is_method ty |> not)
+             |> List.map (GTy.map Rstt.Attr.proj_content))@summary
+            |> List.map TyScheme.mk_poly |> List.map (fun ty ->
             Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=Fun.const ty ; ogen=false }, arg)
             ) in
           let alts_symbolic = sigs.symbolic |> List.map (fun fsig ->

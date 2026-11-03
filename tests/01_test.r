@@ -17,6 +17,9 @@ clx <- 42i
 #| num1 : dbl1
 num1 <- 42
 
+# Annotated: its inferred type has an arrow per signature of `+` (cf.
+# sigs/base.R), and inferring the composition below with it is too slow.
+#| f_succ : (a: dbl1<>) -> dbl1<>
 f_succ <- function(a) a + 1
 f_succ_succ <- function(a) f_succ(f_succ(a))
 
