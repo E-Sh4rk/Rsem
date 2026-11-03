@@ -279,8 +279,8 @@
 #| base::vector : (mode: "raw", length: dbl1?) -> RAW<>
 #| base::vector : (mode: "list", length: dbl1?) -> { null&dyn }<>
 
-#| base::matrix : (data: absent, nrow: dbl1?, ncol: dbl1?, byrow: lgl1?) -> LGL<>
-#| base::matrix : (data: v('a), nrow: dbl1?, ncol: dbl1?, byrow: lgl1?) -> v('a)<>
+#| base::matrix : (data: absent, nrow: dbl1?, ncol: dbl1?, byrow: lgl1?, dimnames: list | null?) -> LGL<>
+#| base::matrix : (data: v('a), nrow: dbl1?, ncol: dbl1?, byrow: lgl1?, dimnames: list | null?) -> v('a)<>
 
 # ========== Functionals ==========
 
