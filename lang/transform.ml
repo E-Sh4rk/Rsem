@@ -376,6 +376,8 @@ let to_mlsem (cfg:cfg) e =
       let pos_named = pos |> List.map (fun (v,_,ty) -> Variable.get_name v |> Option.get, ty) in
       let named = nopos |> List.map (fun (v,_,ty) -> Variable.get_name v |> Option.get, ty) in
       let add_let v def e =
+        (* Generalizing default parameters may complexify the inference. *)
+        let e = Eid.unique (), A.Constructor (SA.NoGen, [e]) in
         Eid.unique (), A.Let ([Ty.any], v, (Eid.unique (), def), e)
       in
       let add_def e (v,o,fty) =
