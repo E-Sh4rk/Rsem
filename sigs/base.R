@@ -209,7 +209,9 @@
 
 # ========== Vectors and lists ==========
 
-#| base::list : (( #l_i : 'a_i )_i, ...: 'a ) -> { ( #l_i : 'a_i )_i, 'a }
+# The named elements are matched by name only, hence after `...`: before it,
+# they would also take positional arguments, `list(1, ok = TRUE)$ok` being `1`.
+#| base::list : (...: 'a, ( #l_i : 'a_i )_i ) -> { ( #l_i : 'a_i )_i, 'a }
 
 # `c()` of nothing but `NULL`s (or of nothing at all) is `NULL`. The overloads
 # that exclude it need a first argument `x`: it is not in R's signature of `c`,
@@ -360,8 +362,14 @@
 #| base::as.integer : (x:vec|null) -> INT<>
 #| base::as.numeric : (x:vec1) -> DBL1<>
 #| base::as.numeric : (x:vec|null) -> DBL<>
+#| base::as.double : (x:vec1) -> DBL1<>
+#| base::as.double : (x:vec|null) -> DBL<>
+#| base::as.logical : (x:vec1) -> LGL1<>
+#| base::as.logical : (x:vec|null) -> LGL<>
 #| base::as.character : (x:vec1) -> CHR1<>
 #| base::as.character : (x:vec|null) -> CHR<>
+#| base::as.raw : (x:vec1) -> RAW1<>
+#| base::as.raw : (x:vec|null) -> RAW<>
 
 # ========== Strings ==========
 
