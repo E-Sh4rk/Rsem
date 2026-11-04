@@ -69,6 +69,11 @@ ns_no_skip <- function() typeof
 # A class-overload can extend a generic of the search path.
 #| print.ns_rec : (x:any) -> CHR1
 ns_print <- function(x) print(x)
+# The parameter of `ns_print` has an unknown class: inferring its type only
+# considers the default signature of the methods (cf. `MetaEnv.sigs`). The
+# method applies to a value of known class.
+#| ns_rec_new : () -> dbl1<ns_rec>
+ns_print_rec <- print(ns_rec_new())
 
 # A class-overload can also be declared in a namespace, as the methods of R's
 # packages are (e.g. `base::print.data.frame`). It extends the generic of the
@@ -76,6 +81,8 @@ ns_print <- function(x) print(x)
 #| base::print.ns_df : (x:any) -> LGL1
 ns_method <- function(x) print(x)
 ns_method_direct <- function(x) base::print.ns_df(x)
+#| ns_df_new : () -> dbl1<ns_df>
+ns_method_df <- print(ns_df_new())
 
 # The generic of a namespaced method is first looked up in its own namespace:
 # here `shapes::area`, and not the global `area` of 04_s3.r.
@@ -83,3 +90,5 @@ ns_method_direct <- function(x) base::print.ns_df(x)
 #| shapes::area.ns_square : (shape:dbl1) -> CHR1
 ns_area <- function(s) shapes::area(s)
 ns_area_global <- function(s) area(s)
+#| ns_square_new : () -> dbl1<ns_square>
+ns_area_square <- shapes::area(ns_square_new())

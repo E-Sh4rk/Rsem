@@ -60,6 +60,10 @@ counter <- local({
 counter_unannot <- local({ n <- 0 ; function() { n <<- n + 1 ; n } })
 top_lapply <- lapply(c(1, 2), function(x) x + 1)
 
+# TODO: the direct application of an anonymous function using a generic with
+# class-overloads does not finish (more than 40 seconds), e.g.:
+# top_lambda_app <- (function(x) x + 1)(1)
+
 # `local(e)` evaluates `e` with `eval`, which `return` returns from: it leaves
 # the block, not the enclosing function (`x` is 1, and `f_ret()` is 2). `break`
 # and `next` cannot leave it: they are an error there.

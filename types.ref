@@ -36,23 +36,16 @@ f_succ_succ: ((a: dbl1<>) -> dbl1<>)<> with {  }
 
 f_req: ((a: dbl<>) -> dbl<>)<> with {  }
 
-f_opt: ∀'a,'b,`a,`b,`c. (((a: ('a &
- DBL1<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `a>)?) ->
- DBL1<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `a>) & ((a: ('a &
- dbl1<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `b>)?) ->
- dbl1<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `b>) & ((a: ('a & (DBL |
- dbl & v('b))<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `c>)?) -> (DBL |
- INT)<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `c> | ((DBL |
- INT)<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `c> | (DBL | dbl &
- v('b))<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `c>) & 'a) & ((a: ('a &
- (DBL1 | dbl1 & v1('b))<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `b>)?)
- -> (DBL1 | INT1)<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `b> | ((DBL1 |
- INT1)<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `b> | (DBL1 | dbl1 &
- v1('b))<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `b>) & 'a) & ((a: ('a &
- (DBL1 | dbl1 & v1('b))<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `c>)?)
- -> (DBL | INT)<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `c> | ((DBL |
- INT)<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `c> | (DBL1 | dbl1 &
- v1('b))<~POSIXt, ~Date, ~difftime, ~factor, ~ts, . | `c>) & 'a))<> with {  }
+f_opt: ∀'a,'b,`a,`b,`c. (((a: ('a & DBL1<~@"-", . | `a>)?) ->
+ DBL1<~@"-", . | `a>) & ((a: ('a & dbl1<~@"-", . | `b>)?) ->
+ dbl1<~@"-", . | `b>) & ((a: ('a & (DBL | dbl & v('b))<~@"-", . | `c>)?) ->
+ (DBL | INT)<~@"-", . | `c> | ((DBL | INT)<~@"-", . | `c> | (DBL | dbl &
+ v('b))<~@"-", . | `c>) & 'a) & ((a: ('a & (DBL1 | dbl1 &
+ v1('b))<~@"-", . | `b>)?) -> (DBL1 | INT1)<~@"-", . | `b> | ((DBL1 |
+ INT1)<~@"-", . | `b> | (DBL1 | dbl1 & v1('b))<~@"-", . | `b>) & 'a) &
+ ((a: ('a & (DBL1 | dbl1 & v1('b))<~@"-", . | `c>)?) -> (DBL |
+ INT)<~@"-", . | `c> | ((DBL | INT)<~@"-", . | `c> | (DBL1 | dbl1 &
+ v1('b))<~@"-", . | `c>) & 'a))<> with {  }
 
 f_opt_ann: ((a: dbl) -> dbl) & ((a: null?) -> lgl1)
 
@@ -83,13 +76,8 @@ _: { 42.<> with {  } }<>
 
 _: { aa: 42.<> with {  } }<>
 
-<<<<<<< HEAD
-test_lists: (() -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42. |
- ff)<> with {  } })<> with {  }
-=======
 test_lists: (() -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42L |
  ff)<> with {  } }<>)<> with {  }
->>>>>>> 48023de (update test suite)
 
 nested_list: ∀`a. (x: { a: { lgl1 }, `a }) -> { a: { lgl1 }, `a }
 
@@ -102,10 +90,14 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<> with {  }
 test_dots1: Untypeable: untypeable coercion
 expected: { `r }
 <<<<<<< HEAD
+<<<<<<< HEAD
 given: list | 'I873
 =======
 given: list<> | 'I988
 >>>>>>> 48023de (update test suite)
+=======
+given: list<> | 'I1256
+>>>>>>> f190961 (experimenting with methods application encoding)
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
 
@@ -118,7 +110,7 @@ print.R6: ∀'a,'b,`a. ((x: 'a & { print: @(...: ('b, empty? | `a)) ->
 ===== Processing tests/04_s3.r =====
 area: ((shape: dbl1<circle, ~ns_square, ...>) -> lgl1) &
  ((shape: dbl1<square, ~circle, ~ns_square, ...>) -> vec1) &
- ((shape: dbl1<~square, ~circle, ~ns_square, ...>) -> dbl1)
+ ((shape: dbl1<~@area, ...>) -> dbl1)
 
 area.square: (shape: dbl1<square, ...>) -> vec1
 
@@ -145,11 +137,10 @@ Line 47, characters 13-26
 application of some_shape failed
 argument is of type @(0.<> with {  })
 
-any_shape: Untypeable: untypeable encoding
+any_shape: Untypeable: untypeable coercion
 Line 55, characters 25-32
-application of area failed
-argument is of type @(dbl1<@area, ...>)
-hint: its classes are unknown, which the signatures of a generic with class-overloads cannot cover (cf. [has_open_classes]): give it a class, or none with `<>`
+expected: vec1
+given: any
 
 default_area: (s: dbl1<~@area, ...>) -> dbl1
 
@@ -205,11 +196,10 @@ plain_list: "b"<> with {  }
 
 plain_round: dbl1<>
 
-next_val: Untypeable: untypeable encoding
+next_val: Untypeable: untypeable coercion
 Line 107, characters 24-29
-application of base::+ failed
-argument is of type @(dbl1, 1.<> with {  })
-hint: its classes are unknown, which the signatures of a generic with class-overloads cannot cover (cf. [has_open_classes]): give it a class, or none with `<>`
+expected: dbl1
+given: any
 
 scaled: (x: dbl<>) -> dbl
 
@@ -303,7 +293,7 @@ counter: (() -> dbl1<>)<> with {  }
 
 counter_unannot: (() -> DBL1<>)<> with {  }
 
-top_lapply: { DBL1<> }<>
+top_lapply: { DBL1<~@"+", ...> }<>
 
 f_ret: (() -> DBL1<>)<> with {  }
 
@@ -373,20 +363,25 @@ ns_skip: (() -> "double"<>)<> with {  }
 
 ns_no_skip: (() -> "not a function"<> with {  })<> with {  }
 
-ns_print: ∀'a. (((x: 'a & <~ns_rec, ~ns_df, ...>) -> 'a) & ((x: 'a & (<ns_df, ...> |
- <ns_rec, ~ns_df, ...>)) -> CHR1 | LGL1))<> with {  }
+ns_print: ∀'a. (((x: 'a & <?ns_rec, ?@print, ?ns_df, ...>) -> any) & ((x: 'a &
+ <~@print, ...>) -> 'a))<> with {  }
 
-ns_method: ∀'a. (((x: 'a & <~ns_rec, ~ns_df, ...>) -> 'a) & ((x: 'a & (<ns_df, ...> |
- <ns_rec, ~ns_df, ...>)) -> CHR1 | LGL1))<> with {  }
+ns_print_rec: CHR1
+
+ns_method: ∀'a. (((x: 'a & <?ns_rec, ?@print, ?ns_df, ...>) -> any) & ((x: 'a &
+ <~@print, ...>) -> 'a))<> with {  }
 
 ns_method_direct: ((x: <ns_df, ...>) -> LGL1)<> with {  }
 
-ns_area: (((s: dbl1<ns_square, ...>) -> CHR1) &
- ((s: dbl1<~square, ~circle, ~ns_square, ...>) -> dbl1))<> with {  }
+ns_method_df: LGL1
 
-ns_area_global: (((s: dbl1<circle, ~ns_square, ...> |
- dbl1<square, ~circle, ~ns_square, ...>) -> vec1) &
- ((s: dbl1<~square, ~circle, ~ns_square, ...>) -> dbl1))<> with {  }
+ns_area: (((s: <?square, ?@area, ?circle, ?ns_square, ...>) -> any) &
+ ((s: dbl1<~@area, ...>) -> dbl1))<> with {  }
+
+ns_area_global: (((s: <?square, ?@area, ?circle, ?ns_square, ...>) -> any) &
+ ((s: dbl1<~@area, ...>) -> dbl1))<> with {  }
+
+ns_area_square: CHR1
 
 
 ===== Processing tests/02_simple/break-for.r =====

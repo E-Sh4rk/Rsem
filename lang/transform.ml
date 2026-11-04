@@ -63,42 +63,36 @@ let sigs_of_fun env e =
     MetaEnv.get_signatures v env |> Option.map (fun sigs -> v, sigs)
   | _ -> None
 
-(* The intersection of the resolved signatures of a function, projected on
-   their content. It is computed once for each set of signatures (they are
-   compared physically), rather than for each application: intersecting the
-   many signatures of a generic with class-overloads (e.g. [+]) is expensive. *)
+(* The intersection of all the (resolved) signatures of a function (cf.
+   [MetaEnv.all]), projected on their content. It is computed once for each
+   set of signatures (they are compared physically), rather than for each
+   application: intersecting the many signatures of a generic with
+   class-overloads (e.g. [+]) is expensive. *)
 let resolved_conj =
   let cache = ref [] in
-  fun (resolved:GTy.t list) ->
-    match List.assq_opt resolved !cache with
+  fun (sigs:MetaEnv.sigs) ->
+    match List.assq_opt sigs !cache with
     | Some ty -> ty
     | None ->
-      let ty = resolved |> List.map (GTy.map Rstt.Attr.proj_content) |> GTy.conj in
-      cache := (resolved, ty)::!cache ; ty
+      let ty = MetaEnv.all sigs |> List.map (GTy.map Rstt.Attr.proj_content) |> GTy.conj in
+      cache := (sigs, ty)::!cache ; ty
 
-(* [has_open_classes arg] tells whether an argument of the call-site type
-   [arg] may have classes that are left unknown (e.g. [dbl], i.e.
-   [dbl<...>], or a class row variable). The signatures of a generic with
-   class-overloads cannot cover such an argument: a class record need not
-   respect the class hierarchy, so that the restriction [<~c, ...>] of the
-   defaults and the domain [<c, ...>] of the method of [c] do not cover a
-   record having [c] without its superclasses. This is tested with a class
-   that nothing mentions, and so that only a value of unknown classes may
-   have. *)
-let has_open_classes =
-  let probe = lazy (
-    let open Rstt in
-    let classes = Classes.mk { pos=[Classes.L ("\000unknown", [])] ; neg=[] ; unk=[] ;
-                               tail=Classes.Unknown } in
-    Attr.mk { content=Ty.any ; classes ; attrs=Ty.any })
-  in
-  fun arg ->
-    let probe = Lazy.force probe in
-    let admits f = Ty.F.get_descr f |> Ty.O.get |> fst |> Ty.disjoint probe |> not in
-    Rstt.Arg.destruct arg |> List.exists (function
-      | Rstt.Arg.CallSite { pos' ; pos_tl' ; named' ; named_tl' } ->
-        List.exists admits (pos_tl'::named_tl'::pos'@List.map snd named')
-      | Rstt.Arg.DefSite _ -> false)
+(* [first_arg_has_class cls arg] tells whether the first positional argument
+   of the call-site type [arg] certainly has the class [cls], i.e. whether it
+   is disjoint from [<~cls, ...>]. It does not for an argument whose type is a
+   type variable: only one built with the class (e.g. ['a<cls>]) does. *)
+let first_arg_has_class cls arg =
+  let open Rstt in
+  let classes = Classes.mk { pos=[] ; neg=[Classes.L (cls, [])] ; unk=[] ; tail=Classes.Unknown } in
+  let not_cls = Attr.mk { content=Ty.any ; classes ; attrs=Ty.any } in
+  let has_class f = Ty.F.get_descr f |> Ty.O.get |> fst |> Ty.disjoint not_cls in
+  match Arg.destruct arg with
+  | [] -> false
+  | atoms ->
+    atoms |> List.for_all (function
+      | Arg.CallSite { pos'=f::_ ; _ } -> has_class f
+      | Arg.CallSite _ | Arg.DefSite _ -> false)
+  | exception _ -> false
 
 (* Arguments builder / Attr projector *)
 
@@ -299,6 +293,31 @@ let to_mlsem (cfg:cfg) e =
       in
       let (pos,named,ell,args) = parse_args args in
       let es = args |> List.map snd |> List.map aux in
+      (* TODO: investigate why the following makes the test suite time out
+         (e.g. [lapply(c(1, 2), function(x) x + 1)] in tests/06_scope.r, or
+         [lapply(c(1, 2), f)] for an inferred [f <- function(x) x + 1]).
+         Each argument would be bound to a variable of its own, the tuple of the
+         arguments being built from these variables: it would then be
+         generalizable (cf. the value restriction), even when an argument is
+         not (e.g. an application). The type variables of the instances of the
+         polymorphic arguments (e.g. a function) would thus be generalized, and
+         refreshed in each alternative of the application below. Currently,
+         the tuple is not generalized as soon as an argument is not
+         generalizable: the alternatives share these type variables, and the
+         substitution one of them finds constrains the others (which makes
+         the result of [lapply(c(1, 2), function(x) x + 1)] less precise).
+         It also requires replacing the [Let] binding [varg] at the end of
+         this case by:
+           let e = Eid.refresh eid, A.Let ([], varg, arg_def, e) in
+           List.fold_right (fun (v,e') e -> Eid.refresh eid, A.Let ([], v, e', e)) es e
+           |> snd |> fun e -> eid, e
+      let es = es |> List.map (fun e -> MVariable.create Immut None, e) in
+      let arg_def = Eid.unique (), A.Constructor
+        (CCustom { cname="cargs" ; cgen=true ;
+          cdom=ArgBuilder.cdom (pos,named,ell) ;
+          cons=ArgBuilder.cons (pos,named,ell) },
+         es |> List.map (fun (v,_) -> Eid.unique (), A.Var v)) in
+      *)
       let arg_def = Eid.unique (), A.Constructor
         (CCustom { cname="cargs" ; cgen=true ;
           cdom=ArgBuilder.cdom (pos,named,ell) ;
@@ -313,16 +332,36 @@ let to_mlsem (cfg:cfg) e =
             (PCustom { pname="pfun" ; pgen=true ; pdom=AttrProj.pdom ; proj=AttrProj.proj }, aux f) in
           Eid.refresh eid, A.App (f, arg)
         | Some (v, sigs) -> (* Top-level function *)
-          let resolved_tys = sigs.resolved |> List.map (GTy.map Rstt.Attr.proj_content) in
+          (* The application of a function with declared signatures (cf.
+             [MetaEnv.sigs] for their kinds) is encoded as an alternative
+             between:
+             - in checking mode (no inference variable in the type of the
+               argument, cf. [amask]), all the signatures at once: their
+               intersection, i.e. base signatures, signatures of the methods,
+               and default signature of the methods (plus the symbolic
+               signatures, resolved for the type of the argument);
+             - in inference mode, each signature alone: the base signatures,
+               the default signature of the methods, and the signatures of
+               the methods for the classes the first argument certainly has
+               (cf. [first_arg_has_class]). The other methods are left out,
+               the default signature standing for them: when the class of the
+               argument is unknown (e.g. a type variable), considering all
+               of them would make the inference blow up, the methods of a
+               generic being many (e.g. [+]). The successful alternatives
+               are intersected, so that the default signature only matters
+               when no method applies.
+             The default signature covers the values the base signatures do
+             not apply to (cf. [MetaEnv.sigs]): an argument whose classes are
+             unknown (e.g. [dbl]) is thus covered, its values of a class with a
+             method being given the type [any]. *)
+          let proj = GTy.map Rstt.Attr.proj_content in
+          let arg_ty env =
+            Env.find_opt varg env |> Option.map (fun ts -> TyScheme.get ts |> snd |> GTy.ub) in
           (* The label variables of a symbolic signature are resolved using the
              type of the argument the function is applied to. *)
           let resolve_ty env fsig =
-            match Env.find_opt varg env with
-            | None -> None
-            | Some ts ->
-              let aty = TyScheme.get ts |> snd |> GTy.ub in
-              MetaEnv.resolve_signature aty fsig
-              |> Option.map (GTy.map Rstt.Attr.proj_content)
+            arg_ty env |> Option.map (fun aty -> MetaEnv.resolve_signature aty fsig)
+            |> Option.join |> Option.map proj
           in
           (* The signatures whose domain is disjoint from the type of the
              argument play no part in the application: they are left out of
@@ -330,83 +369,56 @@ let to_mlsem (cfg:cfg) e =
              class-overloads to an argument of known class much faster. If
              none is left, the application fails: all are kept, for the
              error to be reported. *)
+          let all_tys = MetaEnv.all sigs |> List.map proj in
           let resolved env =
             let applicable =
-              match Env.find_opt varg env with
-              | None -> resolved_tys
-              | Some ts ->
-                let aty = TyScheme.get ts |> snd |> GTy.ub in
-                resolved_tys |> List.filter (fun ty ->
+              match arg_ty env with
+              | None -> all_tys
+              | Some aty ->
+                all_tys |> List.filter (fun ty ->
                   Ty.cap (GTy.lb ty |> Mlsem_types.Arrow.domain) aty |> Ty.is_empty |> not)
             in
-            if List.length applicable = List.length resolved_tys || applicable = []
-            then resolved_conj sigs.resolved
+            if List.length applicable = List.length all_tys || applicable = []
+            then resolved_conj sigs
             else GTy.conj applicable
           in
           let alt_default =
             Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=(fun env ->
-              let resolved_tys' = List.filter_map (resolve_ty env) sigs.symbolic in
-              (resolved env)::resolved_tys' |> GTy.conj |> TyScheme.mk_poly
+              let symbolic = MetaEnv.symbolic sigs |> List.map snd |> List.filter_map (resolve_ty env) in
+              (resolved env)::symbolic |> GTy.conj |> TyScheme.mk_poly
               ) ; ogen=false }, arg)
           in
-          (* In inference mode ([amask_infer]), each signature is an
-             alternative of its own. The signatures of the methods of a generic
-             with class-overloads are many, which makes inference of the
-             applications to an unknown argument (and of the functions using
-             their results) blow up: they are summarised by a single
-             alternative, the arrow from the union of their domains to the
-             union of their results. It is a supertype of their intersection,
-             so this only loses precision on the values of their classes. *)
-          let is_method ty = List.memq ty sigs.methods in
-          let summary =
-            let open Mlsem_types in
-            let summarise tys =
-              let arrows = tys |> List.concat_map (fun ty -> Arrow.dnf ty |> List.concat) in
-              Arrow.mk (List.map fst arrows |> Ty.disj) (List.map snd arrows |> Ty.disj)
-            in
-            match sigs.methods with
-            | [] -> []
-            | methods ->
-              let methods = List.map GTy.ub methods in (* summarise is not monotonic *)
-              [ methods |> List.map Rstt.Attr.proj_content |> summarise |> GTy.mk ]
+          (* The alternatives of the inference mode, each with the class of the
+             method it is a signature of (if any). *)
+          let alt ofun = Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun ; ogen=false }, arg) in
+          let alt_ty ty = alt (Fun.const (proj ty |> TyScheme.mk_poly)) in
+          let alts =
+            (MetaEnv.base sigs@MetaEnv.methods_default sigs |> List.map (fun ty -> None, alt_ty ty))
+            @(MetaEnv.methods_with_class sigs |> List.map (fun (cls, ty) -> Some cls, alt_ty ty))
+            @(MetaEnv.symbolic sigs |> List.map (fun (cls, fsig) -> cls, alt (fun env ->
+                resolve_ty env fsig |> Option.value ~default:GTy.any |> TyScheme.mk_poly)))
           in
-          let alts_resolved =
-            (sigs.resolved |> List.filter (fun ty -> is_method ty |> not)
-             |> List.map (GTy.map Rstt.Attr.proj_content))@summary
-            |> List.map TyScheme.mk_poly |> List.map (fun ty ->
-            Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=Fun.const ty ; ogen=false }, arg)
-            ) in
-          let alts_symbolic = sigs.symbolic |> List.map (fun fsig ->
-            Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ;
-              ofun=(fun env -> resolve_ty env fsig |> Option.value ~default:GTy.any |> TyScheme.mk_poly) ;
-              ogen=false }, arg)
-            ) in
-          let n = List.length alts_resolved + List.length alts_symbolic in
-          let amask_check = true::List.init n (Fun.const false) in
-          let amask_infer = false::List.init n (Fun.const true) in
           let amask env =
             let open Mlsem_types in
             let arg = if Env.mem varg env then Env.find varg env else TyScheme.mk_mono GTy.any in
             if MVarSet.subset (TyScheme.fv arg) (TVOp.all_vars KNoInfer)
-            then amask_check
-            else amask_infer
+            then true::List.map (Fun.const false) alts
+            else
+              let aty = TyScheme.get arg |> snd |> GTy.ub in
+              false::(alts |> List.map (function
+                | None, _ -> true
+                | Some cls, _ -> first_arg_has_class cls aty))
           in
+          let amask_default = true::List.map (Fun.const false) alts in
           let name = Format.asprintf "%a" Variable.pp v in
           let aerror env =
             let ty = Env.find varg env in
-            let hint =
-              if sigs.methods <> [] && has_open_classes (TyScheme.get ty |> snd |> GTy.ub)
-              then "\nhint: its classes are unknown, which the signatures of a generic \
-                    with class-overloads cannot cover (cf. [has_open_classes]): give \
-                    it a class, or none with `<>`"
-              else ""
-            in
-            Format.asprintf "application of %s failed\nargument is of type @[<h>%a@]%s"
-              name TyScheme.pp ty hint
+            Format.asprintf "application of %s failed\nargument is of type @[<h>%a@]" name TyScheme.pp ty
           in
-          let settings = { SA.aname=name ; aerror ; amask ; amask_default=amask_check } in
-          Eid.refresh eid, A.Alt (settings, alt_default::alts_resolved@alts_symbolic)
+          let settings = { SA.aname=name ; aerror ; amask ; amask_default } in
+          Eid.refresh eid, A.Alt (settings, alt_default::List.map snd alts)
       in
+      (* Cf. the TODO above for the generalization of the arguments. *)
       eid, A.Let ([], varg, arg_def, e)
     | Ite (e, e1, e2) ->
       let e = aux e in

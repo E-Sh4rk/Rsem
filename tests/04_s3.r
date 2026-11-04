@@ -46,11 +46,11 @@ m_square <- some_shape(sq_new())
 m_circle <- some_shape(ci_new())
 m_default <- some_shape(0)
 
-# But such a value cannot be given to `area` (it is expected to fail): its
+# But `area` gives such a value the type `any` (it is expected to fail): its
 # other classes are unknown, and the class records do not respect the class
 # hierarchy, so that `<@area, ...>` has values of neither `square` nor
-# `circle` that the default signature of `area` does not accept (cf.
-# `has_open_classes` in lang/transform.ml).
+# `circle`, which only the default signature of the methods covers (cf.
+# `MetaEnv.sigs`).
 #| any_shape : (s: dbl1<@area, ...>) -> vec1
 any_shape <- function(s) area(s)
 
@@ -99,10 +99,10 @@ plain_sub <- c(1, 2)[1]
 plain_list <- list(a = 1, b = "b")[["b"]]
 plain_round <- round(plain)
 
-# A value of unknown class cannot be given to a generic with class-overloads
-# (it is expected to fail, cf. `has_open_classes` in lang/transform.ml): the
-# class records do not respect the class hierarchy, which the signatures of
-# the generic cannot cover. Its classes must be given, or none with `<>`.
+# A value of unknown class may have a class with a method: for it, only the
+# default signature of the methods applies (cf. `MetaEnv.sigs`), whose result
+# is `any` (it is expected to fail). Its classes must be given, or none with
+# `<>`.
 #| next_val : (x: dbl1) -> dbl1
 next_val <- function(x) x + 1
 #| scaled : (x: dbl<>) -> dbl
