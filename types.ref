@@ -238,7 +238,7 @@ annot_dot_use: (() -> CHR1)<> with {  }
 
 .dot_local: (() -> dbl)<> with {  }
 
-annot_pow: ∀`a,`b. (((x: dbl1<`a>) -> DBL1<. | `a>) & ((x: dbl<`b>) ->
+annot_pow: ∀`a,`b. (((x: dbl1<. | `a>) -> DBL1<. | `a>) & ((x: dbl<. | `b>) ->
  DBL<. | `b>))<> with {  }
 
 annot_tilde: ((x: any, y: any) -> any)<> with {  }

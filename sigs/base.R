@@ -82,43 +82,42 @@
 # double vectors exact too, but costs as much inference time as a second
 # vector overload per mode: arithmetic in loops got 1.6x slower.
 # The result keeps the classes of the operands (those of `e1` if it has some,
-# and those of `e2` otherwise): each operand has its own class row variable,
-# and the result their union. With a single one for both, `x + 1` would not
-# keep the classes of `x`, as the literal has none.
+# and those of `e2` otherwise): both share a class row variable, which a row
+# can instantiate with a union, e.g. `x + 1` has the classes of `x` or none.
 #| base::(-) : ( e1:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
 #| base::(-) : ( e1:dbl1<`c> ) -> dbl1<`c>
 #| base::(-) : ( e1:DBL1<`c> ) -> DBL1<`c>
-#| base::(-) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`d> ) -> (v('a)&(dbl\lgl) | INT)<`c | `d>
-#| base::(-) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> dbl1<`c | `d>
-#| base::(-) : ( e1:DBL1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
-#| base::(-) : ( e1:dbl1<`c>, e2:DBL1<`d> ) -> DBL1<`c | `d>
+#| base::(-) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(-) : ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
+#| base::(-) : ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#| base::(-) : ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
 
 #| base::(+) : ( e1:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
 #| base::(+) : ( e1:dbl1<`c> ) -> dbl1<`c>
 #| base::(+) : ( e1:DBL1<`c> ) -> DBL1<`c>
-#| base::(+) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`d> ) -> (v('a)&(dbl\lgl) | INT)<`c | `d>
-#| base::(+) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> dbl1<`c | `d>
-#| base::(+) : ( e1:DBL1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
-#| base::(+) : ( e1:dbl1<`c>, e2:DBL1<`d> ) -> DBL1<`c | `d>
+#| base::(+) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(+) : ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
+#| base::(+) : ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#| base::(+) : ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
 
-#| base::(*) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`d> ) -> (v('a)&(dbl\lgl) | INT)<`c | `d>
-#| base::(*) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> dbl1<`c | `d>
-#| base::(*) : ( e1:DBL1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
-#| base::(*) : ( e1:dbl1<`c>, e2:DBL1<`d> ) -> DBL1<`c | `d>
-#| base::(%%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`d> ) -> (v('a)&(dbl\lgl) | INT)<`c | `d>
-#| base::(%%) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> dbl1<`c | `d>
-#| base::(%%) : ( e1:DBL1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
-#| base::(%%) : ( e1:dbl1<`c>, e2:DBL1<`d> ) -> DBL1<`c | `d>
-#| base::(%/%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`d> ) -> (v('a)&(dbl\lgl) | INT)<`c | `d>
-#| base::(%/%) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> dbl1<`c | `d>
-#| base::(%/%) : ( e1:DBL1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
-#| base::(%/%) : ( e1:dbl1<`c>, e2:DBL1<`d> ) -> DBL1<`c | `d>
+#| base::(*) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(*) : ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
+#| base::(*) : ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#| base::(*) : ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
+#| base::(%%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(%%) : ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
+#| base::(%%) : ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#| base::(%%) : ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
+#| base::(%/%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(%/%) : ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
+#| base::(%/%) : ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#| base::(%/%) : ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
 
 # Always a double, even for integer operands (`1L / 2L` is `0.5`).
-#| base::(/) : ( e1:dbl<`c>, e2:dbl<`d> ) -> DBL<`c | `d>
-#| base::(/) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
-#| base::(^) : ( e1:dbl<`c>, e2:dbl<`d> ) -> DBL<`c | `d>
-#| base::(^) : ( e1:dbl1<`c>, e2:dbl1<`d> ) -> DBL1<`c | `d>
+#| base::(/) : ( e1:dbl<`c>, e2:dbl<`c> ) -> DBL<`c>
+#| base::(/) : ( e1:dbl1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#| base::(^) : ( e1:dbl<`c>, e2:dbl<`c> ) -> DBL<`c>
+#| base::(^) : ( e1:dbl1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
 
 # ========== Comparisons and Boolean operators ==========
 

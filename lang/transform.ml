@@ -293,33 +293,9 @@ let to_mlsem (cfg:cfg) e =
       in
       let (pos,named,ell,args) = parse_args args in
       let es = args |> List.map snd |> List.map aux in
-      (* TODO: investigate why the following makes the test suite time out
-         (e.g. [lapply(c(1, 2), function(x) x + 1)] in tests/06_scope.r, or
-         [lapply(c(1, 2), f)] for an inferred [f <- function(x) x + 1]).
-         Each argument would be bound to a variable of its own, the tuple of the
-         arguments being built from these variables: it would then be
-         generalizable (cf. the value restriction), even when an argument is
-         not (e.g. an application). The type variables of the instances of the
-         polymorphic arguments (e.g. a function) would thus be generalized, and
-         refreshed in each alternative of the application below. Currently,
-         the tuple is not generalized as soon as an argument is not
-         generalizable: the alternatives share these type variables, and the
-         substitution one of them finds constrains the others (which makes
-         the result of [lapply(c(1, 2), function(x) x + 1)] less precise).
-         It also requires replacing the [Let] binding [varg] at the end of
-         this case by:
-           let e = Eid.refresh eid, A.Let ([], varg, arg_def, e) in
-           List.fold_right (fun (v,e') e -> Eid.refresh eid, A.Let ([], v, e', e)) es e
-           |> snd |> fun e -> eid, e
-      let es = es |> List.map (fun e -> MVariable.create Immut None, e) in
+      (* Arg def is not generalized because it makes the Alt encoding slower. *)
       let arg_def = Eid.unique (), A.Constructor
-        (CCustom { cname="cargs" ; cgen=true ;
-          cdom=ArgBuilder.cdom (pos,named,ell) ;
-          cons=ArgBuilder.cons (pos,named,ell) },
-         es |> List.map (fun (v,_) -> Eid.unique (), A.Var v)) in
-      *)
-      let arg_def = Eid.unique (), A.Constructor
-        (CCustom { cname="cargs" ; cgen=true ;
+        (CCustom { cname="cargs" ; cgen=false ;
           cdom=ArgBuilder.cdom (pos,named,ell) ;
           cons=ArgBuilder.cons (pos,named,ell) }, es) in
       (* let arg_def = Eid.unique (), A.Constructor (SA.Normalize, [arg_def]) in *)
@@ -418,7 +394,6 @@ let to_mlsem (cfg:cfg) e =
           let settings = { SA.aname=name ; aerror ; amask ; amask_default } in
           Eid.refresh eid, A.Alt (settings, alt_default::List.map snd alts)
       in
-      (* Cf. the TODO above for the generalization of the arguments. *)
       eid, A.Let ([], varg, arg_def, e)
     | Ite (e, e1, e2) ->
       let e = aux e in
