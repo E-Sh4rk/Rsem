@@ -83,7 +83,7 @@ let resolved_conj =
    type variable: only one built with the class (e.g. ['a<cls>]) does. *)
 let first_arg_has_class cls arg =
   let open Rstt in
-  let classes = Classes.mk { pos=[] ; neg=[Classes.L (cls, [])] ; unk=[] ; tail=Classes.Unknown } in
+  let classes = Classes.mk { pos=[] ; neg=[Classes.Class cls] ; unk=[] ; tail=Classes.Unknown } in
   let not_cls = Attr.mk { content=Ty.any ; classes ; attrs=Ty.any } in
   let has_class f = Ty.F.get_descr f |> Ty.O.get |> fst |> Ty.disjoint not_cls in
   match Arg.destruct arg with

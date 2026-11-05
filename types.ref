@@ -76,7 +76,7 @@ _: { 42.<> with {  } }<>
 
 _: { aa: 42.<> with {  } }<>
 
-test_lists: (() -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42L |
+test_lists: (() -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42. |
  ff)<> with {  } }<>)<> with {  }
 
 nested_list: ∀`a. (x: { a: { lgl1 }, `a }) -> { a: { lgl1 }, `a }
@@ -89,15 +89,7 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<> with {  }
 
 test_dots1: Untypeable: untypeable coercion
 expected: { `r }
-<<<<<<< HEAD
-<<<<<<< HEAD
-given: list | 'I873
-=======
-given: list<> | 'I988
->>>>>>> 48023de (update test suite)
-=======
-given: list<> | 'I1256
->>>>>>> f190961 (experimenting with methods application encoding)
+given: list<> | 'I1262
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
 
@@ -363,23 +355,21 @@ ns_skip: (() -> "double"<>)<> with {  }
 
 ns_no_skip: (() -> "not a function"<> with {  })<> with {  }
 
-ns_print: ∀'a. (((x: 'a & <?ns_rec, ?@print, ?ns_df, ...>) -> any) & ((x: 'a &
- <~@print, ...>) -> 'a))<> with {  }
+ns_print: ∀'a. (((x: 'a & <@print, ...>) -> any) & ((x: 'a & <~@print, ...>) ->
+ 'a))<> with {  }
 
 ns_print_rec: CHR1
 
-ns_method: ∀'a. (((x: 'a & <?ns_rec, ?@print, ?ns_df, ...>) -> any) & ((x: 'a &
- <~@print, ...>) -> 'a))<> with {  }
+ns_method: ∀'a. (((x: 'a & <@print, ...>) -> any) & ((x: 'a & <~@print, ...>) ->
+ 'a))<> with {  }
 
 ns_method_direct: ((x: <ns_df, ...>) -> LGL1)<> with {  }
 
 ns_method_df: LGL1
 
-ns_area: (((s: <?square, ?@area, ?circle, ?ns_square, ...>) -> any) &
- ((s: dbl1<~@area, ...>) -> dbl1))<> with {  }
+ns_area: (((s: <@area, ...>) -> any) & ((s: dbl1<~@area, ...>) -> dbl1))<> with {  }
 
-ns_area_global: (((s: <?square, ?@area, ?circle, ?ns_square, ...>) -> any) &
- ((s: dbl1<~@area, ...>) -> dbl1))<> with {  }
+ns_area_global: (((s: <@area, ...>) -> any) & ((s: dbl1<~@area, ...>) -> dbl1))<> with {  }
 
 ns_area_square: CHR1
 

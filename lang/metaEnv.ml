@@ -15,7 +15,7 @@ type fsig = {
   decl : funsig ;
   (* Class-overload restrictions declared for this signature, in the order they
      must be applied to its first parameter. *)
-  restr : (bool * string) list ;
+  restr : (bool * Rstt.Classes.cls) list ;
   build : builder -> GTy.t ;
 }
 
@@ -66,8 +66,8 @@ let is_fun_sig ty =
 let class_ty restr =
   let open Rstt in
   let pos, neg = List.partition fst restr in
-  let pos = pos |> List.map (fun (_,cls) -> Classes.L (Classes.Class cls, [])) in
-  let neg = neg |> List.map (fun (_,cls) -> Classes.Class cls) in
+  let pos = pos |> List.map (fun (_,cls) -> Classes.L (cls, [])) in
+  let neg = neg |> List.map snd in
   let classes = Classes.mk { pos ; neg ; unk=[] ; tail=Classes.Unknown } in
   Attr.mk { content=Ty.any ; classes ; attrs=Ty.any }
 
@@ -230,7 +230,7 @@ let is_method m t = overloads m t <> []
 
 (* The method class of the generic [m], i.e. the class of the values whose
    class has a class-overload of [m]. *)
-let method_class m = Rstt.Classes.class_of_method (r_name m)
+let method_class m = Rstt.Classes.Method (r_name m)
 
 (* The restriction of the first parameter of a signature of the generic [m]
    (cf. [add_signature]): the values whose class has no class-overload of [m]
@@ -242,17 +242,15 @@ let restriction ?cls m t =
   match cls with
   | None when is_method m t -> [false, method_class m]
   | None -> []
-  | Some cls -> overloads_after cls m t |> List.map (fun c -> false, c)
+  | Some cls -> overloads_after cls m t |> List.map (fun c -> false, Rstt.Classes.Class c)
 
 (* The default signature of the methods of the generic [m],
    [(X: ~<~@m, ...>, ...: any) -> any]: it covers the values for which the
    base signatures do not apply, i.e. the complement of their restriction
-   [<~@m, ...>]. This is not [<@m, ...>]: the encoding of the classes does
-   not enforce their hierarchy, so that a class record may have a class with
-   a class-overload of [m] without having [@m], and [<~@m, ...>] (which closes
-   over the subclasses of [@m]) does not have it either. Contrarily to the
-   signatures of the methods, it also covers the values of these classes whose
-   other classes are unknown (e.g. [<@m, ...>]). *)
+   [<~@m, ...>], i.e. [<@m, ...>] (a class implies the method classes it
+   implements). Contrarily to the signatures of the methods, it also covers
+   the values of these classes whose other classes are unknown (e.g.
+   [<@m, ...>]). *)
 let methods_default_ty m =
   let open Rstt in
   let field ty = Ty.F.mk_descr (Ty.O.required ty) in
@@ -264,8 +262,8 @@ let methods_default_ty m =
 (* Restrictions of the signature of the class-overload of a generic for the
    class [cls]: its first parameter is restricted to the values of class
    [cls]. *)
-let class_overload_sig cls f = restrict_sig [true, cls] f
-let class_overload_ty cls ty = restrict_first_param [true, cls] ty
+let class_overload_sig cls f = restrict_sig [true, Rstt.Classes.Class cls] f
+let class_overload_ty cls ty = restrict_first_param [true, Rstt.Classes.Class cls] ty
 
 (* ===== Registration of the signatures ===== *)
 

@@ -37,14 +37,13 @@ type sigs
      declared after the one for [c_i] (which take precedence over it);
    - the default signature of its methods,
      [(X: ~<~@m, ...>, ...: any) -> any], which covers the values the base
-     signatures do not apply to: those of the classes that have a
-     class-overload of [m], whatever their other classes are. Neither the
-     signatures of the methods nor [<@m, ...>] cover all of them, as the
-     encoding of the classes does not enforce their hierarchy: a class record
-     may have [c_i] without [@m], so that [<@m, ~c_1, ..., ~c_n, ...>] is not
-     empty, and [<~@m, ...> | <@m, ...>] is not [<...>]. With it, the
-     signatures of a method cover all the values its base signatures cover,
-     and those of unknown classes (e.g. [dbl]) in particular.
+     signatures do not apply to, i.e. [<@m, ...>] (a class implies the method
+     classes it implements, so these are the values of the classes that have
+     a class-overload of [m], whatever their other classes are). The
+     signatures of the methods do not cover all of them, as
+     [<@m, ~c_1, ..., ~c_n, ...>] is not empty. With it, the signatures of a
+     method cover all the values its base signatures cover, and those of
+     unknown classes (e.g. [dbl]) in particular.
    A function that is not a method only has base signatures (whose first
    parameter is not restricted). Each kind only lists the signatures that
    could be converted to a type: the function signatures that still contain
