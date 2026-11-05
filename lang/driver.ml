@@ -386,9 +386,9 @@ let add_ns_sig ctx ns str tye =
   { ctx with tenv }
 
 (* Every declaration but a class-overload may build types that mention
-   classes: the class lattice must be built first. *)
+   classes: the classes declared so far must be declared to rstt first. *)
 let add_def ctx offset def =
-  begin match def with Sigs.NewClass _ -> () | _ -> MetaEnv.build_lattice () end ;
+  begin match def with Sigs.NewClass _ -> () | _ -> MetaEnv.declare_classes ctx.tenv end ;
   match def with
   | Sigs.Sig (str, tye) -> add_sig ctx str tye
   | Sigs.LocalSig (f, str, tye) -> add_local_sig ctx offset f str tye
@@ -475,7 +475,7 @@ let process ctx (prog, extras) =
   let ctx = { ctx with lannots =
     ctx.lannots |> List.map (fun a -> { a with loffset = min_int }) } in
   let ctx = List.fold_left (treat_extra prog) ctx extras in
-  MetaEnv.build_lattice () ;
+  MetaEnv.declare_classes ctx.tenv ;
   List.fold_left treat_def ctx prog
 
 let main (ctx, fn) =

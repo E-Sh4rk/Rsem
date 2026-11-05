@@ -55,11 +55,11 @@ let is_fun_sig ty =
 (* [<cls, ...>] if [present], [<~cls, ...>] otherwise. *)
 let class_ty ~present cls =
   let open Rstt in
-  let line = Classes.L (cls, []) in
+  let cls = Classes.Class cls in
   let classes =
     if present
-    then Classes.mk { pos=[line] ; neg=[] ; unk=[] ; tail=Classes.Unknown }
-    else Classes.mk { pos=[] ; neg=[line] ; unk=[] ; tail=Classes.Unknown }
+    then Classes.mk { pos=[Classes.L (cls, [])] ; neg=[] ; unk=[] ; tail=Classes.Unknown }
+    else Classes.mk { pos=[] ; neg=[cls] ; unk=[] ; tail=Classes.Unknown }
   in
   Attr.mk { content=Ty.any ; classes ; attrs=Ty.any }
 
@@ -144,11 +144,15 @@ let resolve_signature arg f =
 
 (* ===== Class-overloads ===== *)
 
+(* Classes already declared to rstt. As rstt, it is global: a class can only be
+   declared once, with all the methods it implements. *)
+let declared = Hashtbl.create 10
+
 (* Declares the class-overload of the generic [m] for the class [cls]: [cls]
-   becomes a subclass of the method class of [m]. The class hierarchy and the
+   will implement the method class of [m]. The methods of a class and the
    restrictions of the signatures are derived from the class-overloads, so they
-   must all be declared before the class lattice is built (i.e. before any type
-   mentions a class, cf. [build_lattice]) and before [m] is given a type.
+   must all be declared before the class is declared (i.e. before any type
+   mentions it, cf. [declare_classes]) and before [m] is given a type.
    Declaring the same class-overload again does nothing. *)
 let new_class_overload m cls t =
   if List.mem (m,cls) t.ovl then t
@@ -156,17 +160,26 @@ let new_class_overload m cls t =
     let error reason =
       failwith (Printf.sprintf "Cannot declare the class-overload %s @ %s: %s." m cls reason) in
     if StrSet.mem m t.bound then error (m^" has already been given a type") ;
-    begin try Rstt.Classes.add_relation cls ~supers:[Rstt.Classes.class_of_method m]
-    with Invalid_argument _ ->
-      error "class-overloads must be declared before any type annotation"
-    end ;
+    if Hashtbl.mem declared cls then
+      error (cls^" has already been declared (class-overloads must precede any type mentioning their class)") ;
     { t with ovl=t.ovl@[m,cls] }
   end
 
-(* Freezes the class hierarchy declared by the class-overloads. It must be
-   called before any type mentioning a class is built. Calling it again does
-   nothing. *)
-let build_lattice () = Rstt.Classes.build_lattice ()
+(* Declares to rstt the classes of the class-overloads that have not been
+   declared yet, each with the methods of all its class-overloads. It must be
+   called before any type mentioning these classes is built. *)
+let declare_classes t =
+  t.ovl |> List.iter (fun (_,cls) ->
+    if Hashtbl.mem declared cls |> not then begin
+      let methods = t.ovl |> List.filter_map (fun (m,c) ->
+        if String.equal c cls then Some m else None) in
+      begin try Rstt.Classes.declare_class cls ~methods
+      with Invalid_argument _ ->
+        failwith (Printf.sprintf
+          "Cannot declare the class %s: it is mentioned by a type built before its class-overloads." cls)
+      end ;
+      Hashtbl.add declared cls ()
+    end)
 
 (* Classes of the class-overloads of the generic [m] that take precedence over
    a signature of [m]: those declared after the class-overload for [cls] if

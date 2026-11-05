@@ -1,8 +1,8 @@
 # ========== S3 dispatch ==========
 
 # The class-overloads are declared first, as they define the class hierarchy:
-# `new area @ square` makes `square` a subclass of the method class `@area`,
-# and must come before any type mentions `square`. They also restrict the
+# `new area @ square` makes `square` implement the method class `@area`, and
+# must come before any type mentions `square`. They also restrict the
 # signatures of `area`: the first parameter of a signature of `area` excludes
 # the classes of the class-overloads that take precedence over it (all of them
 # for the generic itself, the ones declared later for a class-overload), and

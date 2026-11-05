@@ -49,13 +49,15 @@ val set_from_tyscheme : Variable.t -> TyScheme.t -> t -> t
 
 val new_class_overload : string -> string -> t -> t
 (* [new_class_overload m cls t] declares the class-overload of the generic
-   named [m] for the class [cls], after the ones already declared: [cls]
-   becomes a subclass of the method class of [m]. It has no effect if it
-   already is.
-   @raise Failure if the class lattice has been built or [m] given a type. *)
-val build_lattice : unit -> unit
-(* Freezes the class hierarchy. It must be called before any type mentioning a
-   class is built, and makes later class-overloads declarations fail. *)
+   named [m] for the class [cls], after the ones already declared: [cls] will
+   implement the method class of [m]. It has no effect if it already does.
+   @raise Failure if [cls] has already been declared (cf. [declare_classes]) or
+   [m] given a type. *)
+val declare_classes : t -> unit
+(* Declares the classes of the class-overloads of [t] that have not been
+   declared yet, with their methods. It must be called before any type
+   mentioning these classes is built, and makes later class-overloads for them
+   fail. *)
 val class_overload_sig : string -> fsig -> fsig
 val class_overload_ty : string -> GTy.t -> GTy.t
 (* Restriction of the signature of a class-overload for the class [cls]: its
