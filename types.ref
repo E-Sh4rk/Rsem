@@ -287,6 +287,8 @@ counter_unannot: (() -> DBL1<>)<> with {  }
 
 top_lapply: { DBL1<~@"+", ...> }<>
 
+top_lambda_app: DBL1<>
+
 f_ret: (() -> DBL1<>)<> with {  }
 
 top_ret: 1.<> with {  }

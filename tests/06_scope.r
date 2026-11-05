@@ -62,9 +62,14 @@ counter_unannot <- local({ n <- 0 ; function() { n <<- n + 1 ; n } })
 # TODO: Class inferred is not precise.
 top_lapply <- lapply(c(1, 2), function(x) x + 1)
 
-# TODO: the direct application of an anonymous function using a generic with
-# class-overloads does not finish (more than 40 seconds), e.g.:
-# top_lambda_app <- (function(x) x + 1)(1)
+# The direct application of an anonymous function using a generic with
+# class-overloads.
+top_lambda_app <- (function(x) x + 1)(1)
+
+# TODO: the application of a generic with class-overloads to a value whose
+# classes are unknown does not finish (more than 20 seconds), e.g.:
+# #| neg_unknown : (x: dbl) -> any
+# neg_unknown <- function(x) -x
 
 # `local(e)` evaluates `e` with `eval`, which `return` returns from: it leaves
 # the block, not the enclosing function (`x` is 1, and `f_ret()` is 2). `break`

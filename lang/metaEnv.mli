@@ -36,7 +36,7 @@ type sigs
      [c_(i+1), ..., c_n] are the classes of the class-overloads of [m]
      declared after the one for [c_i] (which take precedence over it);
    - the default signature of its methods,
-     [(X: ~<~@m, ...>, ...: any) -> any], which covers the values the base
+     [(X: <@m, ...>, ...: any) -> any], which covers the values the base
      signatures do not apply to, i.e. [<@m, ...>] (a class implies the method
      classes it implements, so these are the values of the classes that have
      a class-overload of [m], whatever their other classes are). The

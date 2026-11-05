@@ -245,16 +245,15 @@ let restriction ?cls m t =
   | Some cls -> overloads_after cls m t |> List.map (fun c -> false, Rstt.Classes.Class c)
 
 (* The default signature of the methods of the generic [m],
-   [(X: ~<~@m, ...>, ...: any) -> any]: it covers the values for which the
-   base signatures do not apply, i.e. the complement of their restriction
-   [<~@m, ...>], i.e. [<@m, ...>] (a class implies the method classes it
+   [(X: <@m, ...>, ...: any) -> any]: it covers the values for which the
+   base signatures do not apply, i.e. the complement [<@m, ...>] of their
+   restriction [<~@m, ...>] (a class implies the method classes it
    implements). Contrarily to the signatures of the methods, it also covers
-   the values of these classes whose other classes are unknown (e.g.
-   [<@m, ...>]). *)
+   the values of these classes whose other classes are unknown. *)
 let methods_default_ty m =
   let open Rstt in
   let field ty = Ty.F.mk_descr (Ty.O.required ty) in
-  let x = Ty.diff Attr.any (class_ty [false, method_class m]) in
+  let x = class_ty [true, method_class m] in
   let dom = Arg.mk { pos_named=["X", field x] ;
                      pos_tl=field Ty.any ; named=[] ; named_tl=field Ty.any } in
   Arrow.mk dom Ty.any |> Attr.mk_content |> GTy.mk

@@ -79,13 +79,14 @@ let resolved_conj =
 
 (* [first_arg_has_class cls arg] tells whether the first positional argument
    of the call-site type [arg] certainly has the class [cls], i.e. whether it
-   is disjoint from [<~cls, ...>]. It does not for an argument whose type is a
+   is a subtype of [<cls, ...>]. It does not for an argument whose type is a
    type variable: only one built with the class (e.g. ['a<cls>]) does. *)
 let first_arg_has_class cls arg =
   let open Rstt in
-  let classes = Classes.mk { pos=[] ; neg=[Classes.Class cls] ; unk=[] ; tail=Classes.Unknown } in
-  let not_cls = Attr.mk { content=Ty.any ; classes ; attrs=Ty.any } in
-  let has_class f = Ty.F.get_descr f |> Ty.O.get |> fst |> Ty.disjoint not_cls in
+  let classes = Classes.mk { pos=[Classes.L (Classes.Class cls, [])] ; neg=[] ; unk=[] ;
+                             tail=Classes.Unknown } in
+  let with_cls = Attr.mk { content=Ty.any ; classes ; attrs=Ty.any } in
+  let has_class f = Ty.leq (Ty.F.get_descr f |> Ty.O.get |> fst) with_cls in
   match Arg.destruct arg with
   | [] -> false
   | atoms ->
