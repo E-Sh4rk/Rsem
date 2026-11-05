@@ -258,6 +258,30 @@ let methods_default_ty m =
                      pos_tl=field Ty.any ; named=[] ; named_tl=field Ty.any } in
   Arrow.mk dom Ty.any |> Attr.mk_content |> GTy.mk
 
+(* A partition of the R values the first argument of an application of the
+   generic [m] may take, following its dispatch (as all R values are
+   attributed, it does not have to cover the other types): the values whose
+   class has
+   no class-overload of [m] ([<~@m, ...>], which the base signatures cover),
+   those of the class [c_i] of each of its class-overloads that have none of
+   the classes of the class-overloads declared after it
+   ([<c_i, ~c_(i+1), ..., ~c_n, ...>]), and the rest ([<@m, ~c_1, ..., ~c_n,
+   ...>], if not empty). It is empty if [m] is not a method. *)
+let dispatch_partition m t =
+  match overloads m t with
+  | [] -> []
+  | clss ->
+    let base = class_ty [false, method_class m] in
+    let rec meths clss =
+      match clss with
+      | [] -> []
+      | c::clss ->
+        class_ty ((true, Rstt.Classes.Class c)::List.map (fun c -> false, Rstt.Classes.Class c) clss)
+        ::meths clss
+    in
+    let rest = class_ty ((true, method_class m)::List.map (fun c -> false, Rstt.Classes.Class c) clss) in
+    base::meths clss@(if Ty.is_empty rest then [] else [rest])
+
 (* Restrictions of the signature of the class-overload of a generic for the
    class [cls]: its first parameter is restricted to the values of class
    [cls]. *)

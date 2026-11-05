@@ -66,10 +66,12 @@ top_lapply <- lapply(c(1, 2), function(x) x + 1)
 # class-overloads.
 top_lambda_app <- (function(x) x + 1)(1)
 
-# TODO: the application of a generic with class-overloads to a value whose
-# classes are unknown does not finish (more than 20 seconds), e.g.:
-# #| neg_unknown : (x: dbl) -> any
-# neg_unknown <- function(x) -x
+# The application of a generic with class-overloads to a value whose classes
+# are unknown: in checking mode, its argument is partitioned following the
+# dispatch of the generic, each part being typed with the few signatures that
+# apply to it.
+#| neg_unknown : (x: dbl) -> any
+neg_unknown <- function(x) -x
 
 # `local(e)` evaluates `e` with `eval`, which `return` returns from: it leaves
 # the block, not the enclosing function (`x` is 1, and `f_ret()` is 2). `break`

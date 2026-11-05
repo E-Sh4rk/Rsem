@@ -95,6 +95,31 @@ let first_arg_has_class cls arg =
       | Arg.CallSite _ | Arg.DefSite _ -> false)
   | exception _ -> false
 
+(* The partition of the call-site arguments of an application of the
+   variable [v] following its dispatch, if it is a generic with class-overloads
+   and its first positional argument [pos] (cf. [ArgBuilder]) is passed: the
+   arguments whose first positional one is in each part of
+   [MetaEnv.dispatch_partition]. Each part has as many positional arguments
+   as the call ([pos]), as a call-site argument keeps track of their number
+   (an argument passed but absent differs from none passed). It is empty
+   otherwise. *)
+let dispatch_partition env v pos =
+  match Variable.get_name v, pos with
+  | None, _ | _, ([] | false::_) -> []
+  | Some name, true::pos ->
+    (* The name of a variable of a namespace is prefixed with it. *)
+    let name =
+      match String.split_on_char ':' name |> List.rev with
+      | name::""::_::_ -> name
+      | _ -> name
+    in
+    let open Rstt in
+    let opt_any = Ty.F.mk_descr (Ty.O.optional Ty.any) in
+    let others = List.map (Fun.const opt_any) pos in
+    MetaEnv.dispatch_partition name env |> List.map (fun p ->
+      Arg.mk' { pos'=Ty.F.mk_descr (Ty.O.required p)::others ; pos_tl'=opt_any ;
+                named'=[] ; named_tl'=opt_any })
+
 (* Arguments builder / Attr projector *)
 
 module ArgBuilder = struct
@@ -332,12 +357,12 @@ let to_mlsem (cfg:cfg) e =
              unknown (e.g. [dbl]) is thus covered, its values of a class with a
              method being given the type [any]. *)
           let proj = GTy.map Rstt.Attr.proj_content in
-          let arg_ty env =
-            Env.find_opt varg env |> Option.map (fun ts -> TyScheme.get ts |> snd |> GTy.ub) in
+          let arg_ty ?(v=varg) env =
+            Env.find_opt v env |> Option.map (fun ts -> TyScheme.get ts |> snd |> GTy.ub) in
           (* The label variables of a symbolic signature are resolved using the
              type of the argument the function is applied to. *)
-          let resolve_ty env fsig =
-            arg_ty env |> Option.map (fun aty -> MetaEnv.resolve_signature aty fsig)
+          let resolve_ty ?v env fsig =
+            arg_ty ?v env |> Option.map (fun aty -> MetaEnv.resolve_signature aty fsig)
             |> Option.join |> Option.map proj
           in
           (* The signatures whose domain is disjoint from the type of the
@@ -347,9 +372,9 @@ let to_mlsem (cfg:cfg) e =
              none is left, the application fails: all are kept, for the
              error to be reported. *)
           let all_tys = MetaEnv.all sigs |> List.map proj in
-          let resolved env =
+          let resolved ?v env =
             let applicable =
-              match arg_ty env with
+              match arg_ty ?v env with
               | None -> all_tys
               | Some aty ->
                 all_tys |> List.filter (fun ty ->
@@ -359,11 +384,25 @@ let to_mlsem (cfg:cfg) e =
             then resolved_conj sigs
             else GTy.conj applicable
           in
+          (* In checking mode, the argument is partitioned following the
+             dispatch of the generic, if it is a method (cf.
+             [MetaEnv.dispatch_partition]): the class of its first positional
+             argument. Each part is typed apart, with only the signatures
+             whose domain is not disjoint from it (cf. [resolved]), which
+             avoids the intersection of all of them when the class of the
+             argument is unknown (e.g. [dbl]). *)
+          let partition = dispatch_partition cfg.env v pos in
+          let varg' = if partition = [] then varg else MVariable.create Immut None in
           let alt_default =
             Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=(fun env ->
-              let symbolic = MetaEnv.symbolic sigs |> List.map snd |> List.filter_map (resolve_ty env) in
-              (resolved env)::symbolic |> GTy.conj |> TyScheme.mk_poly
-              ) ; ogen=false }, arg)
+              let symbolic = MetaEnv.symbolic sigs |> List.map snd
+                             |> List.filter_map (resolve_ty ~v:varg' env) in
+              (resolved ~v:varg' env)::symbolic |> GTy.conj |> TyScheme.mk_poly
+              ) ; ogen=false }, (Eid.unique (), A.Var varg'))
+          in
+          let alt_default =
+            if partition = [] then alt_default
+            else Eid.unique (), A.Let (partition, varg', arg, alt_default)
           in
           (* The alternatives of the inference mode, each with the class of the
              method it is a signature of (if any). *)

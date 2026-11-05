@@ -99,6 +99,11 @@ val declare_classes : t -> unit
    declared yet, with their methods. It must be called before any type
    mentioning these classes is built, and makes later class-overloads for them
    fail. *)
+val dispatch_partition : string -> t -> Ty.t list
+(* [dispatch_partition m t] partitions the R values of the first argument of an
+   application of the generic [m] following its dispatch: [<~@m, ...>], then
+   [<c_i, ~c_(i+1), ..., ~c_n, ...>] for each class-overload of [m], and the
+   rest. It is empty if [m] is not a method. *)
 val class_overload_sig : string -> fsig -> fsig
 val class_overload_ty : string -> GTy.t -> GTy.t
 (* Restriction of the signature of a class-overload for the class [cls]: its

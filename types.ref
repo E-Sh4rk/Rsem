@@ -89,7 +89,7 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<> with {  }
 
 test_dots1: Untypeable: untypeable coercion
 expected: { `r }
-given: list<> | 'I1262
+given: list<> | 'I1260
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
 
@@ -288,6 +288,8 @@ counter_unannot: (() -> DBL1<>)<> with {  }
 top_lapply: { DBL1<~@"+", ...> }<>
 
 top_lambda_app: DBL1<>
+
+neg_unknown: (x: dbl) -> any
 
 f_ret: (() -> DBL1<>)<> with {  }
 
