@@ -36,16 +36,14 @@ f_succ_succ: ((a: dbl1<>) -> dbl1<>)<> with {  }
 
 f_req: ((a: dbl<>) -> dbl<>)<> with {  }
 
-f_opt: ∀'a,'b,`a,`b,`c. (((a: ('a & DBL1<~@"-", . | `a>)?) ->
- DBL1<~@"-", . | `a>) & ((a: ('a & dbl1<~@"-", . | `b>)?) ->
- dbl1<~@"-", . | `b>) & ((a: ('a & (DBL | dbl & v('b))<~@"-", . | `c>)?) ->
- (DBL | INT)<~@"-", . | `c> | ((DBL | INT)<~@"-", . | `c> | (DBL | dbl &
- v('b))<~@"-", . | `c>) & 'a) & ((a: ('a & (DBL1 | dbl1 &
- v1('b))<~@"-", . | `b>)?) -> (DBL1 | INT1)<~@"-", . | `b> | ((DBL1 |
- INT1)<~@"-", . | `b> | (DBL1 | dbl1 & v1('b))<~@"-", . | `b>) & 'a) &
- ((a: ('a & (DBL1 | dbl1 & v1('b))<~@"-", . | `c>)?) -> (DBL |
- INT)<~@"-", . | `c> | ((DBL | INT)<~@"-", . | `c> | (DBL1 | dbl1 &
- v1('b))<~@"-", . | `c>) & 'a))<> with {  }
+f_opt: ∀'a,'b,`a. (((a: ('a & DBL1<~@"-", . | `a>)?) -> DBL1<~@"-", . | `a>) &
+ ((a: ('a & dbl1<~@"-", . | `a>)?) -> dbl1<~@"-", . | `a>) & ((a: ('a & (DBL
+ | dbl & v('b))<~@"-", . | `a>)?) -> (DBL | INT)<~@"-", . | `a> | ((DBL |
+ INT)<~@"-", . | `a> | (DBL | dbl & v('b))<~@"-", . | `a>) & 'a) & ((a: ('a &
+ (DBL1<~@"-", . | `a> | (dbl & v('b))<~@"-", . | `a>))?) ->
+ (DBL1<~@"-", . | `a> | (INT | (DBL | INT) & v('b))<~@"-", . | `a>) |
+ (DBL1<~@"-", . | `a> | (INT | (DBL | INT) & v('b))<~@"-", . | `a> | (dbl &
+ v('b))<~@"-", . | `a>) & 'a))<> with {  }
 
 f_opt_ann: ((a: dbl) -> dbl) & ((a: null?) -> lgl1)
 
@@ -89,7 +87,7 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<> with {  }
 
 test_dots1: Untypeable: untypeable coercion
 expected: { `r }
-given: list<> | 'I1261
+given: list<> | 'I1039
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
 
@@ -230,8 +228,8 @@ annot_dot_use: (() -> CHR1)<> with {  }
 
 .dot_local: (() -> dbl)<> with {  }
 
-annot_pow: ∀`a,`b. (((x: dbl1<. | `a>) -> DBL1<. | `a>) & ((x: dbl<. | `b>) ->
- DBL<. | `b>))<> with {  }
+annot_pow: ∀`a. (((x: dbl1<. | `a>) -> DBL1<. | `a>) & ((x: dbl<. | `a>) ->
+ DBL<. | `a>))<> with {  }
 
 annot_tilde: ((x: any, y: any) -> any)<> with {  }
 
