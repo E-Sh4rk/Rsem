@@ -36,14 +36,18 @@ type sigs
      [c_(i+1), ..., c_n] are the classes of the class-overloads of [m]
      declared after the one for [c_i] (which take precedence over it);
    - the default signature of its methods,
-     [(X: <@m, ...>, ...: any) -> any], which covers the values the base
+     [(X: <@m, ...>, ...: any) -> ret], which covers the values the base
      signatures do not apply to, i.e. [<@m, ...>] (a class implies the method
      classes it implements, so these are the values of the classes that have
      a class-overload of [m], whatever their other classes are). The
      signatures of the methods do not cover all of them, as
      [<@m, ~c_1, ..., ~c_n, ...>] is not empty. With it, the signatures of a
      method cover all the values its base signatures cover, and those of
-     unknown classes (e.g. [dbl]) in particular.
+     unknown classes (e.g. [dbl]) in particular. [ret] is the union of the
+     return types of the signatures of the methods (their type variables
+     instantiated with their largest instance), or [any] if one of its
+     class-overloads has no signature or one that still contains label
+     variables, or if type variables remain.
    A function that is not a method only has base signatures (whose first
    parameter is not restricted). Each kind only lists the signatures that
    could be converted to a type: the function signatures that still contain

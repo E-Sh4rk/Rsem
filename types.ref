@@ -187,9 +187,9 @@ plain_list: "b"<> with {  }
 plain_round: dbl1<>
 
 next_val: Untypeable: untypeable coercion
-Line 107, characters 24-29
+Line 108, characters 24-29
 expected: dbl1
-given: any
+given: (DBL | INT)<difftime> | (DBL | INT)<ts, ...> | DBL1<~@"+", ...> | LGL<> | dbl<Date, ...> | <POSIXt, ...>
 
 scaled: (x: dbl<>) -> dbl
 
@@ -372,13 +372,13 @@ ns_skip: (() -> "double"<>)<> with {  }
 
 ns_no_skip: (() -> "not a function"<> with {  })<> with {  }
 
-ns_print: ∀'a. (((x: 'a & <@print, ...>) -> any) & ((x: 'a & <~@print, ...>) ->
- 'a))<> with {  }
+ns_print: ∀'a. (((x: 'a & <@print, ...>) -> CHR1 | LGL1) & ((x: 'a & <~@print, ...>)
+ -> 'a))<> with {  }
 
 ns_print_rec: CHR1
 
-ns_method: ∀'a. (((x: 'a & <@print, ...>) -> any) & ((x: 'a & <~@print, ...>) ->
- 'a))<> with {  }
+ns_method: ∀'a. (((x: 'a & <@print, ...>) -> CHR1 | LGL1) & ((x: 'a & <~@print, ...>)
+ -> 'a))<> with {  }
 
 ns_method_direct: ((x: <ns_df, ...>) -> LGL1)<> with {  }
 

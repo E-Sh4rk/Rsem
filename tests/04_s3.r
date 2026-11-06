@@ -101,8 +101,9 @@ plain_round <- round(plain)
 
 # A value of unknown class may have a class with a method: for it, only the
 # default signature of the methods applies (cf. `MetaEnv.sigs`), whose result
-# is `any` (it is expected to fail). Its classes must be given, or none with
-# `<>`.
+# is the union of the results of the methods of `+` (e.g. those for `Date` or
+# `difftime`), not `dbl1` (it is expected to fail). Its classes must be given,
+# or none with `<>`.
 #| next_val : (x: dbl1) -> dbl1
 next_val <- function(x) x + 1
 #| scaled : (x: dbl<>) -> dbl

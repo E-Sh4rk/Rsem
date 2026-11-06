@@ -244,19 +244,45 @@ let restriction ?cls m t =
   | None -> []
   | Some cls -> overloads_after cls m t |> List.map (fun c -> false, Rstt.Classes.Class c)
 
+(* The return type of the signature [ty]: the union of the codomains of its
+   arrows. *)
+let codomain ty =
+  let open Rstt in
+  GTy.ub ty |> Attr.destruct
+  |> List.concat_map (fun (ps,_) -> ps)
+  |> List.concat_map (fun a -> Arrow.dnf a.Attr.content |> List.concat |> List.map snd)
+  |> Ty.disj
+
 (* The default signature of the methods of the generic [m],
-   [(X: <@m, ...>, ...: any) -> any]: it covers the values for which the
+   [(X: <@m, ...>, ...: any) -> ret]: it covers the values for which the
    base signatures do not apply, i.e. the complement [<@m, ...>] of their
    restriction [<~@m, ...>] (a class implies the method classes it
    implements). Contrarily to the signatures of the methods, it also covers
-   the values of these classes whose other classes are unknown. *)
-let methods_default_ty m =
+   the values of these classes whose other classes are unknown.
+   As these values are dispatched to one of the class-overloads of [m], [ret]
+   is the union of the return types of the signatures of its methods [sigs],
+   the type variables of each being instantiated with [TVOp.top_instance]
+   before the union (where a variable could occur with both polarities, and
+   thus survive). It is [any]
+   when this is not possible: when a class-overload has no signature (its
+   return type is unknown), one of them still contains label variables, or
+   type variables remain after the instantiation. *)
+let methods_default_ty m sigs t =
   let open Rstt in
+  let ret =
+    let has_sig c = List.exists (fun (c',_) -> String.equal c c') sigs.methods in
+    let symbolic = List.exists (fun (c,_) -> Option.is_some c) sigs.symbolic in
+    if symbolic || List.for_all has_sig (overloads m t) |> not then Ty.any else
+    let ret = sigs.methods
+              |> List.map (fun (_,ty) -> codomain ty |> TVOp.top_instance MVarSet.empty)
+              |> Ty.disj in
+    if GTy.mk ret |> GTy.fv |> MVarSet.is_empty then ret else Ty.any
+  in
   let field ty = Ty.F.mk_descr (Ty.O.required ty) in
   let x = class_ty [true, method_class m] in
   let dom = Arg.mk { pos_named=["X", field x] ;
                      pos_tl=field Ty.any ; named=[] ; named_tl=field Ty.any } in
-  Arrow.mk dom Ty.any |> Attr.mk_content |> GTy.mk
+  Arrow.mk dom ret |> Attr.mk_content |> GTy.mk
 
 (* A partition of the R values the first argument of an application of the
    generic [m] may take, following its dispatch (as all R values are
@@ -328,8 +354,8 @@ let add_signature ?cls ~name v s t =
     | SigFun f -> None, { sigs with symbolic=(cls,f)::sigs.symbolic }
   in
   let sigs =
-    if is_method name t && sigs.methods_default = []
-    then { sigs with methods_default=[methods_default_ty name] }
+    if is_method name t
+    then { sigs with methods_default=[methods_default_ty name sigs t] }
     else sigs
   in
   let env =
