@@ -397,7 +397,9 @@ let to_mlsem (cfg:cfg) e =
           add_let v e' e
         | None -> add_let v e' e
       in
-      let e = List.fold_left add_def (aux e) (pos@nopos) in
+      (* The first parameter is bound outermost: a default value can refer to
+         the parameters before it ([function(x, r = range(x))]). *)
+      let e = List.fold_right (fun p e -> add_def e p) (pos@nopos) (aux e) in
       let pos_tl, named_tl, e =
         if has_ell
         then
