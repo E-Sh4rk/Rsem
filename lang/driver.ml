@@ -245,8 +245,10 @@ let build_gty tidenv tye =
   GTy.mk_gradual lb ub
 
 (* Resolves the identifiers of the annotation [tye] and turns it into a
-   signature, together with the type the definition it annotates must be checked
-   against (there is none when the signature still contains label variables).
+   signature, together with the types the definition it annotates must be
+   checked against: one per arrow of a function signature (an intersection of
+   arrows, each being checked separately), and none when the signature still
+   contains label variables.
    If [cls] is set, [tye] annotates the overload of a generic function for the
    class [cls]: its first parameter is restricted to the values of that class. *)
 let build_sig ctx cls tye =
@@ -260,8 +262,8 @@ let build_sig ctx cls tye =
       | Some cls -> MetaEnv.class_overload_sig cls fsig in
     let chk =
       if MetaEnv.is_resolved fsig
-      then Some (MetaEnv.fsig_ty ~polymorphic:true fsig |> rigidify)
-      else None in
+      then MetaEnv.arrows fsig |> List.map (fun f -> MetaEnv.fsig_ty ~polymorphic:true f |> rigidify)
+      else [] in
     { ctx with benv }, MetaEnv.SigFun fsig, chk
   | Sigs.ATy tye ->
     let benv, tye = Builder.resolve ctx.benv tye in
@@ -269,7 +271,7 @@ let build_sig ctx cls tye =
     let gty = match cls with
       | None -> gty
       | Some cls -> MetaEnv.class_overload_ty cls gty in
-    { ctx with benv }, MetaEnv.SigTy gty, Some (rigidify gty)
+    { ctx with benv }, MetaEnv.SigTy gty, [rigidify gty]
 
 (* Name under which the class-overload [str] of the namespace [ns] is
    registered. A global name cannot contain [::], so it cannot clash with it. *)
@@ -324,12 +326,12 @@ let add_sig ctx str tye =
     | MetaEnv.SigFun _ ->
       begin match StrMap.find_opt str ctx.idenv with
       | Some v when VarMap.mem v ctx.senv -> (* Overload *)
-        v, (Option.to_list chk)@(VarMap.find v ctx.senv)
+        v, chk@(VarMap.find v ctx.senv)
       (* First signature definition, or redefinition (shadowing) *)
-      | _ -> MVariable.create Immut (Some str), Option.to_list chk
+      | _ -> MVariable.create Immut (Some str), chk
       end
     | MetaEnv.SigTy _ -> (* Definition (or redefinition) of a mutable variable *)
-      let s = Option.get chk in
+      let s = GTy.conj chk in
       if GTy.fv s |> MVarSet.is_empty |> not
       then failwith "Non-functional signatures cannot have type variables" ;
       MVariable.create (AnnotMut s) (Some str), [s]
@@ -362,9 +364,10 @@ let add_alias ctx str tye =
 let add_local_sig ctx offset f x tye =
   let ctx, _, chk = build_sig ctx None tye in
   match chk with
-  | Some lty ->
+  | _::_ ->
+    let lty = GTy.conj chk in
     { ctx with lannots = ctx.lannots@[{ loffset=offset ; lfun=f ; lvar=x ; lty }] }
-  | None ->
+  | [] ->
     failwith ("The annotation of the local variable "^f^"/"^x^
       " cannot contain label variables.")
 
@@ -377,7 +380,7 @@ let add_ns_sig ctx ns str tye =
   let generic = StrMap.find_opt (qualified (Some ns) str) ctx.covl in
   let ctx, sign, chk = build_sig ctx (Option.map snd generic) tye in
   begin match sign, chk with
-  | MetaEnv.SigTy _, Some s when GTy.fv s |> MVarSet.is_empty |> not ->
+  | MetaEnv.SigTy _, [s] when GTy.fv s |> MVarSet.is_empty |> not ->
     failwith "Non-functional signatures cannot have type variables"
   | _ -> ()
   end ;

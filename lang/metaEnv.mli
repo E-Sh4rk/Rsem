@@ -12,6 +12,9 @@ type fsig
 val mk_fsig : (builder -> GTy.t) -> funsig -> fsig
 (* [mk_fsig build decl] is the signature [decl], the types it mentions being
    converted with [build] (which resolves the type aliases they use). *)
+val arrows : fsig -> fsig list
+(* The arrows of a signature (which is their intersection), each as a
+   signature of its own, with the same restrictions. *)
 val is_resolved : fsig -> bool
 (* Whether the signature contains no label variable, i.e. whether it can be
    converted to a set-theoretic type as is. *)

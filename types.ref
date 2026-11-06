@@ -83,7 +83,7 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<> with {  }
 
 test_dots1: Untypeable: untypeable coercion
 expected: { `r }
-given: list | 'I873
+given: list | 'I877
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
 
@@ -144,6 +144,21 @@ annot_dot_use: (() -> CHR1)<> with {  }
 annot_pow: (((x: dbl) -> DBL) & ((x: dbl1) -> DBL1))<> with {  }
 
 annot_tilde: ((x: any, y: any) -> any)<> with {  }
+
+inter_id: ((x: dbl1) -> dbl1) & ((x: lgl1) -> lgl1)
+
+inter_bad: Untypeable: untypeable coercion
+Line 99, characters 25-26
+expected: dbl1
+given: vec1
+
+inter_use: (((y: dbl1) -> dbl1) & ((y: lgl1) -> lgl1))<> with {  }
+
+inter_get: any
+
+inter_get_a: 1.<> with {  }
+
+inter_get_null: null
 
 
 ===== Processing tests/06_scope.r =====

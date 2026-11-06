@@ -117,16 +117,22 @@ let restrict_first_param' ~present cls b =
     | [] -> a
     | (name,t)::ps -> { a with pos_named=(name, TCap (t, restr))::ps }
   in
-  match b with
-  | TArrow (TArg a, ret) -> TArrow (TArg (restrict a), ret)
-  | TArrow (TPolyArg a, ret) -> TArrow (TPolyArg (restrict a), ret)
-  | b -> b
+  (* A signature is an intersection of arrows (cf. [Rstt.FunSig.to_regular]). *)
+  let rec aux b =
+    match b with
+    | TArrow (TArg a, ret) -> TArrow (TArg (restrict a), ret)
+    | TArrow (TPolyArg a, ret) -> TArrow (TPolyArg (restrict a), ret)
+    | TCap (b1, b2) -> TCap (aux b1, aux b2)
+    | b -> b
+  in
+  aux b
 
 (* ===== Function signatures ===== *)
 
 let mk_fsig build decl = { decl ; restr=[] ; build }
 let is_resolved f = Rstt.FunSig.is_regular_ty f.decl
 let restrict_sig ~present cls f = { f with restr=f.restr@[present,cls] }
+let arrows f = f.decl |> List.map (fun a -> { f with decl=[a] })
 
 (* Type of the instance [decl] of the signature [f]. *)
 let instance_ty ?(polymorphic=false) f decl =

@@ -86,3 +86,22 @@ annot_dot_use <- function() .dot_fun(.dot_global)
 
 annot_pow <- function(x) x^2
 annot_tilde <- function(x, y) x ~ y
+
+# ========== Intersections of arrows ==========
+
+# A signature can be an intersection of arrows, written with `&&` (whose
+# precedence is lower than the one of `->`). Each arrow is checked
+# separately (`inter_bad` is expected to fail, for its second arrow).
+#| inter_id : (x: dbl1) -> dbl1 && (x: lgl1) -> lgl1
+inter_id <- function(x) x
+
+#| inter_bad : (x: dbl1) -> dbl1 && (x: chr1) -> dbl1
+inter_bad <- function(x) x
+
+inter_use <- function(y) inter_id(y)
+
+# Its arrows may have label variables, local to each of them.
+#| inter_get : (x: {#k: 'a, any}, k: #k) -> 'a && (x: null, k: chr1) -> null
+inter_get <- function(x, k) x[[k]]
+inter_get_a <- inter_get(list(a = 1), "a")
+inter_get_null <- inter_get(NULL, "a")
