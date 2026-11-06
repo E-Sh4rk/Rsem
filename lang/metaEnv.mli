@@ -113,8 +113,12 @@ val class_overload_ty : string -> GTy.t -> GTy.t
 (* Restriction of the signature of a class-overload for the class [cls]: its
    first parameter is restricted to the values of class [cls]. *)
 val mem : Variable.t -> t -> bool
-val env : t -> Env.t
+val env : VarSet.t -> t -> Env.t
+(* [env dom t] is the typing environment of the variables of [dom] (those of
+   [dom] that [t] does not bind are left out). The types are simplified when
+   stored, lazily: only those of the variables of [dom] are computed. *)
 val get : Variable.t -> t -> TyScheme.t
+(* @raise Not_found if [mem v t] is false. *)
 val get_signatures : Variable.t -> t -> sigs option
 val resolve_signature : Ty.t -> fsig -> GTy.t option
 (* [resolve_signature arg s] resolves the label variables of [s] using the type

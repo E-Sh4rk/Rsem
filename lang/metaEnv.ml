@@ -34,8 +34,13 @@ module StrSet = Set.Make(String)
    only comes from the signatures declared for it.
    [ovl] lists the declared class-overloads (generic name, class), in their
    order of declaration, and [bound] the names that have been given a type
-   (whose class-overloads can thus no longer be declared). *)
-type t = { env : Env.t ; senv : sigs VarMap.t ; ns : Variable.t StrMap.t StrMap.t ;
+   (whose class-overloads can thus no longer be declared).
+   [types] maps each variable to its type, simplified. It is lazy, so that
+   only the types that are used (cf. [env]) get simplified, each only once:
+   simplifying the intersection of the many signatures of a generic with
+   class-overloads (e.g. [+]) is expensive. *)
+type t = { types : TyScheme.t Lazy.t VarMap.t ; senv : sigs VarMap.t ;
+           ns : Variable.t StrMap.t StrMap.t ;
            ovl : (string * string) list ; bound : StrSet.t }
 
 let simplify_tl ty =
@@ -43,8 +48,10 @@ let simplify_tl ty =
   let ty = GTy.map Rstt.TyOp.simplify ty |> GTy.factorize in
   TyScheme.mk tvs ty
 
-let initial = { env=Defs.initial_env ; senv=VarMap.empty ; ns=StrMap.empty ;
-                ovl=[] ; bound=StrSet.empty }
+let initial =
+  let types = Env.bindings Defs.initial_env |> List.fold_left
+      (fun types (v,ts) -> VarMap.add v (Lazy.from_val ts) types) VarMap.empty in
+  { types ; senv=VarMap.empty ; ns=StrMap.empty ; ovl=[] ; bound=StrSet.empty }
 let get_sigs v senv =
   match VarMap.find_opt v senv with
   | None -> { base=[] ; methods=[] ; methods_default=[] ; symbolic=[] }
@@ -316,20 +323,19 @@ let class_overload_ty cls ty = restrict_first_param [true, Rstt.Classes.Class cl
 
 (* ===== Registration of the signatures ===== *)
 
-(* The type of a variable is the intersection of its resolved signatures. It
-   is computed incrementally, by intersecting the previous one with each new
-   signature, and is not simplified: recomputing or simplifying the
-   intersection of the many signatures of a generic with class-overloads
-   (e.g. [+]) at each signature added is expensive. The applications of the
-   variable use its signatures rather than this type anyway (cf.
-   [Transform]), and [get] simplifies it for printing. *)
-let add_resolved v ty t =
-  let ty =
-    if VarMap.mem v t.senv
-    then GTy.conj [ Env.find v t.env |> TyScheme.get |> snd ; ty ]
-    else ty
-  in
-  Env.replace v (TyScheme.mk_poly ty) t.env
+(* The type of a variable declared with the signatures [sigs] is the
+   intersection of its resolved signatures ([any] if there is none), and
+   simplified. It is computed lazily (cf. [types]): the applications of the
+   variable use its signatures rather than this type (cf. [Transform]). *)
+let sigs_ty sigs =
+  lazy begin
+    let ty =
+      match sigs.base@List.map snd sigs.methods with
+      | [] -> GTy.any
+      | tys -> GTy.conj tys
+    in
+    TyScheme.mk_poly ty |> simplify_tl
+  end
 
 (* The first parameter of a signature of [name] is restricted as described by
    [restriction]. *)
@@ -347,24 +353,18 @@ let add_signature ?cls ~name v s t =
     | None -> { sigs with base=ty::sigs.base }
     | Some cls -> { sigs with methods=(cls,ty)::sigs.methods }
   in
-  let resolved, sigs =
+  let sigs =
     match s with
-    | SigTy ty -> Some ty, add ty sigs
-    | SigFun f when is_resolved f -> let ty = fsig_ty f in Some ty, add ty sigs
-    | SigFun f -> None, { sigs with symbolic=(cls,f)::sigs.symbolic }
+    | SigTy ty -> add ty sigs
+    | SigFun f when is_resolved f -> add (fsig_ty f) sigs
+    | SigFun f -> { sigs with symbolic=(cls,f)::sigs.symbolic }
   in
   let sigs =
     if is_method name t
     then { sigs with methods_default=[methods_default_ty name sigs t] }
     else sigs
   in
-  let env =
-    match resolved with
-    | Some ty -> add_resolved v ty t
-    | None when VarMap.mem v t.senv -> t.env
-    | None -> Env.replace v (TyScheme.mk_poly GTy.any) t.env
-  in
-  { t with env ; senv=VarMap.add v sigs t.senv }
+  { t with types=VarMap.add v (sigs_ty sigs) t.types ; senv=VarMap.add v sigs t.senv }
 
 (* An inferred type is restricted as a signature would be. *)
 let set_from_tyscheme v ts t =
@@ -382,14 +382,16 @@ let set_from_tyscheme v ts t =
         TyScheme.mk tvs (restrict_first_param restr ty), t
   in
   let ts = simplify_tl ts in
-  let env, senv = Env.rm v t.env, VarMap.remove v t.senv in
-  { t with env=Env.add v ts env ; senv }
+  { t with types=VarMap.add v (Lazy.from_val ts) t.types ; senv=VarMap.remove v t.senv }
 
-let mem v t = Env.mem v t.env
-let env t = t.env
-let get v t =
-  let ts = Env.find v t.env in
-  if VarMap.mem v t.senv then simplify_tl ts else ts
+let mem v t = VarMap.mem v t.types
+let env dom t =
+  VarSet.fold (fun v env ->
+    match VarMap.find_opt v t.types with
+    | Some ts -> Env.add v (Lazy.force ts) env
+    | None -> env
+  ) dom Env.empty
+let get v t = VarMap.find v t.types |> Lazy.force
 let get_signatures v t = VarMap.find_opt v t.senv
 
 let base sigs = sigs.base

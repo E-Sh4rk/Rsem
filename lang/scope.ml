@@ -13,11 +13,10 @@ exception ScopeError of string
 
 let fun_ty = Arrow.any |> Rstt.Attr.mk_content
 let from_toplevel tenv idmap =
-  let env = MetaEnv.env tenv in
   let tl = idmap |> StrMap.map (fun v ->
-    if Env.mem v env
+    if MetaEnv.mem v tenv
     then
-      let ty = Env.find v env |> TyScheme.get |> snd |> GTy.ub in
+      let ty = MetaEnv.get v tenv |> TyScheme.get |> snd |> GTy.ub in
       if Ty.leq ty fun_ty then KFun, v
       else if Ty.leq ty (Ty.neg fun_ty) then KVal, v
       else KAny, v

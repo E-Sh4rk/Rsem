@@ -65,7 +65,7 @@ let initial_ctx = { benv=Rstt.Builder.empty_env ; tidenv=Rstt.Builder.TIdMap.emp
 
 let infer ctx mlast =
   (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
-  let env = MetaEnv.env ctx.tenv |> extend_env mlast in
+  let env = MetaEnv.env (System.Ast.fv mlast) ctx.tenv |> extend_env mlast in
   let renvs = System.Refinement.refinements env mlast in
   let anns = System.Reconstruction.infer
     ~direct_narrowing:true ~partition_narrowing:false env renvs mlast in
