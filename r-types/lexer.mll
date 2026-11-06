@@ -41,6 +41,8 @@ rule token = parse
 (* A user-defined infix operator: [%] and anything but [%] up to the next [%]
    ([%in%], [%o%]). *)
 | '(' ('%' [^'%' '\n']* '%' as s) ')' { SYM s }
+(* The method of an operator for a class, e.g. [(+.Date)] or [([].factor)]. *)
+| '(' ((sym | '%' [^'%' '\n']* '%') '.' id as s) ')' { SYM s }
 | eof { EOF }
 | _ { raise (LexerError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
 

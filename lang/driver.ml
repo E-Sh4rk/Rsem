@@ -417,20 +417,46 @@ let enclosing_def prog offset =
 
    The marker is [#|] rather than [##] so that it cannot be confused with an
    ordinary comment: [##] is a common way of writing prose in R sources, and
-   every such line would otherwise be parsed as a declaration and rejected. *)
-let annotation extra =
-  match extra with
-  | `Comment (loc, (_, str)) when String.starts_with ~prefix:"#|" str ->
-    Some (Parser.start_offset_of_loc loc, String.sub str 2 ((String.length str) - 2))
-  | _ -> None
+   every such line would otherwise be parsed as a declaration and rejected.
 
-let treat_extra prog ctx extra =
-  match annotation extra with
-  | None -> ctx
-  | Some (offset, str) ->
-    match enclosing_def prog offset, IO.parse_def str with
-    | Some f, Sigs.Sig (x, tye) -> add_def ctx offset (Sigs.LocalSig (f, x, tye))
-    | _, def -> add_def ctx offset def
+   An annotation can be written on several lines: a [#|] line whose text
+   starts with more than one blank continues the annotation of the line just
+   before it (whereas a declaration starts with a single blank, as in
+   [#| name : t]), e.g.
+     #| f : (x: dbl1) -> dbl1
+     #|   && (x: chr1) -> chr1
+   Its text is joined to the annotation, which keeps the offset of its first
+   line. *)
+let annotations extras =
+  let is_continuation str =
+    String.length str >= 2 &&
+    match str.[0], str.[1] with
+    | ' ', (' ' | '\t') | '\t', _ -> true
+    | _ -> false
+  in
+  (* The annotations, in reverse order, each with its offset, the row of its
+     last line and its text. *)
+  extras |> List.fold_left (fun acc extra ->
+    match extra with
+    | `Comment (loc, (_, str)) when String.starts_with ~prefix:"#|" str ->
+      let row = loc.Tree_sitter_run.Loc.start.row in
+      let str = String.sub str 2 ((String.length str) - 2) in
+      if is_continuation str then
+        match acc with
+        | (offset, row', str')::acc when row' = row - 1 ->
+          (offset, row, str'^" "^String.trim str)::acc
+        | _ ->
+          failwith (Printf.sprintf
+            "Line %i: this annotation continues no annotation on the line before it."
+            (row + 1))
+      else (Parser.start_offset_of_loc loc, row, str)::acc
+    | _ -> acc
+  ) [] |> List.rev |> List.map (fun (offset, _, str) -> offset, str)
+
+let treat_annotation prog ctx (offset, str) =
+  match enclosing_def prog offset, IO.parse_def str with
+  | Some f, Sigs.Sig (x, tye) -> add_def ctx offset (Sigs.LocalSig (f, x, tye))
+  | _, def -> add_def ctx offset def
 
 (* ===== ENTRY POINTS ===== *)
 
@@ -464,9 +490,10 @@ let parse fn =
    no effect. An annotation that cannot be parsed is skipped here, [process]
    reports it. *)
 let declare_overloads ctx (_, extras) =
-  extras |> List.fold_left (fun ctx extra ->
-    match annotation extra |> Option.map (fun (_, str) -> IO.parse_def str) with
-    | Some (Sigs.NewClass (ns, m, cls)) -> add_class ctx ns m cls
+  let annots = try annotations extras with Failure _ -> [] in
+  annots |> List.fold_left (fun ctx (_, str) ->
+    match IO.parse_def str with
+    | Sigs.NewClass (ns, m, cls) -> add_class ctx ns m cls
     | _ | exception _ -> ctx
   ) ctx
 
@@ -477,7 +504,7 @@ let process ctx (prog, extras) =
   (* The annotations declared by the previous files precede everything here. *)
   let ctx = { ctx with lannots =
     ctx.lannots |> List.map (fun a -> { a with loffset = min_int }) } in
-  let ctx = List.fold_left (treat_extra prog) ctx extras in
+  let ctx = List.fold_left (treat_annotation prog) ctx (annotations extras) in
   MetaEnv.declare_classes ctx.tenv ;
   List.fold_left treat_def ctx prog
 

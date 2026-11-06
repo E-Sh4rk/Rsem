@@ -1,6 +1,8 @@
 
 ===== Processing sigs/base.R =====
 
+===== Processing sigs/stats.R =====
+
 ===== Processing tests/00_defs.r =====
 
 ===== Processing tests/01_test.r =====
@@ -10,11 +12,11 @@ _: 42.<> with {  }
 
 _: tt<> with {  }
 
-_: DBL1
+_: DBL1<>
 
-_: DBL1
+_: DBL1<>
 
-_: DBL1
+_: DBL1<>
 
 _: (DBL | LGL)<>
 
@@ -28,17 +30,20 @@ clx: CLX1<> with {  }
 
 num1: dbl1
 
-f_succ: (((a: dbl) -> DBL | INT) & ((a: dbl1) -> DBL1))<> with {  }
+f_succ: (a: dbl1<>) -> dbl1<>
 
-f_succ_succ: (((a: dbl) -> DBL | INT) & ((a: dbl1) -> DBL1))<> with {  }
+f_succ_succ: ((a: dbl1<>) -> dbl1<>)<> with {  }
 
-f_req: ∀'a,'b. (((a: 'a & DBL1) -> DBL1) & ((a: 'a & dbl1) -> dbl1) & ((a: 'a &
- (dbl & v('b))) -> ((DBL | INT) & v('b) | INT) | (INT | dbl & v('b)) &
- 'a))<> with {  }
+f_req: ((a: dbl<>) -> dbl<>)<> with {  }
 
-f_opt: ∀'a,'b. (((a: ('a & DBL1)?) -> DBL1) & ((a: ('a & dbl1)?) -> dbl1) &
- ((a: ('a & (DBL | dbl & v('b)))?) -> (DBL | INT) | ((DBL | INT) | (DBL | dbl
- & v('b))) & 'a))<> with {  }
+f_opt: ∀'a,'b,`a. (((a: ('a & DBL1<~@"-", . | `a>)?) -> DBL1<~@"-", . | `a>) &
+ ((a: ('a & dbl1<~@"-", . | `a>)?) -> dbl1<~@"-", . | `a>) & ((a: ('a & (DBL
+ | dbl & v('b))<~@"-", . | `a>)?) -> (DBL | INT)<~@"-", . | `a> | ((DBL |
+ INT)<~@"-", . | `a> | (DBL | dbl & v('b))<~@"-", . | `a>) & 'a) & ((a: ('a &
+ (DBL1<~@"-", . | `a> | (dbl & v('b))<~@"-", . | `a>))?) ->
+ (DBL1<~@"-", . | `a> | (INT | (DBL | INT) & v('b))<~@"-", . | `a>) |
+ (DBL1<~@"-", . | `a> | (INT | (DBL | INT) & v('b))<~@"-", . | `a> | (dbl &
+ v('b))<~@"-", . | `a>) & 'a))<> with {  }
 
 f_opt_ann: ((a: dbl) -> dbl) & ((a: null?) -> lgl1)
 
@@ -49,14 +54,13 @@ ret: (((x: 0) | (x: ff) | (x: null) -> ff<> with {  }) & ((x: ~((0 | ff) | null)
 
 ret_ann: ((x: any) -> lgl1) & ((x: null) -> ff)
 
-narrowing: ∀'a. (((x: DBL1) -> DBL1) & ((x: dbl & v('a)) -> (DBL | INT) & v('a) |
- INT) & ((x: dbl1) -> dbl1) & ((x: null) -> null))<> with {  }
+narrowing: ((x: dbl<> | null) -> (DBL | INT)<> | null)<> with {  }
 
-narrowing_ann: ((x: dbl) -> dbl) & ((x: null) -> null)
+narrowing_ann: ((x: dbl<>) -> dbl) & ((x: null) -> null)
 
-narrowing_ann2: (x: dbl | null) -> dbl | null
+narrowing_ann2: (x: dbl<> | null) -> dbl | null
 
-loop_break: ∀'a. ((x: 'a & null) -> null & 'a)<> with {  }
+loop_break: ((x: dbl<> | null) -> dbl<> | null)<> with {  }
 
 cases: ((x: DBL) -> 0.<> with {  })<> with {  }
 
@@ -64,14 +68,14 @@ assign: ∀'a. ((x: 'a) -> 'a)<> with {  }
 
 superassign: ∀'a. ((x: 42.<> with {  } | 'a) -> 42.<> with {  } | 'a)<> with {  }
 
-_: {  }
+_: {  }<>
 
-_: { 42.<> with {  } }
+_: { 42.<> with {  } }<>
 
-_: { aa: 42.<> with {  } }
+_: { aa: 42.<> with {  } }<>
 
 test_lists: (() -> { a: "a"<> with {  }, b: ff<> with {  }, one: ("a" | 42. |
- ff)<> with {  } })<> with {  }
+ ff)<> with {  } }<>)<> with {  }
 
 nested_list: ∀`a. (x: { a: { lgl1 }, `a }) -> { a: { lgl1 }, `a }
 
@@ -83,11 +87,11 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<> with {  }
 
 test_dots1: Untypeable: untypeable coercion
 expected: { `r }
-given: list | 'I877
+given: list<> | 'I1039
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
 
-test_dots3: ∀'a. ((...: 'a) -> { 'a })<> with {  }
+test_dots3: ∀'a. ((...: 'a) -> { 'a }<>)<> with {  }
 
 print.R6: ∀'a,'b,`a. ((x: 'a & { print: @(...: ('b, empty? | `a)) ->
  any, any }, ...: ('b, `a)) -> 'a)<> with {  }
@@ -96,7 +100,7 @@ print.R6: ∀'a,'b,`a. ((x: 'a & { print: @(...: ('b, empty? | `a)) ->
 ===== Processing tests/04_s3.r =====
 area: ((shape: dbl1<circle, ~ns_square, ...>) -> lgl1) &
  ((shape: dbl1<square, ~circle, ~ns_square, ...>) -> vec1) &
- ((shape: dbl1<~square, ~circle, ~ns_square, ...>) -> dbl1)
+ ((shape: dbl1<~@area, ...>) -> dbl1)
 
 area.square: (shape: dbl1<square, ...>) -> vec1
 
@@ -112,6 +116,89 @@ a_named: vec1
 
 a_direct: vec1
 
+some_shape: (s: dbl1<@area, ...>) -> dbl1<@area, ...>
+
+m_square: dbl1<@area, ...>
+
+m_circle: dbl1<@area, ...>
+
+m_default: Untypeable: untypeable encoding
+Line 47, characters 13-26
+application of some_shape failed
+argument is of type @(0.<> with {  })
+
+any_shape: Untypeable: untypeable coercion
+Line 55, characters 25-32
+expected: vec1
+given: any
+
+default_area: (s: dbl1<~@area, ...>) -> dbl1
+
+today: date1
+
+tomorrow: date1
+
+yesterday: date1
+
+span: difftime1
+
+twice: difftime1
+
+halved: difftime1
+
+span_units: CHR1
+
+dates: date
+
+first_date: date
+
+second_date: date1
+
+t_start: posixct1
+
+t_later: posixct1
+
+t_elapsed: difftime1
+
+fct: INT<factor> with { levels: CHR, any }
+
+fct_first: INT<factor> with { levels: CHR, any }
+
+fct_second: INT1<factor> with { levels: CHR, any }
+
+fct_levels: CHR<>
+
+fct_plus: LGL<>
+
+err_neg: empty
+
+err_add: empty
+
+err_div: empty
+
+plain: DBL1<>
+
+plain_neg: DBL1<>
+
+plain_sub: DBL<>
+
+plain_list: "b"<> with {  }
+
+plain_round: dbl1<>
+
+next_val: Untypeable: untypeable coercion
+Line 108, characters 24-29
+expected: dbl1
+given: (DBL | INT)<difftime> | (DBL | INT)<ts, ...> | DBL1<~@"+", ...> | LGL<> | dbl<Date, ...> | <POSIXt, ...>
+
+scaled: (x: dbl<>) -> dbl
+
+series: DBL<ts> with { tsp: DBL, any }
+
+series_twice: (DBL | INT)<ts, ...>
+
+series_first: DBL<>
+
 
 ===== Processing tests/05_annot.r =====
 annot_local: (() -> dbl)<> with {  }
@@ -122,7 +209,7 @@ annot_inside: (() -> dbl)<> with {  }
 
 annot_param: ((a: dbl) -> dbl)<> with {  }
 
-annot_loop: ((n: dbl) -> dbl)<> with {  }
+annot_loop: ((n: dbl<>) -> dbl<>)<> with {  }
 
 annot_fun: (() -> dbl)<> with {  }
 
@@ -141,14 +228,15 @@ annot_dot_use: (() -> CHR1)<> with {  }
 
 .dot_local: (() -> dbl)<> with {  }
 
-annot_pow: (((x: dbl) -> DBL) & ((x: dbl1) -> DBL1))<> with {  }
+annot_pow: ∀`a. (((x: dbl1<. | `a>) -> DBL1<. | `a>) & ((x: dbl<. | `a>) ->
+ DBL<. | `a>))<> with {  }
 
 annot_tilde: ((x: any, y: any) -> any)<> with {  }
 
 inter_id: ((x: dbl1) -> dbl1) & ((x: lgl1) -> lgl1)
 
 inter_bad: Untypeable: untypeable coercion
-Line 99, characters 25-26
+Line 101, characters 25-26
 expected: dbl1
 given: vec1
 
@@ -186,9 +274,9 @@ use_i: (() -> DBL1 | INT1)<> with {  }
 
 _: null
 
-r: { a: 1.<> with {  } } | { b: 2.<> with {  } }
+r: { a: 1.<> with {  } }<> | { b: 2.<> with {  } }<>
 
-use_r: (() -> { a: 1.<> with {  } } | { b: 2.<> with {  } })<> with {  }
+use_r: (() -> { a: 1.<> with {  } }<> | { b: 2.<> with {  } }<>)<> with {  }
 
 _: null
 
@@ -198,7 +286,7 @@ use_g: (() -> 1.<> with {  })<> with {  }
 
 ablk: dbl
 
-bundle: { h: (a: dbl1) -> dbl1 }
+bundle: { h: (a: dbl1<>) -> dbl1 }<>
 
 use_bundle: (() -> dbl1)<> with {  }
 
@@ -206,13 +294,17 @@ leaked: Untypeable: unbound variable
 Line 46, characters 21-27
 name: helper
 
-counter: (() -> dbl1)<> with {  }
+counter: (() -> dbl1<>)<> with {  }
 
-counter_unannot: (() -> DBL1)<> with {  }
+counter_unannot: (() -> DBL1<>)<> with {  }
 
-top_lapply: { DBL1 }<>
+top_lapply: { DBL1<> }<>
 
-f_ret: (() -> DBL1)<> with {  }
+top_lambda_app: DBL1<>
+
+neg_unknown: (x: dbl) -> any
+
+f_ret: (() -> DBL1<>)<> with {  }
 
 top_ret: 1.<> with {  }
 
@@ -256,7 +348,7 @@ ns_first_class: (() -> dbl1)<> with {  }
 ns_err: Untypeable: untypeable encoding
 Line 41, characters 21-43
 application of stats::median failed
-argument is of type @({ 1.<> with {  } })
+argument is of type @({ 1.<> with {  } }<>)
 
 ns_unknown: Untypeable: unbound variable
 Line 44, characters 26-35
@@ -280,20 +372,23 @@ ns_skip: (() -> "double"<>)<> with {  }
 
 ns_no_skip: (() -> "not a function"<> with {  })<> with {  }
 
-ns_print: ∀'a. (((x: 'a & <ns_df, ...>) -> LGL1) & ((x: 'a & <ns_rec, ~ns_df, ...>)
- -> CHR1) & ((x: 'a & <~ns_rec, ~ns_df, ...>) -> 'a))<> with {  }
+ns_print: ∀'a. (((x: 'a & <@print, ...>) -> CHR1 | LGL1) & ((x: 'a & <~@print, ...>)
+ -> 'a))<> with {  }
 
-ns_method: ∀'a. (((x: 'a & <ns_df, ...>) -> LGL1) & ((x: 'a & <ns_rec, ~ns_df, ...>)
- -> CHR1) & ((x: 'a & <~ns_rec, ~ns_df, ...>) -> 'a))<> with {  }
+ns_print_rec: CHR1
+
+ns_method: ∀'a. (((x: 'a & <@print, ...>) -> CHR1 | LGL1) & ((x: 'a & <~@print, ...>)
+ -> 'a))<> with {  }
 
 ns_method_direct: ((x: <ns_df, ...>) -> LGL1)<> with {  }
 
-ns_area: (((s: dbl1<ns_square, ...>) -> CHR1) &
- ((s: dbl1<~square, ~circle, ~ns_square, ...>) -> dbl1))<> with {  }
+ns_method_df: LGL1
 
-ns_area_global: (((s: dbl1<circle, ~ns_square, ...>) -> lgl1) &
- ((s: dbl1<square, ~circle, ~ns_square, ...>) -> vec1) &
- ((s: dbl1<~square, ~circle, ~ns_square, ...>) -> dbl1))<> with {  }
+ns_area: (((s: <@area, ...>) -> any) & ((s: dbl1<~@area, ...>) -> dbl1))<> with {  }
+
+ns_area_global: (((s: <@area, ...>) -> any) & ((s: dbl1<~@area, ...>) -> dbl1))<> with {  }
+
+ns_area_square: CHR1
 
 
 ===== Processing tests/02_simple/break-for.r =====
@@ -315,11 +410,11 @@ execute: ((n: vec) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/lapply-dots.r =====
-execute: (n: dbl) -> { dbl }
+execute: (n: dbl<>) -> { dbl }
 
 
 ===== Processing tests/02_simple/lapply.r =====
-execute: ((n: dbl) -> { DBL1 }<>)<> with {  }
+execute: ((n: dbl) -> { DBL1<> }<>)<> with {  }
 
 
 ===== Processing tests/02_simple/list-for.r =====
@@ -335,9 +430,9 @@ execute: ((n: dbl1) -> null)<> with {  }
 
 
 ===== Processing tests/02_simple/repeat.r =====
-break_repeat: ((n: vec) -> DBL1)<> with {  }
+break_repeat: ((n: vec) -> DBL1<>)<> with {  }
 
-next_repeat: ((n: vec) -> DBL1)<> with {  }
+next_repeat: ((n: vec) -> DBL1<>)<> with {  }
 
 inner_repeat: (() -> "a"<> with {  })<> with {  }
 
@@ -363,22 +458,22 @@ execute: ((n: dbl1) -> null)<> with {  }
 
 
 ===== Processing tests/03_areWeFast/01_random.r =====
-seed: dbl1
+seed: dbl1<>
 
 resetSeed: (() -> null)<> with {  }
 
-nextRandom: (() -> dbl1)<> with {  }
+nextRandom: (() -> dbl1<>)<> with {  }
 
 
 ===== Processing tests/03_areWeFast/02_storage.r =====
-count: dbl1
+count: dbl1<>
 
-execute: (() -> dbl1)<> with {  }
+execute: (() -> dbl1<>)<> with {  }
 
 verifyResult: (((result: 5461, iterations: any) -> tt<> with {  }) &
  ((result: ~5461, iterations: any) -> ff<> with {  }))<> with {  }
 
-buildTreeDepth: (depth: dbl1, random: any) -> x1 where x1 = dbl | { x1 }
+buildTreeDepth: (depth: dbl1<>, random: any) -> x1 where x1 = dbl | { x1 }
 
 
 ===== Processing tests/03_areWeFast/03_bounce.r =====
@@ -387,7 +482,7 @@ execute: () -> dbl
 verifyResult: (((result: 1331, iterations: any) -> tt<> with {  }) &
  ((result: ~1331, iterations: any) -> ff<> with {  }))<> with {  }
 
-bounce: (ball: dbl) -> { dbl }
+bounce: (ball: dbl<>) -> { dbl<> }<>
 
 
 ===== Processing tests/03_areWeFast/04_bounce_nonames_simple.r =====
@@ -396,19 +491,19 @@ execute: () -> dbl
 verifyResult: (((result: 1331, iterations: any) -> tt<> with {  }) &
  ((result: ~1331, iterations: any) -> ff<> with {  }))<> with {  }
 
-bounce: (ball: dbl) -> { dbl }
+bounce: (ball: dbl<>) -> { dbl<> }<>
 
 
 ===== Processing tests/03_areWeFast/05_mandelbrot.r =====
-lim: dbl1
+lim: dbl1<>
 
-iter: dbl1
+iter: dbl1<>
 
-mandelbrot: (size: dbl1) -> dbl1
+mandelbrot: (size: dbl1<>) -> dbl1
 
-execute: ((n: dbl1?) -> dbl1)<> with {  }
+execute: ((n: dbl1<>?) -> dbl1)<> with {  }
 
 verifyResult: (result: dbl1, innerIterations: any) -> lgl1
 
-innerBenchmarkLoop.mandelbrot: ((class: any, iterations: dbl1) -> ^LGL1<> with {  })<> with {  }
+innerBenchmarkLoop.mandelbrot: ((class: any, iterations: dbl1<>) -> ^LGL1<> with {  })<> with {  }
 

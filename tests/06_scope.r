@@ -36,7 +36,7 @@ ablk <- { au <- 1 ; au }
 # so what it assigns is scoped to the block. An inner name can be annotated,
 # being an ordinary scoped local.
 bundle <- local({
-  #| helper : (a:dbl1) -> dbl1
+  #| helper : (a:dbl1<>) -> dbl1
   helper <- function(a) a + 1
   list(h = helper)
 })
@@ -48,7 +48,7 @@ leaked <- function() helper
 # `local` together with `<<-`, the counter idiom: the block's names are
 # mutable locals, so the closure it returns can assign them.
 counter <- local({
-  #| n : dbl1
+  #| n : dbl1<>
   n <- 0
   function() { n <<- n + 1 ; n }
 })
@@ -58,7 +58,19 @@ counter <- local({
 # nothing that comes later can constrain it, it is instantiated rather than
 # rejected. The same for a top-level application.
 counter_unannot <- local({ n <- 0 ; function() { n <<- n + 1 ; n } })
+
 top_lapply <- lapply(c(1, 2), function(x) x + 1)
+
+# The direct application of an anonymous function using a generic with
+# class-overloads.
+top_lambda_app <- (function(x) x + 1)(1)
+
+# The application of a generic with class-overloads to a value whose classes
+# are unknown: in checking mode, its argument is partitioned following the
+# dispatch of the generic, each part being typed with the few signatures that
+# apply to it.
+#| neg_unknown : (x: dbl) -> any
+neg_unknown <- function(x) -x
 
 # `local(e)` evaluates `e` with `eval`, which `return` returns from: it leaves
 # the block, not the enclosing function (`x` is 1, and `f_ret()` is 2). `break`

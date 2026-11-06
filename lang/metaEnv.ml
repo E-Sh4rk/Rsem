@@ -15,11 +15,16 @@ type fsig = {
   decl : funsig ;
   (* Class-overload restrictions declared for this signature, in the order they
      must be applied to its first parameter. *)
-  restr : (bool * string) list ;
+  restr : (bool * Rstt.Classes.cls) list ;
   build : builder -> GTy.t ;
 }
 
-type sigs = { resolved:GTy.t list ; symbolic:fsig list }
+(* The signatures of a function are of three kinds (cf. the interface):
+   [base], [methods] (each with the class it is the class-overload for) and
+   [methods_default]. [symbolic] are the signatures that still contain label
+   variables, with the class of the class-overload they come from, if any. *)
+type sigs = { base:GTy.t list ; methods:(string * GTy.t) list ;
+              methods_default:GTy.t list ; symbolic:(string option * fsig) list }
 type signature = SigTy of GTy.t | SigFun of fsig
 
 module StrMap = Map.Make(String)
@@ -42,7 +47,7 @@ let initial = { env=Defs.initial_env ; senv=VarMap.empty ; ns=StrMap.empty ;
                 ovl=[] ; bound=StrSet.empty }
 let get_sigs v senv =
   match VarMap.find_opt v senv with
-  | None -> { resolved=[] ; symbolic=[] }
+  | None -> { base=[] ; methods=[] ; methods_default=[] ; symbolic=[] }
   | Some s -> s
 
 (* ===== S3 dispatch (class overloads) ===== *)
@@ -52,27 +57,34 @@ let is_fun_sig ty =
   let ty = GTy.ub ty in
   Ty.leq ty fun_ty && Ty.is_empty ty |> not
 
-(* [<cls, ...>] if [present], [<~cls, ...>] otherwise. *)
-let class_ty ~present cls =
+(* A restriction of the classes of a value is a list of [(present, cls)], each
+   saying whether it has the class [cls] or not (as the [restr] of a [fsig]).
+   [class_ty restr] is the type of the values [restr] admits, e.g.
+   [<c1, ~c2, ...>] for [[true,c1 ; false,c2]]. It is a single class atom:
+   intersecting one atom per class instead makes the intersections of the
+   signatures exponentially slower, as rstt does not merge them. *)
+let class_ty restr =
   let open Rstt in
-  let cls = Classes.Class cls in
-  let classes =
-    if present
-    then Classes.mk { pos=[Classes.L (cls, [])] ; neg=[] ; unk=[] ; tail=Classes.Unknown }
-    else Classes.mk { pos=[] ; neg=[cls] ; unk=[] ; tail=Classes.Unknown }
-  in
+  let pos, neg = List.partition fst restr in
+  let pos = pos |> List.map (fun (_,cls) -> Classes.L (cls, [])) in
+  let neg = neg |> List.map snd in
+  let classes = Classes.mk { pos ; neg ; unk=[] ; tail=Classes.Unknown } in
   Attr.mk { content=Ty.any ; classes ; attrs=Ty.any }
 
-(* [restrict_first_param ~present cls ty] intersects the type of the first
-   parameter (if any) of every arrow of the function signature [ty] with
-   [<cls, ...>] if [present], and with [<~cls, ...>?] otherwise.
-   Non-functional types are returned unchanged. *)
-let restrict_first_param ~present cls ty =
+(* The parameter a restriction applies to may be absent, unless the
+   restriction requires a class. *)
+let is_required restr = List.exists fst restr
+
+(* [restrict_first_param restr ty] intersects the type of the first parameter
+   (if any) of every arrow of the function signature [ty] with the values
+   [restr] admits (cf. [class_ty]), or that are absent if [restr] requires no
+   class. Non-functional types are returned unchanged. *)
+let restrict_first_param restr ty =
   let open Rstt in
-  if is_fun_sig ty |> not then ty else
+  if restr = [] || is_fun_sig ty |> not then ty else
   let restr =
-    let cty = class_ty ~present cls in
-    (if present then Ty.O.required cty else Ty.O.optional cty) |> Ty.F.mk_descr
+    let cty = class_ty restr in
+    (if is_required restr then Ty.O.required cty else Ty.O.optional cty) |> Ty.F.mk_descr
   in
   let restrict_field fty = Ty.F.cap fty restr in
   let restrict_dom dom =
@@ -106,11 +118,12 @@ let restrict_first_param ~present cls ty =
 (* Same restriction, but performed on the (not yet built) signature. It must be
    used for the signatures whose argument is polymorphic: their identifier being
    a type variable, they cannot be destructed once built. *)
-let restrict_first_param' ~present cls b =
+let restrict_first_param' restr b =
   let open Rstt.Builder in
+  if restr = [] then b else
   let restr =
-    let cty = TTy (class_ty ~present cls) in
-    if present then cty else TOption cty
+    let cty = TTy (class_ty restr) in
+    if is_required restr then cty else TOption cty
   in
   let restrict a =
     match a.Rstt.Arg.pos_named with
@@ -131,15 +144,18 @@ let restrict_first_param' ~present cls b =
 
 let mk_fsig build decl = { decl ; restr=[] ; build }
 let is_resolved f = Rstt.FunSig.is_regular_ty f.decl
-let restrict_sig ~present cls f = { f with restr=f.restr@[present,cls] }
+let restrict_sig restr f = { f with restr=f.restr@restr }
 let arrows f = f.decl |> List.map (fun a -> { f with decl=[a] })
 
-(* Type of the instance [decl] of the signature [f]. *)
+(* Type of the instance [decl] of the signature [f]. A restriction intersects
+   the class atom of the first parameter with another one: the result is
+   simplified to merge them, as intersecting signatures whose parameters have
+   several class atoms is exponentially slower (cf. [class_ty]). *)
 let instance_ty ?(polymorphic=false) f decl =
   Rstt.FunSig.to_regular ~polymorphic decl
-  |> (fun b -> List.fold_left
-    (fun b (present,cls) -> restrict_first_param' ~present cls b) b f.restr)
+  |> restrict_first_param' f.restr
   |> f.build
+  |> if f.restr = [] then Fun.id else GTy.map Rstt.TyOp.simplify
 let fsig_ty ?polymorphic f = instance_ty ?polymorphic f f.decl
 
 let resolve_signature arg f =
@@ -154,12 +170,19 @@ let resolve_signature arg f =
    declared once, with all the methods it implements. *)
 let declared = Hashtbl.create 10
 
+(* The name R gives to the generic Rsem names [m]: the subset operators are
+   named after their syntax (cf. [PAst]), e.g. [[]] for R's [\[]. *)
+let r_name m =
+  match m with
+  | "[]" -> "[" | "[[]]" -> "[[" | "[]<-" -> "[<-" | "[[]]<-" -> "[[<-"
+  | m -> m
+
 (* Declares the class-overload of the generic [m] for the class [cls]: [cls]
-   will implement the method class of [m]. The methods of a class and the
-   restrictions of the signatures are derived from the class-overloads, so they
-   must all be declared before the class is declared (i.e. before any type
-   mentions it, cf. [declare_classes]) and before [m] is given a type.
-   Declaring the same class-overload again does nothing. *)
+   will implement the method class of [m] (named after [r_name m]). The methods
+   of a class and the restrictions of the signatures are derived from the
+   class-overloads, so they must all be declared before the class is declared
+   (i.e. before any type mentions it, cf. [declare_classes]) and before [m] is
+   given a type. Declaring the same class-overload again does nothing. *)
 let new_class_overload m cls t =
   if List.mem (m,cls) t.ovl then t
   else begin
@@ -178,7 +201,7 @@ let declare_classes t =
   t.ovl |> List.iter (fun (_,cls) ->
     if Hashtbl.mem declared cls |> not then begin
       let methods = t.ovl |> List.filter_map (fun (m,c) ->
-        if String.equal c cls then Some m else None) in
+        if String.equal c cls then Some (r_name m) else None) in
       begin try Rstt.Classes.declare_class cls ~methods
       with Invalid_argument _ ->
         failwith (Printf.sprintf
@@ -187,53 +210,161 @@ let declare_classes t =
       Hashtbl.add declared cls ()
     end)
 
-(* Classes of the class-overloads of the generic [m] that take precedence over
-   a signature of [m]: those declared after the class-overload for [cls] if
-   the signature is the one of that class-overload, and all of them otherwise.
+(* Classes of the class-overloads of the generic [m], in their order of
+   declaration, and those declared after the class-overload for [cls].
    Class-overloads are matched with the generics by name only, as the method
    classes are: those of two distinct generics with the same name (e.g. a
    global one and the one of a namespace) are mixed together.
    TODO: improve *)
-let overloads_after ?cls m t =
-  let clss = t.ovl |> List.filter_map (fun (m',c) -> if String.equal m m' then Some c else None) in
+let overloads m t =
+  t.ovl |> List.filter_map (fun (m',c) -> if String.equal m m' then Some c else None)
+let overloads_after cls m t =
   let rec after clss =
-    match clss, cls with
-    | [], _ -> []
-    | c::clss, Some cls when String.equal c cls -> clss
-    | _::clss, _ -> after clss
+    match clss with
+    | [] -> []
+    | c::clss when String.equal c cls -> clss
+    | _::clss -> after clss
   in
-  match cls with None -> clss | Some _ -> after clss
+  after (overloads m t)
+let is_method m t = overloads m t <> []
+
+(* The method class of the generic [m], i.e. the class of the values whose
+   class has a class-overload of [m]. *)
+let method_class m = Rstt.Classes.Method (r_name m)
+
+(* The restriction of the first parameter of a signature of the generic [m]
+   (cf. [add_signature]): the values whose class has no class-overload of [m]
+   (i.e. [<~@m, ...>]) for a base signature, and those whose class has no
+   class-overload of [m] declared after the one for [cls] for the signature of
+   that class-overload (whose first parameter is already restricted to [cls],
+   cf. [class_overload_sig]). *)
+let restriction ?cls m t =
+  match cls with
+  | None when is_method m t -> [false, method_class m]
+  | None -> []
+  | Some cls -> overloads_after cls m t |> List.map (fun c -> false, Rstt.Classes.Class c)
+
+(* The return type of the signature [ty]: the union of the codomains of its
+   arrows. *)
+let codomain ty =
+  let open Rstt in
+  GTy.ub ty |> Attr.destruct
+  |> List.concat_map (fun (ps,_) -> ps)
+  |> List.concat_map (fun a -> Arrow.dnf a.Attr.content |> List.concat |> List.map snd)
+  |> Ty.disj
+
+(* The default signature of the methods of the generic [m],
+   [(X: <@m, ...>, ...: any) -> ret]: it covers the values for which the
+   base signatures do not apply, i.e. the complement [<@m, ...>] of their
+   restriction [<~@m, ...>] (a class implies the method classes it
+   implements). Contrarily to the signatures of the methods, it also covers
+   the values of these classes whose other classes are unknown.
+   As these values are dispatched to one of the class-overloads of [m], [ret]
+   is the union of the return types of the signatures of its methods [sigs],
+   the type variables of each being instantiated with [TVOp.top_instance]
+   before the union (where a variable could occur with both polarities, and
+   thus survive). It is [any]
+   when this is not possible: when a class-overload has no signature (its
+   return type is unknown), one of them still contains label variables, or
+   type variables remain after the instantiation. *)
+let methods_default_ty m sigs t =
+  let open Rstt in
+  let ret =
+    let has_sig c = List.exists (fun (c',_) -> String.equal c c') sigs.methods in
+    let symbolic = List.exists (fun (c,_) -> Option.is_some c) sigs.symbolic in
+    if symbolic || List.for_all has_sig (overloads m t) |> not then Ty.any else
+    let ret = sigs.methods
+              |> List.map (fun (_,ty) -> codomain ty |> TVOp.top_instance MVarSet.empty)
+              |> Ty.disj in
+    if GTy.mk ret |> GTy.fv |> MVarSet.is_empty then ret else Ty.any
+  in
+  let field ty = Ty.F.mk_descr (Ty.O.required ty) in
+  let x = class_ty [true, method_class m] in
+  let dom = Arg.mk { pos_named=["X", field x] ;
+                     pos_tl=field Ty.any ; named=[] ; named_tl=field Ty.any } in
+  Arrow.mk dom ret |> Attr.mk_content |> GTy.mk
+
+(* A partition of the R values the first argument of an application of the
+   generic [m] may take, following its dispatch (as all R values are
+   attributed, it does not have to cover the other types): the values whose
+   class has
+   no class-overload of [m] ([<~@m, ...>], which the base signatures cover),
+   those of the class [c_i] of each of its class-overloads that have none of
+   the classes of the class-overloads declared after it
+   ([<c_i, ~c_(i+1), ..., ~c_n, ...>]), and the rest ([<@m, ~c_1, ..., ~c_n,
+   ...>], if not empty). It is empty if [m] is not a method. *)
+let dispatch_partition m t =
+  match overloads m t with
+  | [] -> []
+  | clss ->
+    let base = class_ty [false, method_class m] in
+    let rec meths clss =
+      match clss with
+      | [] -> []
+      | c::clss ->
+        class_ty ((true, Rstt.Classes.Class c)::List.map (fun c -> false, Rstt.Classes.Class c) clss)
+        ::meths clss
+    in
+    let rest = class_ty ((true, method_class m)::List.map (fun c -> false, Rstt.Classes.Class c) clss) in
+    base::meths clss@(if Ty.is_empty rest then [] else [rest])
 
 (* Restrictions of the signature of the class-overload of a generic for the
    class [cls]: its first parameter is restricted to the values of class
    [cls]. *)
-let class_overload_sig cls f = restrict_sig ~present:true cls f
-let class_overload_ty cls ty = restrict_first_param ~present:true cls ty
+let class_overload_sig cls f = restrict_sig [true, Rstt.Classes.Class cls] f
+let class_overload_ty cls ty = restrict_first_param [true, Rstt.Classes.Class cls] ty
 
 (* ===== Registration of the signatures ===== *)
 
-let set_sigs v sigs t =
-  let senv = VarMap.add v sigs t.senv in
-  let ty = sigs.resolved |> GTy.conj |> TyScheme.mk_poly |> simplify_tl in
-  let env = Env.replace v ty t.env in
-  { t with env ; senv }
+(* The type of a variable is the intersection of its resolved signatures. It
+   is computed incrementally, by intersecting the previous one with each new
+   signature, and is not simplified: recomputing or simplifying the
+   intersection of the many signatures of a generic with class-overloads
+   (e.g. [+]) at each signature added is expensive. The applications of the
+   variable use its signatures rather than this type anyway (cf.
+   [Transform]), and [get] simplifies it for printing. *)
+let add_resolved v ty t =
+  let ty =
+    if VarMap.mem v t.senv
+    then GTy.conj [ Env.find v t.env |> TyScheme.get |> snd ; ty ]
+    else ty
+  in
+  Env.replace v (TyScheme.mk_poly ty) t.env
 
-(* A signature of [name] does not apply to the values whose class has a
-   class-overload of [name] taking precedence over it (cf. [overloads_after]). *)
+(* The first parameter of a signature of [name] is restricted as described by
+   [restriction]. *)
 let add_signature ?cls ~name v s t =
-  let s = overloads_after ?cls name t |> List.fold_left (fun s c ->
+  let restr = restriction ?cls name t in
+  let s =
     match s with
-    | SigTy ty -> SigTy (restrict_first_param ~present:false c ty)
-    | SigFun f -> SigFun (restrict_sig ~present:false c f)) s in
+    | SigTy ty -> SigTy (restrict_first_param restr ty)
+    | SigFun f -> SigFun (restrict_sig restr f)
+  in
   let t = { t with bound=StrSet.add name t.bound } in
   let sigs = get_sigs v t.senv in
-  let sigs =
-    match s with
-    | SigTy ty -> { sigs with resolved=ty::sigs.resolved }
-    | SigFun f when is_resolved f -> { sigs with resolved=(fsig_ty f)::sigs.resolved }
-    | SigFun f -> { sigs with symbolic=f::sigs.symbolic }
+  let add ty sigs =
+    match cls with
+    | None -> { sigs with base=ty::sigs.base }
+    | Some cls -> { sigs with methods=(cls,ty)::sigs.methods }
   in
-  set_sigs v sigs t
+  let resolved, sigs =
+    match s with
+    | SigTy ty -> Some ty, add ty sigs
+    | SigFun f when is_resolved f -> let ty = fsig_ty f in Some ty, add ty sigs
+    | SigFun f -> None, { sigs with symbolic=(cls,f)::sigs.symbolic }
+  in
+  let sigs =
+    if is_method name t
+    then { sigs with methods_default=[methods_default_ty name sigs t] }
+    else sigs
+  in
+  let env =
+    match resolved with
+    | Some ty -> add_resolved v ty t
+    | None when VarMap.mem v t.senv -> t.env
+    | None -> Env.replace v (TyScheme.mk_poly GTy.any) t.env
+  in
+  { t with env ; senv=VarMap.add v sigs t.senv }
 
 (* An inferred type is restricted as a signature would be. *)
 let set_from_tyscheme v ts t =
@@ -244,13 +375,11 @@ let set_from_tyscheme v ts t =
     | None -> ts, t
     | Some name ->
       let t = { t with bound=StrSet.add name t.bound } in
-      match overloads_after name t with
+      match restriction name t with
       | [] -> ts, t
-      | clss ->
+      | restr ->
         let tvs, ty = TyScheme.get ts in
-        let ty = clss |> List.fold_left
-          (fun ty c -> restrict_first_param ~present:false c ty) ty in
-        TyScheme.mk tvs ty, t
+        TyScheme.mk tvs (restrict_first_param restr ty), t
   in
   let ts = simplify_tl ts in
   let env, senv = Env.rm v t.env, VarMap.remove v t.senv in
@@ -258,8 +387,21 @@ let set_from_tyscheme v ts t =
 
 let mem v t = Env.mem v t.env
 let env t = t.env
-let get v t = Env.find v t.env
+let get v t =
+  let ts = Env.find v t.env in
+  if VarMap.mem v t.senv then simplify_tl ts else ts
 let get_signatures v t = VarMap.find_opt v t.senv
+
+let base sigs = sigs.base
+let methods ?cls sigs =
+  sigs.methods |> List.filter_map (fun (c,ty) ->
+    match cls with
+    | Some cls when String.equal c cls |> not -> None
+    | _ -> Some ty)
+let methods_with_class sigs = sigs.methods
+let methods_default sigs = sigs.methods_default
+let symbolic sigs = sigs.symbolic
+let all sigs = sigs.base@(List.map snd sigs.methods)@sigs.methods_default
 
 (* ===== Namespaces ===== *)
 

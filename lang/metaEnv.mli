@@ -24,9 +24,51 @@ val fsig_ty : ?polymorphic:bool -> fsig -> GTy.t
    matched with the argument of any definition.
    @raise Invalid_argument if [is_resolved] is false. *)
 
-type sigs = { resolved:GTy.t list ; symbolic:fsig list }
-(* Signatures declared for a variable: those that could be converted to a type,
-   and the function signatures that still contain label variables. *)
+type sigs
+(* Signatures declared for a variable. Those of a generic [m] with
+   class-overloads (a "method") are of three kinds:
+   - its base signatures, i.e. the ones declared for [m] itself. Their first
+     parameter is restricted to the values whose class has no class-overload
+     of [m], i.e. to [<~@m, ...>] (with [@m] the method class of [m]);
+   - the signatures of its methods, i.e. of its class-overloads, each with the
+     class [c_i] it is the class-overload for. Their first parameter is
+     restricted to [<c_i, ~c_(i+1), ..., ~c_n, ...>], where
+     [c_(i+1), ..., c_n] are the classes of the class-overloads of [m]
+     declared after the one for [c_i] (which take precedence over it);
+   - the default signature of its methods,
+     [(X: <@m, ...>, ...: any) -> ret], which covers the values the base
+     signatures do not apply to, i.e. [<@m, ...>] (a class implies the method
+     classes it implements, so these are the values of the classes that have
+     a class-overload of [m], whatever their other classes are). The
+     signatures of the methods do not cover all of them, as
+     [<@m, ~c_1, ..., ~c_n, ...>] is not empty. With it, the signatures of a
+     method cover all the values its base signatures cover, and those of
+     unknown classes (e.g. [dbl]) in particular. [ret] is the union of the
+     return types of the signatures of the methods (their type variables
+     instantiated with their largest instance), or [any] if one of its
+     class-overloads has no signature or one that still contains label
+     variables, or if type variables remain.
+   A function that is not a method only has base signatures (whose first
+   parameter is not restricted). Each kind only lists the signatures that
+   could be converted to a type: the function signatures that still contain
+   label variables are listed apart ([symbolic]).
+   The type of the variable is the intersection of its base and method
+   signatures: the default signature of the methods is only used for its
+   applications (cf. [Transform]). *)
+val base : sigs -> GTy.t list
+val methods : ?cls:string -> sigs -> GTy.t list
+(* [methods ~cls sigs] are the signatures of the method for the class [cls],
+   and [methods sigs] those of all the methods. *)
+val methods_with_class : sigs -> (string * GTy.t) list
+(* The signatures of the methods, each with its class. *)
+val methods_default : sigs -> GTy.t list
+(* The default signature of the methods (none if the function is not a
+   method). *)
+val all : sigs -> GTy.t list
+(* All the signatures of the three kinds above. *)
+val symbolic : sigs -> (string option * fsig) list
+(* The signatures that still contain label variables, with the class of the
+   method they are a signature of, if any. *)
 type signature = SigTy of GTy.t | SigFun of fsig
 
 type label = string
@@ -43,10 +85,10 @@ type t
 val initial : t
 val add_signature : ?cls:string -> name:string -> Variable.t -> signature -> t -> t
 (* [add_signature ~name v s t] adds the signature [s] to [v], a variable named
-   [name]. The first parameter of [s] is restricted to the values whose class
-   has no class-overload of [name] taking precedence over [s]: none if [s] is
-   the signature of the class-overload of [name] for [cls], none declared
-   after it otherwise. *)
+   [name]: as a base signature, or as the signature of the method for [cls]
+   (whose first parameter must already be restricted to [cls], cf.
+   [class_overload_sig]). Its first parameter is restricted as described for
+   [sigs]. *)
 val set_from_tyscheme : Variable.t -> TyScheme.t -> t -> t
 (* The type of [v] is restricted as a signature of its name would be. *)
 
@@ -61,6 +103,11 @@ val declare_classes : t -> unit
    declared yet, with their methods. It must be called before any type
    mentioning these classes is built, and makes later class-overloads for them
    fail. *)
+val dispatch_partition : string -> t -> Ty.t list
+(* [dispatch_partition m t] partitions the R values of the first argument of an
+   application of the generic [m] following its dispatch: [<~@m, ...>], then
+   [<c_i, ~c_(i+1), ..., ~c_n, ...>] for each class-overload of [m], and the
+   rest. It is empty if [m] is not a method. *)
 val class_overload_sig : string -> fsig -> fsig
 val class_overload_ty : string -> GTy.t -> GTy.t
 (* Restriction of the signature of a class-overload for the class [cls]: its
