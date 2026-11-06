@@ -28,6 +28,25 @@
 #   cover them alone, which is why arithmetic uses `v('a)&dbl`.
 # - An elementwise function is length-preserving, which the algebra cannot say:
 #   it gets one overload for scalars, and one for vectors of any length.
+# - An overload can be an intersection of arrows, written with `&&`, one per
+#   line: an annotation continues on the next `#|` lines that start with more
+#   than one blank. In inference mode, it is tried as a whole, as one
+#   alternative, so the arrows of an overload are grouped to make inference
+#   faster:
+#   - overloads whose domains overlap pairwise (e.g. the vector and the scalar
+#     versions of an arithmetic operator) are grouped into one. Its arrows
+#     share their type variables (in particular the class row variable `c):
+#     an overload of the group no longer needs its own, the other ones
+#     constraining the result as well;
+#   - overloads with disjoint domains (e.g. a unary and a binary operator, or
+#     `typeof` for each type) stay separate: grouped, every application to an
+#     argument of unknown type would have to consider all of their arrows at
+#     once, which makes inference much slower (for `typeof`, from a fraction
+#     of a second to more than a minute). Nor are two of them grouped through
+#     a third one that overlaps both (e.g. the `any` overload of `typeof`):
+#     the overloads of a group overlap pairwise.
+#   - an overload with label variables (e.g. `#k`) is never grouped with other
+#     ones: it would make the whole group symbolic.
 
 # ========== Class-overloads ==========
 
@@ -84,30 +103,57 @@
 # The result keeps the classes of the operands (those of `e1` if it has some,
 # and those of `e2` otherwise): both share a class row variable, which a row
 # can instantiate with a union, e.g. `x + 1` has the classes of `x` or none.
-#| base::(-) : ( e1:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c> && ( e1:dbl1<`c> ) -> dbl1<`c> && ( e1:DBL1<`c> ) -> DBL1<`c>
-#| base::(-) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c> && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c> && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c> && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
+#| base::(-) : ( e1:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#|          && ( e1:dbl1<`c> ) -> dbl1<`c>
+#|          && ( e1:DBL1<`c> ) -> DBL1<`c>
+#| base::(-) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#|          && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
+#|          && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#|          && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
 
-#| base::(+) : ( e1:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c> && ( e1:dbl1<`c> ) -> dbl1<`c> && ( e1:DBL1<`c> ) -> DBL1<`c>
-#| base::(+) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c> && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c> && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c> && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
+#| base::(+) : ( e1:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#|          && ( e1:dbl1<`c> ) -> dbl1<`c>
+#|          && ( e1:DBL1<`c> ) -> DBL1<`c>
+#| base::(+) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#|          && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
+#|          && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#|          && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
 
-#| base::(*) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c> && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c> && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c> && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
-#| base::(%%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c> && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c> && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c> && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
-#| base::(%/%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c> && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c> && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c> && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
+#| base::(*) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#|          && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
+#|          && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#|          && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
+#| base::(%%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#|           && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
+#|           && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#|           && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
+#| base::(%/%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#|            && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
+#|            && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#|            && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
 
 # Always a double, even for integer operands (`1L / 2L` is `0.5`).
-#| base::(/) : ( e1:dbl<`c>, e2:dbl<`c> ) -> DBL<`c> && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
-#| base::(^) : ( e1:dbl<`c>, e2:dbl<`c> ) -> DBL<`c> && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#| base::(/) : ( e1:dbl<`c>, e2:dbl<`c> ) -> DBL<`c>
+#|          && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
+#| base::(^) : ( e1:dbl<`c>, e2:dbl<`c> ) -> DBL<`c>
+#|          && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
 
 # ========== Comparisons and Boolean operators ==========
 
 # Contrarily to arithmetic, comparisons and Boolean operators do not keep the
 # class of their operands.
-#| base::(<) : ( e1:vec1, e2:vec1 ) -> LGL1<> && ( e1:vec, e2:vec ) -> LGL<>
-#| base::(<=) : ( e1:vec1, e2:vec1 ) -> LGL1<> && ( e1:vec, e2:vec ) -> LGL<>
-#| base::(>) : ( e1:vec1, e2:vec1 ) -> LGL1<> && ( e1:vec, e2:vec ) -> LGL<>
-#| base::(>=) : ( e1:vec1, e2:vec1 ) -> LGL1<> && ( e1:vec, e2:vec ) -> LGL<>
-#| base::(==) : ( e1:vec1, e2:vec1 ) -> LGL1<> && ( e1:vec, e2:vec ) -> LGL<>
-#| base::(!=) : ( e1:vec1, e2:vec1 ) -> LGL1<> && ( e1:vec, e2:vec ) -> LGL<>
+#| base::(<) : ( e1:vec1, e2:vec1 ) -> LGL1<>
+#|          && ( e1:vec, e2:vec ) -> LGL<>
+#| base::(<=) : ( e1:vec1, e2:vec1 ) -> LGL1<>
+#|           && ( e1:vec, e2:vec ) -> LGL<>
+#| base::(>) : ( e1:vec1, e2:vec1 ) -> LGL1<>
+#|          && ( e1:vec, e2:vec ) -> LGL<>
+#| base::(>=) : ( e1:vec1, e2:vec1 ) -> LGL1<>
+#|           && ( e1:vec, e2:vec ) -> LGL<>
+#| base::(==) : ( e1:vec1, e2:vec1 ) -> LGL1<>
+#|           && ( e1:vec, e2:vec ) -> LGL<>
+#| base::(!=) : ( e1:vec1, e2:vec1 ) -> LGL1<>
+#|           && ( e1:vec, e2:vec ) -> LGL<>
 
 # `&&` and `||` have no signature: being short-circuiting, they are not typed
 # as applications but encoded as conditionals (cf. `encode_short_circuit` in
@@ -116,12 +162,17 @@
 
 # `!`, `&`, `|` and `xor` also take numbers (`!0` is `TRUE`), and are bitwise
 # on raw vectors, hence a result of type `lgl` rather than `LGL`.
-#| base::(!) : ( x:tt ) -> ff<> && ( x:dbl1 ) -> lgl1<> && ( x:dbl ) -> lgl<>
+#| base::(!) : ( x:tt ) -> ff<>
+#|          && ( x:dbl1 ) -> lgl1<>
+#|          && ( x:dbl ) -> lgl<>
 #| base::(!) : ( x:ff ) -> tt<>
 
-#| base::(&) : ( e1:dbl1, e2:dbl1 ) -> lgl1<> && ( e1:dbl, e2:dbl ) -> lgl<>
-#| base::(|) : ( e1:dbl1, e2:dbl1 ) -> lgl1<> && ( e1:dbl, e2:dbl ) -> lgl<>
-#| base::xor : ( x:dbl1, y:dbl1 ) -> lgl1<> && ( x:dbl, y:dbl ) -> lgl<>
+#| base::(&) : ( e1:dbl1, e2:dbl1 ) -> lgl1<>
+#|          && ( e1:dbl, e2:dbl ) -> lgl<>
+#| base::(|) : ( e1:dbl1, e2:dbl1 ) -> lgl1<>
+#|          && ( e1:dbl, e2:dbl ) -> lgl<>
+#| base::xor : ( x:dbl1, y:dbl1 ) -> lgl1<>
+#|          && ( x:dbl, y:dbl ) -> lgl<>
 
 # ========== Lookups ==========
 
@@ -169,12 +220,14 @@
 
 # The attributes it sets, the class among them, are not tracked: the result has
 # the type of `.Data` with any attributes.
-#| base::structure : (.Data:v('a), ...: any) -> v('a) && (.Data:any, ...: any) -> any
+#| base::structure : (.Data:v('a), ...: any) -> v('a)
+#|                && (.Data:any, ...: any) -> any
 #| base::structure : (.Data:{'a}, ...: any) -> {'a}
 
 # ========== Types and predicates ==========
 
-#| base::typeof : ( x: DBL ) -> "double"<> && ( x: any ) -> CHR1<>
+#| base::typeof : ( x: DBL ) -> "double"<>
+#|             && ( x: any ) -> CHR1<>
 #| base::typeof : ( x: CHR ) -> "character"<>
 #| base::typeof : ( x: LGL ) -> "logical"<>
 #| base::typeof : ( x: INT ) -> "integer"<>
@@ -185,28 +238,37 @@
 
 #| base::is.null : (x:null) -> tt<>
 #| base::is.null : (x:~null) -> ff<>
-#| base::is.na : (x:vec1) -> LGL1<> && (x:any) -> LGL<>
+#| base::is.na : (x:vec1) -> LGL1<>
+#|            && (x:any) -> LGL<>
 #| base::is.character : (x:CHR) -> tt<>
 #| base::is.character : (x:~CHR) -> ff<>
 # Factors and the date and time classes are built on numbers, but are not
 # numeric for `is.numeric`: any other class keeps it `TRUE`.
-#| base::is.numeric : (x:(DBL|INT)<~factor, ~Date, ~POSIXt, ~difftime, ...>) -> tt<> && (x:DBL|INT) -> LGL1<>
+#| base::is.numeric : (x:(DBL|INT)<~factor, ~Date, ~POSIXt, ~difftime, ...>) -> tt<>
+#|                 && (x:DBL|INT) -> LGL1<>
 #| base::is.numeric : (x:~(DBL|INT)) -> ff<>
-#| base::is.list : (x:list) -> tt<> && (x:any) -> LGL1<>
+#| base::is.list : (x:list) -> tt<>
+#|              && (x:any) -> LGL1<>
 #| base::is.environment : (x:env) -> tt<>
 #| base::is.environment : (x:~env) -> ff<>
 #| base::is.function : (x:any) -> LGL1<>
 #| base::is.factor : (x:any) -> LGL1<>
 #| base::is.matrix : (x:any) -> LGL1<>
-#| base::is.nan : (x:vec1) -> LGL1<> && (x:any) -> LGL<>
+#| base::is.nan : (x:vec1) -> LGL1<>
+#|             && (x:any) -> LGL<>
 #| base::is.logical : (x:LGL) -> tt<>
 #| base::is.logical : (x:~LGL) -> ff<>
-#| base::is.finite : (x:vec1) -> LGL1<> && (x:any) -> LGL<>
-#| base::is.infinite : (x:vec1) -> LGL1<> && (x:any) -> LGL<>
-#| base::isTRUE : (x:~lgl) -> ff<> && (x:any) -> LGL1<>
-#| base::isFALSE : (x:~lgl) -> ff<> && (x:any) -> LGL1<>
+#| base::is.finite : (x:vec1) -> LGL1<>
+#|                && (x:any) -> LGL<>
+#| base::is.infinite : (x:vec1) -> LGL1<>
+#|                  && (x:any) -> LGL<>
+#| base::isTRUE : (x:~lgl) -> ff<>
+#|             && (x:any) -> LGL1<>
+#| base::isFALSE : (x:~lgl) -> ff<>
+#|              && (x:any) -> LGL1<>
 #| base::identical : (x:any, y:any, ...: any) -> LGL1<>
-#| base::(%in%) : (x:vec1, table:vec|null) -> LGL1<> && (x:vec|null, table:vec|null) -> LGL<>
+#| base::(%in%) : (x:vec1, table:vec|null) -> LGL1<>
+#|             && (x:vec|null, table:vec|null) -> LGL<>
 # Like `!`, they coerce numbers.
 #| base::all : (...: dbl, na.rm:lgl1?) -> LGL1<>
 #| base::any : (...: dbl, na.rm:lgl1?) -> LGL1<>
@@ -224,8 +286,10 @@
 # of `x` (which the default method in fact drops, but then `x` has typically
 # none). This takes a single overload: a third one on vectors makes inference
 # blow up in memory (e.g. on rematch::re_match_all1 with --gradual).
-#| base::c : ( x:v('p)<`c>, ...: v('p)|null ) -> v('p)<`c> && ( ...: v('p)|null ) -> v('p) | null
-#| base::c : ( x:{'a}, ...: {'a}|null ) -> {'a}<> && ( ...: {'a}|null ) -> {'a}<> | null
+#| base::c : ( x:v('p)<`c>, ...: v('p)|null ) -> v('p)<`c>
+#|        && ( ...: v('p)|null ) -> v('p) | null
+#| base::c : ( x:{'a}, ...: {'a}|null ) -> {'a}<>
+#|        && ( ...: {'a}|null ) -> {'a}<> | null
 
 #| base::length : (x:any) -> INT1<>
 #| base::rev : (x:v('a)) -> v('a)
@@ -247,7 +311,8 @@
 #| base::rep : (x:{'a}, ...: any) -> {'a}
 #| base::rep : (x:null, ...: any) -> null
 
-#| base::as.list : (x:{'a}, ...: any) -> {'a} && (x:any, ...: any) -> { any }<>
+#| base::as.list : (x:{'a}, ...: any) -> {'a}
+#|              && (x:any, ...: any) -> { any }<>
 #| base::as.list : (x:v('a), ...: any) -> { v1('a) }<>
 
 #| base::logical : (length:dbl1?) -> LGL<>
@@ -260,17 +325,24 @@
 # `NULL`: `intersect` when either argument is one, `setdiff` when `x` is,
 # `union` when both are. The first overload of each covers all the arguments
 # alone (see the conventions above); the others make the result precise.
-#| base::union : (x:v('a)|null, y:v('a)|null) -> v('a)<> | null && (x:v('a), y:v('a)|null) -> v('a)<> && (x:v('a)|null, y:v('a)) -> v('a)<>
+#| base::union : (x:v('a)|null, y:v('a)|null) -> v('a)<> | null
+#|            && (x:v('a), y:v('a)|null) -> v('a)<>
+#|            && (x:v('a)|null, y:v('a)) -> v('a)<>
 #| base::union : (x:null, y:null) -> null
-#| base::intersect : (x:v('a)|null, y:v('a)|null) -> v('a)<> | null && (x:v('a), y:v('a)) -> v('a)<>
-#| base::intersect : (x:null, y:vec|null) -> null && (x:vec|null, y:null) -> null
-#| base::setdiff : (x:v('a)|null, y:vec|null) -> v('a)<> | null && (x:v('a), y:vec|null) -> v('a)<>
+#| base::intersect : (x:v('a)|null, y:v('a)|null) -> v('a)<> | null
+#|                && (x:v('a), y:v('a)) -> v('a)<>
+#| base::intersect : (x:null, y:vec|null) -> null
+#|                && (x:vec|null, y:null) -> null
+#| base::setdiff : (x:v('a)|null, y:vec|null) -> v('a)<> | null
+#|              && (x:v('a), y:vec|null) -> v('a)<>
 #| base::setdiff : (x:null, y:vec|null) -> null
 
 # Factors are the only class `unlist` keeps.
-#| base::unlist : (x:{v('a)<~factor, ...>}) -> v('a)<> && (x:{v('a)}) -> v('a)
+#| base::unlist : (x:{v('a)<~factor, ...>}) -> v('a)<>
+#|             && (x:{v('a)}) -> v('a)
 
-#| base::(:) : ( from:int, to:dbl ) -> INT<> && ( from:dbl, to:dbl ) -> (INT|DBL)<>
+#| base::(:) : ( from:int, to:dbl ) -> INT<>
+#|          && ( from:dbl, to:dbl ) -> (INT|DBL)<>
 
 #| base::vector : (mode: "logical"?, length: dbl1?) -> LGL<>
 #| base::vector : (mode: "integer", length: dbl1?) -> INT<>
@@ -291,90 +363,142 @@
 #| base::lapply : (X:v('a)<`c>, FUN:@(v1('a)<`c>, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}<>
 #| base::lapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}<>
 
-#| base::vapply : (X:v('a)<>, FUN:@(v1('a)<>, X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<> && (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<>
+#| base::vapply : (X:v('a)<>, FUN:@(v1('a)<>, X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<>
+#|             && (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<>
 #| base::vapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<>
 
 # `sapply` simplifies the result to a vector when `FUN` returns a scalar, and
 # to a matrix or a list otherwise.
-#| base::sapply : (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: `r) -> v1('b), ...: `r) -> v('b)<> && (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: `r) -> any, ...: `r) -> any
-#| base::sapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> v1('b), ...: `r) -> v('b)<> && (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> any, ...: `r) -> any
+#| base::sapply : (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: `r) -> v1('b), ...: `r) -> v('b)<>
+#|             && (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: `r) -> any, ...: `r) -> any
+#| base::sapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> v1('b), ...: `r) -> v('b)<>
+#|             && (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> any, ...: `r) -> any
 
 # Drawing one element gives a scalar; the size being a literal, the singleton
 # type of the argument is enough to say so. A single number `n` (at least 1)
 # is not drawn from, but stands for `1:n`. Drawing from `NULL` is an error.
-#| base::sample : (x:v('a) \ (INT1|DBL1), size:1) -> v1('a) && (x:v('a) \ (INT1|DBL1), size:dbl1?) -> v('a)
-#| base::sample : (x:INT1|DBL1, size:1) -> (INT1|DBL1)<> && (x:INT1|DBL1, size:dbl1?) -> (INT|DBL)<>
+#| base::sample : (x:v('a) \ (INT1|DBL1), size:1) -> v1('a)
+#|             && (x:v('a) \ (INT1|DBL1), size:dbl1?) -> v('a)
+#| base::sample : (x:INT1|DBL1, size:1) -> (INT1|DBL1)<>
+#|             && (x:INT1|DBL1, size:dbl1?) -> (INT|DBL)<>
 #| base::sample : (x:{'a}, size:dbl1?) -> {'a}
 #| base::sample : (x:null, size:1) -> empty
 
 # ========== Bitwise ==========
 
-#| base::bitwNot : (a:dbl) -> INT<> && (a:dbl1) -> INT1<>
+#| base::bitwNot : (a:dbl) -> INT<>
+#|              && (a:dbl1) -> INT1<>
 
-#| base::bitwAnd : (a:dbl, b:dbl) -> INT<> && (a:dbl1, b:dbl1) -> INT1<>
-#| base::bitwOr : (a:dbl, b:dbl) -> INT<> && (a:dbl1, b:dbl1) -> INT1<>
-#| base::bitwXor : (a:dbl, b:dbl) -> INT<> && (a:dbl1, b:dbl1) -> INT1<>
+#| base::bitwAnd : (a:dbl, b:dbl) -> INT<>
+#|              && (a:dbl1, b:dbl1) -> INT1<>
+#| base::bitwOr : (a:dbl, b:dbl) -> INT<>
+#|             && (a:dbl1, b:dbl1) -> INT1<>
+#| base::bitwXor : (a:dbl, b:dbl) -> INT<>
+#|              && (a:dbl1, b:dbl1) -> INT1<>
 
-#| base::bitwShiftL : (a:dbl, n:dbl1) -> INT<> && (a:dbl1, n:dbl1) -> INT1<>
-#| base::bitwShiftR : (a:dbl, n:dbl1) -> INT<> && (a:dbl1, n:dbl1) -> INT1<>
+#| base::bitwShiftL : (a:dbl, n:dbl1) -> INT<>
+#|                 && (a:dbl1, n:dbl1) -> INT1<>
+#| base::bitwShiftR : (a:dbl, n:dbl1) -> INT<>
+#|                 && (a:dbl1, n:dbl1) -> INT1<>
 
 # ========== Maths ==========
 
 # The functions of the `Math` group keep the class of their argument.
 # Like arithmetic: a logical gives an integer, a double a double.
-#| base::abs : (x:(v('a)&dbl)<`c>) -> (v('a)&(dbl\lgl) | INT)<`c> && (x:dbl1<`c>) -> dbl1<`c> && (x:DBL1<`c>) -> DBL1<`c>
-#| base::round : (x:dbl1<`c>, digits:dbl1?) -> dbl1<`c> && (x:dbl<`c>, digits:dbl1?) -> dbl<`c>
-#| base::signif : (x:dbl1<`c>, digits:dbl1?) -> dbl1<`c> && (x:dbl<`c>, digits:dbl1?) -> dbl<`c>
-#| base::floor : (x:dbl1<`c>) -> dbl1<`c> && (x:dbl<`c>) -> dbl<`c>
-#| base::ceiling : (x:dbl1<`c>) -> dbl1<`c> && (x:dbl<`c>) -> dbl<`c>
-#| base::trunc : (x:dbl1<`c>, ...: any) -> dbl1<`c> && (x:dbl<`c>, ...: any) -> dbl<`c>
-#| base::log : (x:dbl1<`c>, base:dbl1?) -> DBL1<`c> && (x:dbl<`c>, base:dbl1?) -> DBL<`c>
-#| base::log10 : (x:dbl1<`c>) -> DBL1<`c> && (x:dbl<`c>) -> DBL<`c>
+#| base::abs : (x:(v('a)&dbl)<`c>) -> (v('a)&(dbl\lgl) | INT)<`c>
+#|          && (x:dbl1<`c>) -> dbl1<`c>
+#|          && (x:DBL1<`c>) -> DBL1<`c>
+#| base::round : (x:dbl1<`c>, digits:dbl1?) -> dbl1<`c>
+#|            && (x:dbl<`c>, digits:dbl1?) -> dbl<`c>
+#| base::signif : (x:dbl1<`c>, digits:dbl1?) -> dbl1<`c>
+#|             && (x:dbl<`c>, digits:dbl1?) -> dbl<`c>
+#| base::floor : (x:dbl1<`c>) -> dbl1<`c>
+#|            && (x:dbl<`c>) -> dbl<`c>
+#| base::ceiling : (x:dbl1<`c>) -> dbl1<`c>
+#|              && (x:dbl<`c>) -> dbl<`c>
+#| base::trunc : (x:dbl1<`c>, ...: any) -> dbl1<`c>
+#|            && (x:dbl<`c>, ...: any) -> dbl<`c>
+#| base::log : (x:dbl1<`c>, base:dbl1?) -> DBL1<`c>
+#|          && (x:dbl<`c>, base:dbl1?) -> DBL<`c>
+#| base::log10 : (x:dbl1<`c>) -> DBL1<`c>
+#|            && (x:dbl<`c>) -> DBL<`c>
 
 # Of an integer (or logical) vector, the result is an integer.
-#| base::max : (...: int, na.rm:lgl1?) -> INT1 && (...: dbl, na.rm:lgl1?) -> dbl1
-#| base::min : (...: int, na.rm:lgl1?) -> INT1 && (...: dbl, na.rm:lgl1?) -> dbl1
-#| base::sum : (...: int, na.rm:lgl1?) -> INT1<> && (...: dbl, na.rm:lgl1?) -> dbl1<>
+#| base::max : (...: int, na.rm:lgl1?) -> INT1
+#|          && (...: dbl, na.rm:lgl1?) -> dbl1
+#| base::min : (...: int, na.rm:lgl1?) -> INT1
+#|          && (...: dbl, na.rm:lgl1?) -> dbl1
+#| base::sum : (...: int, na.rm:lgl1?) -> INT1<>
+#|          && (...: dbl, na.rm:lgl1?) -> dbl1<>
 # The minimum and the maximum, a vector of length 2 (which the algebra cannot
 # say), of the mode of the arguments.
-#| base::range : (...: int, na.rm:lgl1?, finite:lgl1?) -> INT && (...: dbl, na.rm:lgl1?, finite:lgl1?) -> dbl && (...: CHR, na.rm:lgl1?, finite:lgl1?) -> CHR
+#| base::range : (...: int, na.rm:lgl1?, finite:lgl1?) -> INT
+#|            && (...: dbl, na.rm:lgl1?, finite:lgl1?) -> dbl
+#|            && (...: CHR, na.rm:lgl1?, finite:lgl1?) -> CHR
 
 # The conversions drop every attribute.
-#| base::as.integer : (x:vec1) -> INT1<> && (x:vec|null) -> INT<>
-#| base::as.numeric : (x:vec1) -> DBL1<> && (x:vec|null) -> DBL<>
-#| base::as.double : (x:vec1) -> DBL1<> && (x:vec|null) -> DBL<>
-#| base::as.logical : (x:vec1) -> LGL1<> && (x:vec|null) -> LGL<>
-#| base::as.character : (x:vec1) -> CHR1<> && (x:vec|null) -> CHR<>
-#| base::as.raw : (x:vec1) -> RAW1<> && (x:vec|null) -> RAW<>
+#| base::as.integer : (x:vec1) -> INT1<>
+#|                 && (x:vec|null) -> INT<>
+#| base::as.numeric : (x:vec1) -> DBL1<>
+#|                 && (x:vec|null) -> DBL<>
+#| base::as.double : (x:vec1) -> DBL1<>
+#|                && (x:vec|null) -> DBL<>
+#| base::as.logical : (x:vec1) -> LGL1<>
+#|                 && (x:vec|null) -> LGL<>
+#| base::as.character : (x:vec1) -> CHR1<>
+#|                   && (x:vec|null) -> CHR<>
+#| base::as.raw : (x:vec1) -> RAW1<>
+#|             && (x:vec|null) -> RAW<>
 
 # ========== Strings ==========
 
 # The result is a scalar when collapsed, or when every argument is one.
-#| base::paste : (...: vec1, sep:chr1?, collapse:(chr1|null)?) -> CHR1<> && (...: any, sep:chr1?, collapse:chr1) -> CHR1<> && (...: any, sep:chr1?, collapse:(chr1|null)?) -> CHR<>
-#| base::paste0 : (...: vec1, collapse:(chr1|null)?) -> CHR1<> && (...: any, collapse:chr1) -> CHR1<> && (...: any, collapse:(chr1|null)?) -> CHR<>
+#| base::paste : (...: vec1, sep:chr1?, collapse:(chr1|null)?) -> CHR1<>
+#|            && (...: any, sep:chr1?, collapse:chr1) -> CHR1<>
+#|            && (...: any, sep:chr1?, collapse:(chr1|null)?) -> CHR<>
+#| base::paste0 : (...: vec1, collapse:(chr1|null)?) -> CHR1<>
+#|             && (...: any, collapse:chr1) -> CHR1<>
+#|             && (...: any, collapse:(chr1|null)?) -> CHR<>
 
-#| base::nchar : (x:chr1, type:chr1?) -> INT1<> && (x:chr, type:chr1?) -> INT<>
-#| base::substring : (text:chr1, first:dbl1, last:dbl1?) -> CHR1<> && (text:chr, first:dbl, last:dbl?) -> CHR<>
-#| base::substr : (x:chr1, start:dbl1, stop:dbl1) -> CHR1<> && (x:chr, start:dbl, stop:dbl) -> CHR<>
-#| base::toupper : (x:chr1) -> CHR1<> && (x:chr) -> CHR<>
-#| base::tolower : (x:chr1) -> CHR1<> && (x:chr) -> CHR<>
-#| base::trimws : (x:chr1, which:chr1?) -> CHR1<> && (x:chr, which:chr1?) -> CHR<>
-#| base::sprintf : (fmt:chr1, ...: vec1) -> CHR1<> && (fmt:chr, ...: any) -> CHR<>
-#| base::format : (x:vec1, ...: any) -> CHR1<> && (x:any, ...: any) -> CHR<>
-#| base::formatC : (x:vec1, ...: any) -> CHR1<> && (x:any, ...: any) -> CHR<>
+#| base::nchar : (x:chr1, type:chr1?) -> INT1<>
+#|            && (x:chr, type:chr1?) -> INT<>
+#| base::substring : (text:chr1, first:dbl1, last:dbl1?) -> CHR1<>
+#|                && (text:chr, first:dbl, last:dbl?) -> CHR<>
+#| base::substr : (x:chr1, start:dbl1, stop:dbl1) -> CHR1<>
+#|             && (x:chr, start:dbl, stop:dbl) -> CHR<>
+#| base::toupper : (x:chr1) -> CHR1<>
+#|              && (x:chr) -> CHR<>
+#| base::tolower : (x:chr1) -> CHR1<>
+#|              && (x:chr) -> CHR<>
+#| base::trimws : (x:chr1, which:chr1?) -> CHR1<>
+#|             && (x:chr, which:chr1?) -> CHR<>
+#| base::sprintf : (fmt:chr1, ...: vec1) -> CHR1<>
+#|              && (fmt:chr, ...: any) -> CHR<>
+#| base::format : (x:vec1, ...: any) -> CHR1<>
+#|             && (x:any, ...: any) -> CHR<>
+#| base::formatC : (x:vec1, ...: any) -> CHR1<>
+#|              && (x:any, ...: any) -> CHR<>
 #| base::strsplit : (x:chr, split:chr, fixed:lgl1?, perl:lgl1?) -> { CHR<> }<>
-#| base::file.path : (...: chr1, fsep:chr1?) -> CHR1<> && (...: chr, fsep:chr1?) -> CHR<>
-#| base::normalizePath : (path:chr1, winslash:chr1?, mustWork:lgl1?) -> CHR1<> && (path:chr, winslash:chr1?, mustWork:lgl1?) -> CHR<>
+#| base::file.path : (...: chr1, fsep:chr1?) -> CHR1<>
+#|                && (...: chr, fsep:chr1?) -> CHR<>
+#| base::normalizePath : (path:chr1, winslash:chr1?, mustWork:lgl1?) -> CHR1<>
+#|                    && (path:chr, winslash:chr1?, mustWork:lgl1?) -> CHR<>
 
 # ========== Regular expressions ==========
 
-#| base::grepl : (pattern:chr1, x:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> LGL1<> && (pattern:chr1, x:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> LGL<>
-#| base::sub : (pattern:chr1, replacement:chr1, x:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> CHR1<> && (pattern:chr1, replacement:chr1, x:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> CHR<>
-#| base::gsub : (pattern:chr1, replacement:chr1, x:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> CHR1<> && (pattern:chr1, replacement:chr1, x:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> CHR<>
+#| base::grepl : (pattern:chr1, x:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> LGL1<>
+#|            && (pattern:chr1, x:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> LGL<>
+#| base::sub : (pattern:chr1, replacement:chr1, x:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> CHR1<>
+#|          && (pattern:chr1, replacement:chr1, x:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> CHR<>
+#| base::gsub : (pattern:chr1, replacement:chr1, x:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> CHR1<>
+#|           && (pattern:chr1, replacement:chr1, x:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> CHR<>
 # regexpr returns the match position, carrying the match geometry as attributes.
 # The capture groups are only reported by the Perl engine (and only when the
 # pattern has some, which is assumed).
-#| base::regexpr : (pattern:chr1, text:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> INT1<> with { match.length: INT1, any } && (pattern:chr1, text:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> INT<> with { match.length: INT, any } && (pattern:chr1, text:chr1, ignore.case:lgl1?, perl:tt, fixed:lgl1?) -> INT1<> with { match.length: INT1, capture.start: INT, capture.length: INT, capture.names: CHR, any } && (pattern:chr1, text:chr, ignore.case:lgl1?, perl:tt, fixed:lgl1?) -> INT<> with { match.length: INT, capture.start: INT, capture.length: INT, capture.names: CHR, any }
+#| base::regexpr : (pattern:chr1, text:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> INT1<> with { match.length: INT1, any }
+#|              && (pattern:chr1, text:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> INT<> with { match.length: INT, any }
+#|              && (pattern:chr1, text:chr1, ignore.case:lgl1?, perl:tt, fixed:lgl1?) -> INT1<> with { match.length: INT1, capture.start: INT, capture.length: INT, capture.names: CHR, any }
+#|              && (pattern:chr1, text:chr, ignore.case:lgl1?, perl:tt, fixed:lgl1?) -> INT<> with { match.length: INT, capture.start: INT, capture.length: INT, capture.names: CHR, any }
 
 # ========== S3 methods ==========
 
@@ -388,17 +512,22 @@
 #| difftime1 = DBL1<difftime> with { units: CHR1, any }
 
 #| base::Sys.Date : () -> date1
-#| base::as.Date : (x:chr1, ...: any) -> date1 && (x:chr|date, ...: any) -> date
-#| base::as.POSIXct : (x:chr1, ...: any) -> posixct1 && (x:chr|posixct, ...: any) -> posixct
-#| base::difftime : (time1:date1|posixct1, time2:date1|posixct1, tz:chr1?, units:chr1?) -> difftime1 && (time1:date|posixct, time2:date|posixct, tz:chr1?, units:chr1?) -> difftime
-#| base::as.difftime : (tim:dbl1, format:chr1?, units:chr1?, tz:chr1?) -> difftime1 && (tim:dbl, format:chr1?, units:chr1?, tz:chr1?) -> difftime
+#| base::as.Date : (x:chr1, ...: any) -> date1
+#|              && (x:chr|date, ...: any) -> date
+#| base::as.POSIXct : (x:chr1, ...: any) -> posixct1
+#|                 && (x:chr|posixct, ...: any) -> posixct
+#| base::difftime : (time1:date1|posixct1, time2:date1|posixct1, tz:chr1?, units:chr1?) -> difftime1
+#|               && (time1:date|posixct, time2:date|posixct, tz:chr1?, units:chr1?) -> difftime
+#| base::as.difftime : (tim:dbl1, format:chr1?, units:chr1?, tz:chr1?) -> difftime1
+#|                  && (tim:dbl, format:chr1?, units:chr1?, tz:chr1?) -> difftime
 #| base::units : (x:<difftime, ...> with { units: 'u, any }) -> 'u
 
 # The class of a factor is `factor`, or `ordered` and `factor` for an ordered
 # one: its methods keep it, whichever it is.
 #| base::factor : (x:vec|null?, levels:vec?, labels:chr?, ordered:ff?, ...: any) -> INT<factor> with { levels: CHR, any }
 #| base::factor : (x:vec|null?, levels:vec?, labels:chr?, ordered:tt, ...: any) -> INT<ordered, factor> with { levels: CHR, any }
-#| base::levels : (x:<factor, ...> with { levels: 'l, any }) -> 'l && (x:any) -> CHR<> | null
+#| base::levels : (x:<factor, ...> with { levels: 'l, any }) -> 'l
+#|             && (x:any) -> CHR<> | null
 #| base::nlevels : (x:any) -> INT1<>
 
 # A method covers every value of its class that the default signatures of its
@@ -413,11 +542,20 @@
 # class of the result is `Date` whatever the classes of the operands. The
 # difference of two dates is a `difftime`. Adding two dates, or negating one,
 # is an error.
-#| base::(+.Date) : (e1:dbl1<Date, ...>) -> dbl1<Date, ...> && (e1:dbl<Date, ...>) -> dbl<Date, ...>
-#| base::(+.Date) : (e1:DBL1<Date, ...>, e2:dbl1) -> date1 && (e1:DBL<Date, ...>, e2:dbl) -> date && (e1:dbl1<Date, ...>, e2:dbl1) -> (DBL1|INT1)<Date> && (e1:dbl<Date, ...>, e2:dbl) -> (DBL|INT)<Date> && (e1:<Date, ...>, e2:<Date, ...>) -> empty
+#| base::(+.Date) : (e1:dbl1<Date, ...>) -> dbl1<Date, ...>
+#|               && (e1:dbl<Date, ...>) -> dbl<Date, ...>
+#| base::(+.Date) : (e1:DBL1<Date, ...>, e2:dbl1) -> date1
+#|               && (e1:DBL<Date, ...>, e2:dbl) -> date
+#|               && (e1:dbl1<Date, ...>, e2:dbl1) -> (DBL1|INT1)<Date>
+#|               && (e1:dbl<Date, ...>, e2:dbl) -> (DBL|INT)<Date>
+#|               && (e1:<Date, ...>, e2:<Date, ...>) -> empty
 #| base::(-.Date) : (e1:<Date, ...>) -> empty
-#| base::(-.Date) : (e1:DBL1<Date, ...>, e2:dbl1<~Date, ...>) -> date1 && (e1:DBL<Date, ...>, e2:dbl<~Date, ...>) -> date && (e1:dbl1<Date, ...>, e2:dbl1) -> (DBL1|INT1)<Date> | difftime1 && (e1:dbl<Date, ...>, e2:dbl) -> (DBL|INT)<Date> | difftime
-#| base::(-.Date) : (e1:DBL1<Date, ...>, e2:DBL1<Date, ...>) -> difftime1 && (e1:dbl<Date, ...>, e2:dbl<Date, ...>) -> difftime
+#| base::(-.Date) : (e1:DBL1<Date, ...>, e2:dbl1<~Date, ...>) -> date1
+#|               && (e1:DBL<Date, ...>, e2:dbl<~Date, ...>) -> date
+#|               && (e1:dbl1<Date, ...>, e2:dbl1) -> (DBL1|INT1)<Date> | difftime1
+#|               && (e1:dbl<Date, ...>, e2:dbl) -> (DBL|INT)<Date> | difftime
+#| base::(-.Date) : (e1:DBL1<Date, ...>, e2:DBL1<Date, ...>) -> difftime1
+#|               && (e1:dbl<Date, ...>, e2:dbl<Date, ...>) -> difftime
 # The subsets keep the classes of `x`.
 #| base::([].Date) : (x:v('a)<Date, `c>, ...: dbl|CHR) -> v('a)<Date, `c>
 #| base::([].Date) : (x:{any}<Date, ...>, ...: dbl|CHR) -> any
@@ -427,11 +565,21 @@
 # The same for the date-times (`POSIXct`, and the list-based `POSIXlt`, which
 # is converted), a number being a number of seconds. The result is a
 # `POSIXct`.
-#| base::(+.POSIXt) : (e1:dbl1<POSIXt, ...>) -> dbl1<POSIXt, ...> && (e1:dbl<POSIXt, ...>) -> dbl<POSIXt, ...> && (e1:<POSIXt, ...>) -> <POSIXt, ...>
-#| base::(+.POSIXt) : (e1:DBL1<POSIXct, POSIXt, ...>, e2:dbl1) -> posixct1 && (e1:DBL<POSIXct, POSIXt, ...>, e2:dbl) -> posixct && (e1:dbl1<POSIXt, ...>, e2:dbl1) -> (DBL1|INT1)<POSIXct, POSIXt> && (e1:<POSIXt, ...>, e2:dbl) -> (DBL|INT)<POSIXct, POSIXt> && (e1:<POSIXt, ...>, e2:<POSIXt, ...>) -> empty
+#| base::(+.POSIXt) : (e1:dbl1<POSIXt, ...>) -> dbl1<POSIXt, ...>
+#|                 && (e1:dbl<POSIXt, ...>) -> dbl<POSIXt, ...>
+#|                 && (e1:<POSIXt, ...>) -> <POSIXt, ...>
+#| base::(+.POSIXt) : (e1:DBL1<POSIXct, POSIXt, ...>, e2:dbl1) -> posixct1
+#|                 && (e1:DBL<POSIXct, POSIXt, ...>, e2:dbl) -> posixct
+#|                 && (e1:dbl1<POSIXt, ...>, e2:dbl1) -> (DBL1|INT1)<POSIXct, POSIXt>
+#|                 && (e1:<POSIXt, ...>, e2:dbl) -> (DBL|INT)<POSIXct, POSIXt>
+#|                 && (e1:<POSIXt, ...>, e2:<POSIXt, ...>) -> empty
 #| base::(-.POSIXt) : (e1:<POSIXt, ...>) -> empty
-#| base::(-.POSIXt) : (e1:DBL1<POSIXct, POSIXt, ...>, e2:dbl1<~POSIXt, ...>) -> posixct1 && (e1:DBL<POSIXct, POSIXt, ...>, e2:dbl<~POSIXt, ...>) -> posixct && (e1:dbl1<POSIXt, ...>, e2:dbl1) -> (DBL1|INT1)<POSIXct, POSIXt> | difftime1 && (e1:<POSIXt, ...>, e2:dbl) -> (DBL|INT)<POSIXct, POSIXt> | difftime
-#| base::(-.POSIXt) : (e1:DBL1<POSIXct, POSIXt, ...>, e2:DBL1<POSIXct, POSIXt, ...>) -> difftime1 && (e1:<POSIXt, ...>, e2:<POSIXt, ...>) -> difftime
+#| base::(-.POSIXt) : (e1:DBL1<POSIXct, POSIXt, ...>, e2:dbl1<~POSIXt, ...>) -> posixct1
+#|                 && (e1:DBL<POSIXct, POSIXt, ...>, e2:dbl<~POSIXt, ...>) -> posixct
+#|                 && (e1:dbl1<POSIXt, ...>, e2:dbl1) -> (DBL1|INT1)<POSIXct, POSIXt> | difftime1
+#|                 && (e1:<POSIXt, ...>, e2:dbl) -> (DBL|INT)<POSIXct, POSIXt> | difftime
+#| base::(-.POSIXt) : (e1:DBL1<POSIXct, POSIXt, ...>, e2:DBL1<POSIXct, POSIXt, ...>) -> difftime1
+#|                 && (e1:<POSIXt, ...>, e2:<POSIXt, ...>) -> difftime
 #| base::([].POSIXct) : (x:v('a)<POSIXct, `c>, ...: dbl|CHR) -> v('a)<POSIXct, `c>
 #| base::([].POSIXct) : (x:{any}<POSIXct, ...>, ...: dbl|CHR) -> any
 #| base::([[]].POSIXct) : (x:v('a)<POSIXct, `c>, ...: dbl|CHR) -> v1('a)<POSIXct, `c>
@@ -440,22 +588,43 @@
 # A `difftime` can be negated, added to and scaled by numbers: the result is
 # a `difftime` in the units of the operand. Multiplying two of them, or
 # dividing by one, is an error.
-#| base::(+.difftime) : (e1:difftime1, e2:dbl1?) -> difftime1 && (e1:difftime, e2:dbl?) -> difftime && (e1:dbl1<difftime, ...>, e2:dbl1?) -> (DBL1|INT1)<difftime> && (e1:dbl<difftime, ...>, e2:dbl?) -> (DBL|INT)<difftime>
-#| base::(-.difftime) : (e1:difftime1, e2:dbl1?) -> difftime1 && (e1:difftime, e2:dbl?) -> difftime && (e1:dbl1<difftime, ...>, e2:dbl1?) -> (DBL1|INT1)<difftime> && (e1:dbl<difftime, ...>, e2:dbl?) -> (DBL|INT)<difftime>
-#| base::(*.difftime) : (e1:difftime1, e2:dbl1) -> difftime1 && (e1:difftime, e2:dbl) -> difftime && (e1:dbl1<difftime, ...>, e2:dbl1) -> (DBL1|INT1)<difftime> && (e1:dbl<difftime, ...>, e2:dbl) -> (DBL|INT)<difftime> && (e1:<difftime, ...>, e2:<difftime, ...>) -> empty
-#| base::(/.difftime) : (e1:difftime1, e2:dbl1) -> difftime1 && (e1:difftime, e2:dbl) -> difftime && (e1:dbl1<difftime, ...>, e2:dbl1) -> DBL1<difftime> && (e1:dbl<difftime, ...>, e2:dbl) -> DBL<difftime> && (e1:<difftime, ...>, e2:<difftime, ...>) -> empty
-#| base::([].difftime) : (x:v('a)<difftime, `c> with { units: 'u, any }, ...: dbl|CHR) -> v('a)<difftime, `c> with { units: 'u, any } && (x:v('a)<difftime, `c>, ...: dbl|CHR) -> v('a)<difftime, `c>
+#| base::(+.difftime) : (e1:difftime1, e2:dbl1?) -> difftime1
+#|                   && (e1:difftime, e2:dbl?) -> difftime
+#|                   && (e1:dbl1<difftime, ...>, e2:dbl1?) -> (DBL1|INT1)<difftime>
+#|                   && (e1:dbl<difftime, ...>, e2:dbl?) -> (DBL|INT)<difftime>
+#| base::(-.difftime) : (e1:difftime1, e2:dbl1?) -> difftime1
+#|                   && (e1:difftime, e2:dbl?) -> difftime
+#|                   && (e1:dbl1<difftime, ...>, e2:dbl1?) -> (DBL1|INT1)<difftime>
+#|                   && (e1:dbl<difftime, ...>, e2:dbl?) -> (DBL|INT)<difftime>
+#| base::(*.difftime) : (e1:difftime1, e2:dbl1) -> difftime1
+#|                   && (e1:difftime, e2:dbl) -> difftime
+#|                   && (e1:dbl1<difftime, ...>, e2:dbl1) -> (DBL1|INT1)<difftime>
+#|                   && (e1:dbl<difftime, ...>, e2:dbl) -> (DBL|INT)<difftime>
+#|                   && (e1:<difftime, ...>, e2:<difftime, ...>) -> empty
+#| base::(/.difftime) : (e1:difftime1, e2:dbl1) -> difftime1
+#|                   && (e1:difftime, e2:dbl) -> difftime
+#|                   && (e1:dbl1<difftime, ...>, e2:dbl1) -> DBL1<difftime>
+#|                   && (e1:dbl<difftime, ...>, e2:dbl) -> DBL<difftime>
+#|                   && (e1:<difftime, ...>, e2:<difftime, ...>) -> empty
+#| base::([].difftime) : (x:v('a)<difftime, `c> with { units: 'u, any }, ...: dbl|CHR) -> v('a)<difftime, `c> with { units: 'u, any }
+#|                    && (x:v('a)<difftime, `c>, ...: dbl|CHR) -> v('a)<difftime, `c>
 #| base::([].difftime) : (x:{any}<difftime, ...>, ...: dbl|CHR) -> any
 
 # The arithmetic of factors is not meaningful: it gives `NA` (with a warning),
 # as long as the longest operand. Their subsets keep their classes and levels.
-#| base::(+.factor) : (e1:vec1<factor, ...>, e2:vec1?) -> LGL1<> && (e1:<factor, ...>, e2:any?) -> LGL<>
-#| base::(-.factor) : (e1:vec1<factor, ...>, e2:vec1?) -> LGL1<> && (e1:<factor, ...>, e2:any?) -> LGL<>
-#| base::(*.factor) : (e1:vec1<factor, ...>, e2:vec1) -> LGL1<> && (e1:<factor, ...>, e2:any) -> LGL<>
-#| base::(/.factor) : (e1:vec1<factor, ...>, e2:vec1) -> LGL1<> && (e1:<factor, ...>, e2:any) -> LGL<>
-#| base::([].factor) : (x:v('a)<factor, `c> with { levels: 'l, any }, ...: dbl|CHR, drop:lgl1?) -> v('a)<factor, `c> with { levels: 'l, any } && (x:v('a)<factor, `c>, ...: dbl|CHR, drop:lgl1?) -> v('a)<factor, `c>
+#| base::(+.factor) : (e1:vec1<factor, ...>, e2:vec1?) -> LGL1<>
+#|                 && (e1:<factor, ...>, e2:any?) -> LGL<>
+#| base::(-.factor) : (e1:vec1<factor, ...>, e2:vec1?) -> LGL1<>
+#|                 && (e1:<factor, ...>, e2:any?) -> LGL<>
+#| base::(*.factor) : (e1:vec1<factor, ...>, e2:vec1) -> LGL1<>
+#|                 && (e1:<factor, ...>, e2:any) -> LGL<>
+#| base::(/.factor) : (e1:vec1<factor, ...>, e2:vec1) -> LGL1<>
+#|                 && (e1:<factor, ...>, e2:any) -> LGL<>
+#| base::([].factor) : (x:v('a)<factor, `c> with { levels: 'l, any }, ...: dbl|CHR, drop:lgl1?) -> v('a)<factor, `c> with { levels: 'l, any }
+#|                  && (x:v('a)<factor, `c>, ...: dbl|CHR, drop:lgl1?) -> v('a)<factor, `c>
 #| base::([].factor) : (x:{any}<factor, ...>, ...: dbl|CHR, drop:lgl1?) -> any
-#| base::([[]].factor) : (x:v('a)<factor, `c> with { levels: 'l, any }, ...: dbl|CHR) -> v1('a)<factor, `c> with { levels: 'l, any } && (x:v('a)<factor, `c>, ...: dbl|CHR) -> v1('a)<factor, `c>
+#| base::([[]].factor) : (x:v('a)<factor, `c> with { levels: 'l, any }, ...: dbl|CHR) -> v1('a)<factor, `c> with { levels: 'l, any }
+#|                    && (x:v('a)<factor, `c>, ...: dbl|CHR) -> v1('a)<factor, `c>
 #| base::([[]].factor) : (x:{any}<factor, ...>, ...: dbl|CHR) -> any
 
 # ========== Input and output ==========
@@ -475,7 +644,8 @@
 
 # ========== Session and environment ==========
 
-#| base::Sys.getenv : (x:chr1, unset:chr1?) -> CHR1<> && (x:chr, unset:chr1?) -> CHR<>
+#| base::Sys.getenv : (x:chr1, unset:chr1?) -> CHR1<>
+#|                 && (x:chr, unset:chr1?) -> CHR<>
 #| base::Sys.setenv : (...: any) -> LGL<>
 #| base::Sys.time : () -> DBL1<POSIXct, POSIXt>
 #| base::getOption : (x:chr1, default:'a?) -> 'a | null
@@ -496,7 +666,8 @@
 
 # Environments. `environment()` of a primitive is `NULL`.
 #| base::parent.frame : (n:dbl1?) -> env
-#| base::environment : (fun:null?) -> env && (fun:any) -> env | null
+#| base::environment : (fun:null?) -> env
+#|                  && (fun:any) -> env | null
 #| base::new.env : (hash:lgl1?, parent:env?, size:dbl1?) -> env
 #| base::emptyenv : () -> env
 #| base::globalenv : () -> env
@@ -516,7 +687,8 @@
 #| base::stopifnot : (...: any) -> null
 # One of the choices (several with `several.ok = TRUE`). The default
 # `choices` are the caller's formals, which a signature cannot see.
-#| base::match.arg : (arg:chr|null, choices:chr?, several.ok:ff?) -> CHR1<> && (arg:chr|null, choices:chr?, several.ok:lgl1) -> CHR<>
+#| base::match.arg : (arg:chr|null, choices:chr?, several.ok:ff?) -> CHR1<>
+#|                && (arg:chr|null, choices:chr?, several.ok:lgl1) -> CHR<>
 
 # Its argument is the name of a formal, not evaluated.
 #| base::missing : (x:any) -> LGL1<>
