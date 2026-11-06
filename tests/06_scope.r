@@ -59,7 +59,6 @@ counter <- local({
 # rejected. The same for a top-level application.
 counter_unannot <- local({ n <- 0 ; function() { n <<- n + 1 ; n } })
 
-# TODO: Class inferred is not precise.
 top_lapply <- lapply(c(1, 2), function(x) x + 1)
 
 # The direct application of an anonymous function using a generic with

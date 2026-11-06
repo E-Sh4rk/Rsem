@@ -341,8 +341,7 @@
 # The extra arguments are passed along to `FUN`. The elements of a vector
 # without class have none either, which the first signature says, for `FUN`
 # to only accept values without class.
-#| base::lapply : (X:v('a)<>, FUN:@(v1('a)<>, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}<>
-#| base::lapply : (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}<>
+#| base::lapply : (X:v('a)<`c>, FUN:@(v1('a)<`c>, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}<>
 #| base::lapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}<>
 
 #| base::vapply : (X:v('a)<>, FUN:@(v1('a)<>, X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<>
