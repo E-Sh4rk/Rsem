@@ -231,6 +231,11 @@
 #| base::rev : (x:null) -> null
 #| base::seq_along : (along.with:any) -> INT<>
 #| base::seq_len : (length.out:dbl1) -> INT<>
+# `seq` is generic: its methods (for dates, ...) keep the class. A single
+# `from` of length other than 1 is `seq_along(from)`. `to` and `by` must have
+# length 1, but are vectors here: `x[1L]`, their usual source, is not a scalar
+# for the algebra.
+#| base::seq : (from:dbl?, to:dbl?, by:dbl?, length.out:dbl1?, along.with:any?, ...: any) -> INT|DBL
 #| base::which : (x:lgl, arr.ind:lgl1?, useNames:lgl1?) -> INT<>
 #| base::nrow : (x:any) -> INT1<> | null
 #| base::ncol : (x:any) -> INT1<> | null
