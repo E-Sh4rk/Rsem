@@ -356,6 +356,11 @@
 #| base::min : (...: dbl, na.rm:lgl1?) -> dbl1
 #| base::sum : (...: int, na.rm:lgl1?) -> INT1<>
 #| base::sum : (...: dbl, na.rm:lgl1?) -> dbl1<>
+# The minimum and the maximum, a vector of length 2 (which the algebra cannot
+# say), of the mode of the arguments.
+#| base::range : (...: int, na.rm:lgl1?, finite:lgl1?) -> INT
+#| base::range : (...: dbl, na.rm:lgl1?, finite:lgl1?) -> dbl
+#| base::range : (...: CHR, na.rm:lgl1?, finite:lgl1?) -> CHR
 
 # The conversions drop every attribute.
 #| base::as.integer : (x:vec1) -> INT1<>
@@ -473,6 +478,7 @@
 
 #| base::.Platform : { OS.type: CHR1, file.sep: CHR1, path.sep: CHR1, GUI: CHR1, any }<>
 #| base::.Machine : { integer.max: INT1, double.eps: DBL1, double.xmax: DBL1, any }<>
+#| base::pi : ^DBL1<>
 
 # ========== Control ==========
 
