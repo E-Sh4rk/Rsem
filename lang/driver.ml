@@ -16,6 +16,22 @@ open Mlsem.Types
    reported as unbound. Set by the [-gradual] flag. *)
 let gradual = ref false
 
+(* How the details of a typing error are printed: with the types involved, or
+   with a witness of the failure (a value of the given type that is not of the
+   expected one). Set to [Witnesses] by the [-witnesses] flag. *)
+let errors_style = ref System.Error.Types
+
+(* The details of a typing error. The failure of an [Alt] encoding an
+   application gets the description [Transform] registered for it. *)
+let error_descr (err:System.Error.t) =
+  match err.kind with
+  | UntypeableEncoding ->
+    begin match Transform.alt_error err.eid err.env with
+    | Some d -> Some d
+    | None -> System.Error.descr ~style:!errors_style err
+    end
+  | _ -> System.Error.descr ~style:!errors_style err
+
 module StrMap = Map.Make(String)
 
 (* The type variables written in a signature are universally quantified: they
@@ -96,7 +112,7 @@ let instantiate_weak ts =
    a statement, whose typing raised [Failure]. *)
 type outcome =
   | Typed of TyScheme.t
-  | Untypeable of System.Checker.error * Position.t
+  | Untypeable of System.Error.t * Position.t
   | Failed of string
 
 let on_outcome : (Variable.t -> outcome -> unit) ref = ref (fun _ _ -> ())
@@ -126,11 +142,11 @@ let treat_ast ?(post=Fun.id) v ctx ast =
     Format.printf "%a:@? @[%a@]@.@." Variable.pp v TyScheme.pp_short ty ;
     !on_outcome v (Typed ty) ;
     ctx
-  with System.Checker.Untypeable (err) ->
-    Format.printf "%a:@? Untypeable: %s@." Variable.pp v err.title ;
+  with System.Error.Untypeable (err) ->
+    Format.printf "%a:@? Untypeable: %s@." Variable.pp v (System.Error.title err) ;
     let loc = Eid.loc err.eid in
     if loc <> Position.dummy then Format.printf "%s@." (Position.string_of_pos loc) ;
-    err.descr |> Option.iter (Format.printf "%s@.") ;
+    error_descr err |> Option.iter (Format.printf "%s@.") ;
     Format.printf "@." ;
     !on_outcome v (Untypeable (err, loc)) ;
     { ctx with senv=VarMap.remove v ctx.senv } (* Do not keep a failed signature pending *)

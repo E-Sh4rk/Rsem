@@ -287,6 +287,20 @@ let loop_body e =
   let e = Eid.unique (), A.Block (A.BLoop, e) in
   Eid.unique (), A.Loop e
 
+(* Descriptions of the failure of the [Alt] expressions that encode the
+   applications of overloaded functions, indexed by the id of the [Alt].
+   MLsem reports such a failure as an [UntypeableEncoding] error, without
+   details: they are recovered from this table (cf. [alt_error]). *)
+module EidTbl = Hashtbl.Make(Eid)
+let alt_errors : (Env.t -> string) EidTbl.t = EidTbl.create 256
+
+(* The description of an [UntypeableEncoding] error raised on the [Alt]
+   [eid] (or on one of its copies) under [env], if it encodes an application. *)
+let alt_error eid env =
+  Eid.eq_class eid |> Eid.Set.elements
+  |> List.find_map (EidTbl.find_opt alt_errors)
+  |> Option.map (fun f -> f env)
+
 type cfg = { env : MetaEnv.t }
 
 let to_mlsem (cfg:cfg) e =
@@ -431,8 +445,10 @@ let to_mlsem (cfg:cfg) e =
             let ty = Env.find varg env in
             Format.asprintf "application of %s failed\nargument is of type @[<h>%a@]" name TyScheme.pp ty
           in
-          let settings = { SA.aname=name ; aerror ; amask ; amask_default } in
-          Eid.refresh eid, A.Alt (settings, alt_default::List.map snd alts)
+          let settings = { SA.aname=name ; amask ; amask_default } in
+          let alt_eid = Eid.refresh eid in
+          EidTbl.replace alt_errors alt_eid aerror ;
+          alt_eid, A.Alt (settings, alt_default::List.map snd alts)
       in
       eid, A.Let ([], varg, arg_def, e)
     | Ite (e, e1, e2) ->
