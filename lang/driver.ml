@@ -466,6 +466,7 @@ let setup () =
   Mlsem_types.PrinterCfg.set_descr_printer Rstt.Pp.print_descr_ctx ;
   Mlsem_types.PrinterCfg.set_printer Rstt.Pp.print ;
   Mlsem_types.PrinterCfg.set_printer_params [Rstt.Pp.printer_params ()] ;
+  Witnesses.register () ;
   Mlsem_system.Config.reexplore_failed_domains := true ;
   Mlsem_system.Config.assimilate_vars := true ;
   Mlsem_system.Config.infer_overload := true ;

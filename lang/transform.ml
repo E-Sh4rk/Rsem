@@ -23,7 +23,8 @@ let na_ty kind =
 let typeof_const c =
   let open Builder in
   let pack t =
-    Builder.build_struct Builder.TIdMap.empty t |> Attr.mk_content_noattr
+    Builder.build_struct Builder.TIdMap.empty t (*|> Attr.mk_content_noattr*)
+    |> Attr.mk_content_noclass
   in
   let nopack t = Builder.build_struct Builder.TIdMap.empty t in
   match c with
@@ -226,13 +227,13 @@ end
 module AttrConstr = struct
   let cons tys =
     match tys with
-    | [ty] -> Attr.mk_content_noattr ty
+    | [ty] -> (*Attr.mk_content_noattr ty*) Attr.mk_content_noclass ty
     | _ -> assert false
   let cdom ty =
     Attr.destruct ty
     |> List.filter_map (fun (ps,_) ->
       let content = ps |> List.map (fun a -> a.Attr.content) |> Ty.conj in
-      let ty' = Attr.mk_content_noattr content in
+      let ty' = (*Attr.mk_content_noattr content*) Attr.mk_content_noclass content in
       if Ty.leq ty' ty then Some [content] else None
     )
 end

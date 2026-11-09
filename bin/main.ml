@@ -6,14 +6,19 @@ open Lang
 let record = ref false
 let input_files = ref []
 
-let usage_msg = "rsem [-record] [-gradual] [-witnesses] <file1> [<file2>] ..."
+let usage_msg = "rsem [-record] [-gradual] [-errors {types|witnesses|both}] <file1> [<file2>] ..."
 let anon_fun filename = input_files := filename::!input_files
 let speclist =
   [
     ("-record", Arg.Set record, "Record tallying instances into a file") ;
     ("-gradual", Arg.Set Driver.gradual, "Give the dyn type to undefined functions") ;
-    ("-witnesses", Arg.Unit (fun () -> Error.style := Mlsem.System.Error.Witnesses),
-     "Explain typing errors with a witness value instead of the types involved")
+    ("-errors", Arg.Symbol (["types" ; "witnesses" ; "both"], fun s ->
+         Error.style := match s with
+           | "witnesses" -> Mlsem.System.Error.Witnesses
+           | "both" -> Mlsem.System.Error.Both
+           | _ -> Mlsem.System.Error.Types),
+     " Explain typing errors with the types involved, \
+      with a witness value, or both (default)")
   ]
 
 let () =
