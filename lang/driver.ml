@@ -91,9 +91,10 @@ let instantiate_weak ts =
 (* What became of a variable [treat_def] typed, for an embedder (TypR) that
    wants it structured rather than printed. [Typed] carries the type the
    variable now has, also when it was checked against a signature;
-   [Untypeable] the checker's error and the position it is about ([dummy]
-   when it has none); [Failed] the message of a name [treat_def] hoists out of
-   a statement, whose typing raised [Failure]. *)
+   [Untypeable] the checker's error, as raised (cf. [Error.resolve] for the
+   application error an [Alt] failure stands for), and the position it is
+   about ([dummy] when it has none); [Failed] the message of a name
+   [treat_def] hoists out of a statement, whose typing raised [Failure]. *)
 type outcome =
   | Typed of TyScheme.t
   | Untypeable of System.Error.t * Position.t
@@ -132,7 +133,7 @@ let treat_ast ?(post=Fun.id) v ctx ast =
     if loc <> Position.dummy then Format.printf "%s@." (Position.string_of_pos loc) ;
     Error.descr err |> Option.iter (Format.printf "%s@.") ;
     Format.printf "@." ;
-    !on_outcome v (Untypeable (Error.resolve err, loc)) ;
+    !on_outcome v (Untypeable (err, loc)) ;
     { ctx with senv=VarMap.remove v ctx.senv } (* Do not keep a failed signature pending *)
 
 (* Name of the variable a top-level definition binds, if any. It is the name
