@@ -12,7 +12,7 @@ let speclist =
   [
     ("-record", Arg.Set record, "Record tallying instances into a file") ;
     ("-gradual", Arg.Set Driver.gradual, "Give the dyn type to undefined functions") ;
-    ("-witnesses", Arg.Unit (fun () -> Driver.errors_style := Mlsem.System.Error.Witnesses),
+    ("-witnesses", Arg.Unit (fun () -> Error.style := Mlsem.System.Error.Witnesses),
      "Explain typing errors with a witness value instead of the types involved")
   ]
 

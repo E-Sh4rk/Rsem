@@ -122,10 +122,9 @@ m_square: dbl1<@area, ...>
 
 m_circle: dbl1<@area, ...>
 
-m_default: Untypeable: untypeable encoding
+m_default: Untypeable: untypeable application of some_shape
 Line 47, characters 13-26
-application of some_shape failed
-argument is of type @(0.<> with {  })
+argument: @(0.<> with {  })
 
 any_shape: Untypeable: untypeable coercion
 Line 55, characters 25-32
@@ -345,10 +344,9 @@ ns_global_ns: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<> with {  }
 
 ns_first_class: (() -> dbl1)<> with {  }
 
-ns_err: Untypeable: untypeable encoding
+ns_err: Untypeable: untypeable application of stats::median
 Line 41, characters 21-43
-application of stats::median failed
-argument is of type @({ 1.<> with {  } }<>)
+argument: @({ 1.<> with {  } }<>)
 
 ns_unknown: Untypeable: unbound variable
 Line 44, characters 26-35

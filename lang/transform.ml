@@ -287,19 +287,26 @@ let loop_body e =
   let e = Eid.unique (), A.Block (A.BLoop, e) in
   Eid.unique (), A.Loop e
 
-(* Descriptions of the failure of the [Alt] expressions that encode the
-   applications of overloaded functions, indexed by the id of the [Alt].
-   MLsem reports such a failure as an [UntypeableEncoding] error, without
-   details: they are recovered from this table (cf. [alt_error]). *)
+(* The errors of the [Alt] expressions that encode the applications of
+   functions with declared signatures, indexed by the id of the [Alt]. MLsem
+   reports the failure of an [Alt] as an [UntypeableEncoding] error: the
+   function registered for it converts this error into the application error
+   it stands for, paired with the name of the function applied (cf.
+   [alt_error]). *)
 module EidTbl = Hashtbl.Make(Eid)
-let alt_errors : (Env.t -> string) EidTbl.t = EidTbl.create 256
+let alt_errors : (Mlsem.System.Error.t -> string * Mlsem.System.Error.t) EidTbl.t =
+  EidTbl.create 256
 
-(* The description of an [UntypeableEncoding] error raised on the [Alt]
-   [eid] (or on one of its copies) under [env], if it encodes an application. *)
-let alt_error eid env =
-  Eid.eq_class eid |> Eid.Set.elements
-  |> List.find_map (EidTbl.find_opt alt_errors)
-  |> Option.map (fun f -> f env)
+(* The application error that the [UntypeableEncoding] error [err] stands for,
+   with the name of the function applied, if it was raised on an [Alt]
+   encoding an application (or on one of its copies). *)
+let alt_error (err:Mlsem.System.Error.t) =
+  match err.kind with
+  | UntypeableEncoding ->
+    Eid.eq_class err.eid |> Eid.Set.elements
+    |> List.find_map (EidTbl.find_opt alt_errors)
+    |> Option.map (fun f -> f err)
+  | _ -> None
 
 type cfg = { env : MetaEnv.t }
 
@@ -441,9 +448,14 @@ let to_mlsem (cfg:cfg) e =
           in
           let amask_default = true::List.map (Fun.const false) alts in
           let name = Format.asprintf "%a" Variable.pp v in
-          let aerror env =
-            let ty = Env.find varg env in
-            Format.asprintf "application of %s failed\nargument is of type @[<h>%a@]" name TyScheme.pp ty
+          (* The failure of the [Alt] is that of the application of the
+             intersection of the signatures (its first alternative). *)
+          let aerror (err:Mlsem.System.Error.t) =
+            let symbolic = MetaEnv.symbolic sigs |> List.map snd
+                           |> List.filter_map (resolve_ty err.env) in
+            let fn = (resolved err.env)::symbolic |> GTy.conj |> GTy.lb in
+            let arg = arg_ty err.env |> Option.value ~default:Ty.any in
+            name, { err with kind=UntypeableApp { fn ; arg } }
           in
           let settings = { SA.aname=name ; amask ; amask_default } in
           let alt_eid = Eid.refresh eid in
