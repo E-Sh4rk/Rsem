@@ -251,7 +251,8 @@
 #|              && (x:any) -> LGL1<>
 #| base::is.environment : (x:env) -> tt<>
 #| base::is.environment : (x:~env) -> ff<>
-#| base::is.function : (x:any) -> LGL1<>
+#| base::is.function : (x:(empty -> any)) -> tt<>
+#| base::is.function : (x:~(empty -> any)) -> ff<>
 #| base::is.factor : (x:any) -> LGL1<>
 #| base::is.matrix : (x:any) -> LGL1<>
 #| base::is.nan : (x:vec1) -> LGL1<>
@@ -315,11 +316,12 @@
 #|              && (x:any, ...: any) -> { any }<>
 #| base::as.list : (x:v('a), ...: any) -> { v1('a) }<>
 
-#| base::logical : (length:dbl1?) -> LGL<>
-#| base::integer : (length:dbl1?) -> INT<>
-#| base::double : (length:dbl1?) -> DBL<>
-#| base::numeric : (length:dbl1?) -> DBL<>
-#| base::character : (length:dbl1?) -> CHR<>
+# A length of 1 gives a scalar: `vapply(x, f, logical(1))` asks `f` for one.
+#| base::logical : (length:1) -> LGL1<> && (length:dbl1?) -> LGL<>
+#| base::integer : (length:1) -> INT1<> && (length:dbl1?) -> INT<>
+#| base::double : (length:1) -> DBL1<> && (length:dbl1?) -> DBL<>
+#| base::numeric : (length:1) -> DBL1<> && (length:dbl1?) -> DBL<>
+#| base::character : (length:1) -> CHR1<> && (length:dbl1?) -> CHR<>
 
 # The set operations drop the attributes of their arguments. A `NULL` gives
 # `NULL`: `intersect` when either argument is one, `setdiff` when `x` is,
@@ -630,6 +632,7 @@
 # ========== Input and output ==========
 
 #| base::identity : ( x:'a ) -> 'a
+#| base::force : (x:'a) -> 'a
 # Since R 4.4.0.
 #| base::(%||%) : ( x:null, y:'b ) -> 'b
 #| base::(%||%) : ( x:~null & 'a, y:any ) -> 'a
