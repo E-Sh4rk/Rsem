@@ -96,3 +96,13 @@ shadow_fn <- function() {
   local <- function(v) v
   e
 }
+
+# A call skips the bindings that are not functions: a parameter `force` that
+# is `FALSE` leaves `force(x)` to `base::force`. A parameter is called as
+# `if (is.function(f)) f else <the next binding of f>`: only a parameter,
+# which is bound from the start of the body. A local name may be called
+# before the body assigns it, which Rsem cannot tell: it is taken as is.
+param_force <- function(x, force = FALSE) force(x)
+param_maybe_fun <- function(x, f) f(x)
+param_assigned <- function(x, force) { force <- FALSE ; force(x) }
+local_paste <- function(x) { paste <- "a" ; paste(x, "b") }

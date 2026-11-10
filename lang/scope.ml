@@ -3,7 +3,9 @@ open Mlsem.Types
 module MVariable = Mlsem.Lang.MVariable
 module StrMap = Map.Make(String)
 
-type kind = KFun | KVal | KAny | KAnyOpt
+(* [KParam] is a parameter: of any kind too, but bound from the start of the
+   function's body, unlike its other local names, bound when assigned. *)
+type kind = KFun | KVal | KAny | KParam | KAnyOpt
 type env = (kind * Variable.t) StrMap.t
 (* [envs] are the nested scopes, innermost first and top level last. [tenv]
    gives the namespaces a name the top level does not bind is searched for. *)
@@ -34,7 +36,9 @@ let add_local_binding ?annot str kind t =
   match t.envs with
   | [] -> assert false
   | env::_ when StrMap.mem str env ->
-    if (StrMap.find str env |> fst) <> kind
+    let k = StrMap.find str env |> fst in
+    (* A parameter the body assigns stays a parameter. *)
+    if k <> kind && not (k = KParam && kind = KAny)
     then raise (ScopeError ("Symbol "^str^" already defined with different kind"))
     else t
   | env::envs ->
@@ -76,11 +80,45 @@ let resolve_call str t =
     | env::envs ->
       begin match StrMap.find_opt str env with
       | None | Some (KVal, _) -> aux envs
-      | Some ((KFun | KAny), v) -> v
+      | Some ((KFun | KAny | KParam), v) -> v
       | Some (KAnyOpt, _) -> raise (ScopeError ("Cannot resolve symbol "^str))
       end
   in
   aux t.envs
+
+(* The variables a call of [str] may refer to, innermost first. As in R,
+   the bindings known not to be functions are skipped, and the search goes on
+   past the parameters, which may or may not be functions: it ends with the
+   first other binding, the top-level one, or the namespaces past the top
+   level. Not past the other local names: one may be called before the body
+   assigns it, where it is not bound yet, and Rsem cannot tell. The call is
+   to the first of them that is a function at run time (cf. [PAst]). A
+   single variable, [resolve_call]'s, when no parameter is followed by
+   another binding. *)
+let call_candidates str t =
+  let rec aux = function
+    | [] -> []
+    | [ tl ] ->
+      begin match StrMap.find_opt str tl with
+      | None | Some (KVal, _) ->
+        begin match Defs.BuiltinOp.find_builtin str with
+        | Some v -> [ v ]
+        | None -> Option.to_list (MetaEnv.search str t.tenv)
+        end
+      | Some ((KFun | KAny | KParam), v) -> [ v ]
+      | Some (KAnyOpt, _) -> raise (ScopeError ("Cannot resolve symbol "^str))
+      end
+    | env::envs ->
+      begin match StrMap.find_opt str env with
+      | None | Some (KVal, _) -> aux envs
+      | Some ((KFun | KAny), v) -> [ v ]
+      | Some (KParam, v) -> v :: aux envs
+      | Some (KAnyOpt, _) -> raise (ScopeError ("Cannot resolve symbol "^str))
+      end
+  in
+  match aux t.envs with
+  | [] | [ _ ] -> [ resolve_call str t ]
+  | vs -> vs
 
 let resolve ?search str t =
   let rec aux envs =
@@ -89,7 +127,7 @@ let resolve ?search str t =
     | env::envs ->
       begin match StrMap.find_opt str env with
       | None -> aux envs
-      | Some ((KFun | KVal | KAny), v) -> v
+      | Some ((KFun | KVal | KAny | KParam), v) -> v
       | Some (KAnyOpt, _) -> raise (ScopeError ("Cannot resolve symbol "^str))
       end
   in

@@ -147,8 +147,8 @@ let add_def env e str =
   let v = Scope.resolve str env.id in
   Eid.unique (), Ast.Declare (v, e)
 
-let add_binding annots acc str =
-  Scope.add_local_binding ?annot:(StrMap.find_opt str annots) str Scope.KAny acc
+let add_binding ?(kind=Scope.KAny) annots acc str =
+  Scope.add_local_binding ?annot:(StrMap.find_opt str annots) str kind acc
 
 let rec expr_of_left pos r l =
   let call pos r op_prefix args =
@@ -223,7 +223,22 @@ let rec aux_e env (pos,e) =
     Ast.Local (List.fold_left (add_def env) (aux_e env body) (StrSet.elements ebvs))
   | Call (e,args) ->
     let e = match e with
-      | pos, Id str -> Eid.unique_with_pos pos, Ast.Id (Scope.resolve_call str env.id)
+      | pos, Id str ->
+        (* A parameter is called only if it is a function: otherwise R looks
+           further, e.g. [force(x)] in a function with a parameter
+           [force = FALSE] calls [base::force]. The callee is then
+           [if (is.function(f)) f else <the next binding of f>]
+           (cf. [Scope.call_candidates]). *)
+        let mk e = Eid.unique_with_pos pos, e in
+        let is_function = MetaEnv.ns_find "base" "is.function" env.id.Scope.tenv in
+        let rec callee = function
+          | v :: (_ :: _ as vs) when Option.is_some is_function ->
+            let test = mk (Ast.Call (mk (Ast.Id (Option.get is_function)),
+                                     [ MetaEnv.Positional, Some (mk (Ast.Id v)) ])) in
+            mk (Ast.Ite (test, mk (Ast.Id v), callee vs))
+          | v :: _ -> mk (Ast.Id v)
+          | [] -> assert false in
+        callee (Scope.call_candidates str env.id)
       | e -> aux_e env e
     in
     begin match args with
@@ -243,6 +258,7 @@ let rec aux_e env (pos,e) =
     Ast.For (Some (Scope.resolve_assigned str env.id), aux_e env e, aux_e env e')
   | Repeat e -> Ast.Repeat (aux_e env e)
   | Function (_,params,e) ->
+    let add_param = add_binding ~kind:Scope.KParam env.annots in
     let add_binding = add_binding env.annots in
     (* Params *)
     let env = { env with id=Scope.new_scope env.id } in
@@ -251,7 +267,8 @@ let rec aux_e env (pos,e) =
       | None -> StrSet.empty
       | Some lst -> bv_params lst
     in
-    let env = { env with id=List.fold_left add_binding env.id (StrSet.elements pbvs) } in
+    let env = { env with id=List.fold_left add_param env.id
+                              (StrSet.elements pbvs) } in
     let params =
       match params with
       | None -> []

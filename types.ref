@@ -86,15 +86,17 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<>
 
 test_dots1: Untypeable: untypeable coercion
 expected: { `r }
-given: list<> | 'I1039
+given: list<> | 'I1049
 expression may be: new.env()
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
 
 test_dots3: ∀'a. ((...: 'a) -> { 'a }<>)<>
 
-print.R6: ∀'a,'b,`a. ((x: 'a & { print: @(...: ('b, empty? | `a)) ->
- any, any }, ...: ('b, `a)) -> 'a)<>
+print.R6: ∀'a,'b,`a. ((x: 'a & vec, ...: ('b, `a)) | (x: 'a &
+ { print: @(...: ('b, empty? | `a)) -> any, any }, ...: ('b, `a)) | (x: 'a &
+ { print: ~arrow, any }, ...: ('b, `a)) | (x: 'a & { ~arrow }, ...: ('b, `a))
+ -> 'a)<>
 
 
 ===== Processing tests/04_s3.r =====
@@ -327,6 +329,18 @@ d: 2.<>
 use_d: (() -> 2.<>)<>
 
 shadow_fn: (() -> 3.<>)<>
+
+param_force: ∀'a. ((x: 'a, force: (~arrow)?) -> 'a)<>
+
+param_maybe_fun: ∀'a,'b. ((x: 'a, f: @('a) -> 'b) -> 'b)<>
+
+param_assigned: ∀'a. ((x: 'a, force: any) -> 'a)<>
+
+local_paste: Untypeable: untypeable application
+Line 108, characters 44-57
+function: s("a")
+argument: @('x, "b"<>)
+function (not a function) may be: "a"
 
 
 ===== Processing tests/07_namespace.r =====
