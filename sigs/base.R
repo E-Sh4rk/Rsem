@@ -216,7 +216,13 @@
 # The attribute is selected by a literal name, so the label is polymorphic.
 #| base::attr : (x:any with { #k:'b, any }, which: #k, exact:lgl1?) -> 'b
 
-#| base::attributes : (x:any) -> { any }<> | null
+# The attributes of `x` as a list, the row variable `r carrying them over
+# exactly: NULL when there are none, and the class (which is not part of the
+# `with` record) as an extra `class` entry. The three cases do not overlap:
+# their results would otherwise be intersected (`null` with `{ }` is empty).
+#| base::attributes : (x:<> with { }) -> null
+#|                  && (x:(<> with { `r }) & ~(<> with { })) -> { `r }<>
+#|                  && (x:(any with { `r }) & ~<>) -> { class: CHR, `r }<>
 
 # The attributes it sets, the class among them, are not tracked: the result has
 # the type of `.Data` with any attributes.
