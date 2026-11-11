@@ -1,5 +1,4 @@
 open Mlsem.Common
-open Mlsem.Types
 module MVariable = Mlsem.Lang.MVariable
 module StrMap = Map.Make(String)
 
@@ -11,16 +10,12 @@ type t = { envs : env list ; tenv : MetaEnv.t }
 
 exception ScopeError of string
 
-let fun_ty = Arrow.any |> Rstt.Attr.mk_content
 let from_toplevel tenv idmap =
   let tl = idmap |> StrMap.map (fun v ->
-    if MetaEnv.mem v tenv
-    then
-      let ty = MetaEnv.get v tenv |> TyScheme.get |> snd |> GTy.ub in
-      if Ty.leq ty fun_ty then KFun, v
-      else if Ty.leq ty (Ty.neg fun_ty) then KVal, v
-      else KAny, v
-    else KAny, v
+    match MetaEnv.kind v tenv with
+    | MetaEnv.KFun -> KFun, v
+    | MetaEnv.KVal -> KVal, v
+    | MetaEnv.KAny -> KAny, v
     ) in
   { envs=[ tl ] ; tenv }
 

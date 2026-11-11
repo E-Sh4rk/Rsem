@@ -23,8 +23,11 @@ type fsig = {
    [base], [methods] (each with the class it is the class-overload for) and
    [methods_default]. [symbolic] are the signatures that still contain label
    variables, with the class of the class-overload they come from, if any. *)
+type kind = KFun | KVal | KAny
+(* [kind] is the kind of the type of the variable (cf. [sigs_kind]). *)
 type sigs = { base:GTy.t list ; methods:(string * GTy.t) list ;
-              methods_default:GTy.t list ; symbolic:(string option * fsig) list }
+              methods_default:GTy.t list ; symbolic:(string option * fsig) list ;
+              kind:kind }
 type signature = SigTy of GTy.t | SigFun of fsig
 
 module StrMap = Map.Make(String)
@@ -38,8 +41,12 @@ module StrSet = Set.Make(String)
    [types] maps each variable to its type, simplified. It is lazy, so that
    only the types that are used (cf. [env]) get simplified, each only once:
    simplifying the intersection of the many signatures of a generic with
-   class-overloads (e.g. [+]) is expensive. *)
-type t = { types : TyScheme.t Lazy.t VarMap.t ; senv : sigs VarMap.t ;
+   class-overloads (e.g. [+]) is expensive.
+   [kinds] maps each variable to whether its type is known to be a function or
+   a non-function: it is kept apart, so that it can be known without forcing
+   the type (cf. [sigs_kind]). *)
+type t = { types : TyScheme.t Lazy.t VarMap.t ; kinds : kind Lazy.t VarMap.t ;
+           senv : sigs VarMap.t ;
            ns : Variable.t StrMap.t StrMap.t ;
            ovl : (string * string) list ; bound : StrSet.t }
 
@@ -48,18 +55,27 @@ let simplify_tl ty =
   let ty = GTy.map Rstt.TyOp.simplify ty |> GTy.factorize in
   TyScheme.mk tvs ty
 
+let fun_ty = Arrow.any |> Rstt.Attr.mk_content
+let kind_of_ty ty =
+  let ty = GTy.ub ty in
+  if Ty.leq ty fun_ty then KFun
+  else if Ty.leq ty (Ty.neg fun_ty) then KVal
+  else KAny
+let kind_of_tyscheme ts = TyScheme.get ts |> snd |> kind_of_ty
+
 let initial =
-  let types = Env.bindings Defs.initial_env |> List.fold_left
-      (fun types (v,ts) -> VarMap.add v (Lazy.from_val ts) types) VarMap.empty in
-  { types ; senv=VarMap.empty ; ns=StrMap.empty ; ovl=[] ; bound=StrSet.empty }
+  let types, kinds = Env.bindings Defs.initial_env |> List.fold_left
+      (fun (types, kinds) (v,ts) ->
+        VarMap.add v (Lazy.from_val ts) types,
+        VarMap.add v (lazy (kind_of_tyscheme ts)) kinds)
+      (VarMap.empty, VarMap.empty) in
+  { types ; kinds ; senv=VarMap.empty ; ns=StrMap.empty ; ovl=[] ; bound=StrSet.empty }
 let get_sigs v senv =
   match VarMap.find_opt v senv with
-  | None -> { base=[] ; methods=[] ; methods_default=[] ; symbolic=[] }
+  | None -> { base=[] ; methods=[] ; methods_default=[] ; symbolic=[] ; kind=KAny }
   | Some s -> s
 
 (* ===== S3 dispatch (class overloads) ===== *)
-
-let fun_ty = Arrow.any |> Rstt.Attr.mk_content
 let is_fun_sig ty =
   let ty = GTy.ub ty in
   Ty.leq ty fun_ty && Ty.is_empty ty |> not
@@ -337,6 +353,18 @@ let sigs_ty sigs =
     TyScheme.mk_poly ty |> simplify_tl
   end
 
+(* The kind of the type of a variable whose signatures have the kind [k], once
+   the signature [ty] is added to them: as the type is their intersection, it
+   is a function (resp. a non-function) as soon as one of them is. It is only
+   an approximation (an intersection of signatures that are neither may still
+   be one or the other), but it is computed without building the
+   intersection (cf. [sigs_ty]). An empty intersection is a function. *)
+let sigs_kind k ty =
+  match k, kind_of_ty ty with
+  | KFun, _ | _, KFun -> KFun
+  | KVal, _ | _, KVal -> KVal
+  | KAny, KAny -> KAny
+
 (* The first parameter of a signature of [name] is restricted as described by
    [restriction]. *)
 let add_signature ?cls ~name v s t =
@@ -350,8 +378,8 @@ let add_signature ?cls ~name v s t =
   let sigs = get_sigs v t.senv in
   let add ty sigs =
     match cls with
-    | None -> { sigs with base=ty::sigs.base }
-    | Some cls -> { sigs with methods=(cls,ty)::sigs.methods }
+    | None -> { sigs with base=ty::sigs.base ; kind=sigs_kind sigs.kind ty }
+    | Some cls -> { sigs with methods=(cls,ty)::sigs.methods ; kind=sigs_kind sigs.kind ty }
   in
   let sigs =
     match s with
@@ -364,7 +392,9 @@ let add_signature ?cls ~name v s t =
     then { sigs with methods_default=[methods_default_ty name sigs t] }
     else sigs
   in
-  { t with types=VarMap.add v (sigs_ty sigs) t.types ; senv=VarMap.add v sigs t.senv }
+  { t with types=VarMap.add v (sigs_ty sigs) t.types ;
+           kinds=VarMap.add v (Lazy.from_val sigs.kind) t.kinds ;
+           senv=VarMap.add v sigs t.senv }
 
 (* An inferred type is restricted as a signature would be. *)
 let set_from_tyscheme v ts t =
@@ -382,9 +412,15 @@ let set_from_tyscheme v ts t =
         TyScheme.mk tvs (restrict_first_param restr ty), t
   in
   let ts = simplify_tl ts in
-  { t with types=VarMap.add v (Lazy.from_val ts) t.types ; senv=VarMap.remove v t.senv }
+  { t with types=VarMap.add v (Lazy.from_val ts) t.types ;
+           kinds=VarMap.add v (lazy (kind_of_tyscheme ts)) t.kinds ;
+           senv=VarMap.remove v t.senv }
 
 let mem v t = VarMap.mem v t.types
+let kind v t =
+  match VarMap.find_opt v t.kinds with
+  | Some k -> Lazy.force k
+  | None -> KAny
 let env dom t =
   VarSet.fold (fun v env ->
     match VarMap.find_opt v t.types with

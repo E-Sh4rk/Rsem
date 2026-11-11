@@ -113,6 +113,13 @@ val class_overload_ty : string -> GTy.t -> GTy.t
 (* Restriction of the signature of a class-overload for the class [cls]: its
    first parameter is restricted to the values of class [cls]. *)
 val mem : Variable.t -> t -> bool
+type kind = KFun | KVal | KAny
+val kind : Variable.t -> t -> kind
+(* [kind v t] tells whether the type of [v] is known to be a function ([KFun])
+   or a non-function ([KVal]), without computing the type. For a variable
+   declared with signatures, it is [KFun] (resp. [KVal]) when one of its base
+   or method signatures is (an approximation of the kind of their
+   intersection). It is [KAny] if [mem v t] is false. *)
 val env : VarSet.t -> t -> Env.t
 (* [env dom t] is the typing environment of the variables of [dom] (those of
    [dom] that [t] does not bind are left out). The types are simplified when
