@@ -86,7 +86,7 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<>
 
 test_dots1: Untypeable: untypeable coercion
 expected: { `r }
-given: list<> | 'I1049
+given: list<> | 'I1060
 expression may be: new.env()
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
@@ -97,6 +97,10 @@ print.R6: ∀'a,'b,`a. ((x: 'a & vec, ...: ('b, `a)) | (x: 'a &
  { print: @(...: ('b, empty? | `a)) -> any, any }, ...: ('b, `a)) | (x: 'a &
  { print: ~arrow, any }, ...: ('b, `a)) | (x: 'a & { ~arrow }, ...: ('b, `a))
  -> 'a)<>
+
+rollmean: ∀'a. (((x: any, k: any, fill: 'a?, na.pad: any?, ...: any) -> (LGL1 \
+ ^LGL1)<> | null | 'a) & ((x: any, k: any, fill: 'a?, na.pad: ff?, ...: any)
+ -> null | 'a))<>
 
 
 ===== Processing tests/04_s3.r =====

@@ -209,3 +209,7 @@ print.R6 <- function(x, ...) {
 
   invisible(x)
 }
+
+rollmean <- function(x, k, fill = if (na.pad) NA, na.pad = FALSE, ...) {
+  fill
+}
