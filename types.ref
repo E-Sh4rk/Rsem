@@ -320,6 +320,11 @@ brk_cond: (((b: any) -> 1.<>) & ((b: tt) -> empty))<>
 
 loop_in_local: DBL1 | INT1
 
+to_json: ∀'a. ((x: 'a, force: any?) -> 'a)<>
+
+local_c: ∀'a,`a. (((x: (DBL | v('a))<`a>) -> (DBL | v('a))<`a>) & ((x: (DBL |
+ v('a)) | null) -> (DBL | v('a)) | null))<>
+
 local: ∀'a. ((e: 'a) -> 'a)<>
 
 shadowed: 2.<>

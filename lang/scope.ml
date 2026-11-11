@@ -2,7 +2,7 @@ open Mlsem.Common
 module MVariable = Mlsem.Lang.MVariable
 module StrMap = Map.Make(String)
 
-type kind = KFun | KVal | KAny | KAnyOpt
+type kind = KFun | KVal | KAny
 type env = (kind * Variable.t) StrMap.t
 (* [envs] are the nested scopes, innermost first and top level last. [tenv]
    gives the namespaces a name the top level does not bind is searched for. *)
@@ -72,7 +72,6 @@ let resolve_call str t =
       begin match StrMap.find_opt str env with
       | None | Some (KVal, _) -> aux envs
       | Some ((KFun | KAny), v) -> v
-      | Some (KAnyOpt, _) -> raise (ScopeError ("Cannot resolve symbol "^str))
       end
   in
   aux t.envs
@@ -84,8 +83,7 @@ let resolve ?search str t =
     | env::envs ->
       begin match StrMap.find_opt str env with
       | None -> aux envs
-      | Some ((KFun | KVal | KAny), v) -> v
-      | Some (KAnyOpt, _) -> raise (ScopeError ("Cannot resolve symbol "^str))
+      | Some (_, v) -> v
       end
   in
   aux t.envs

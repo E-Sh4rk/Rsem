@@ -81,6 +81,14 @@ cond_ret <- function(b) local({ if (b) return(1) ; "a" })
 brk_cond <- function(b) { for (i in 1:3) { x <- local({ if (b) next ; 1 }) } ; x }
 loop_in_local <- local({ s <- 0 ; for (i in 1:3) { if (i > 1) break ; s <- i } ; s })
 
+# A call skips the bindings known not to be functions. Before typing, this is
+# known from the syntax only: a parameter with a default value, or a local
+# variable, is a function if and only if it is bound to a function definition.
+# So `force(x)` calls `base::force`, not the parameter, and `c(x, c)` calls
+# `base::c`, passing it the local variable.
+to_json <- function(x, force = FALSE) force(x)
+local_c <- function(x) { c <- 3 ; c(x, c) }
+
 # A package defining its own `local` gets an ordinary call, so what the braces
 # assign binds in the enclosing scope -- here, at top level. What decides it is
 # the scope, in `bv_e` as much as in `aux_e`: were the two to disagree, `d`
