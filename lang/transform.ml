@@ -295,13 +295,13 @@ let loop_body e =
    it stands for, paired with the name of the function applied (cf.
    [alt_error]). *)
 module EidTbl = Hashtbl.Make(Eid)
-let alt_errors : (Mlsem.System.Error.t -> string * Mlsem.System.Error.t) EidTbl.t =
+let alt_errors : (Mlsem.Lang.Error.t -> string * Mlsem.Lang.Error.t) EidTbl.t =
   EidTbl.create 256
 
 (* The application error that the [UntypeableEncoding] error [err] stands for,
    with the name of the function applied, if it was raised on an [Alt]
    encoding an application (or on one of its copies). *)
-let alt_error (err:Mlsem.System.Error.t) =
+let alt_error (err:Mlsem.Lang.Error.t) =
   match err.kind with
   | UntypeableEncoding ->
     Eid.eq_class err.eid |> Eid.Set.elements
@@ -451,7 +451,7 @@ let to_mlsem (cfg:cfg) e =
           let name = Format.asprintf "%a" Variable.pp v in
           (* The failure of the [Alt] is that of the application of the
              intersection of the signatures (its first alternative). *)
-          let aerror (err:Mlsem.System.Error.t) =
+          let aerror (err:Mlsem.Lang.Error.t) =
             let symbolic = MetaEnv.symbolic sigs |> List.map snd
                            |> List.filter_map (resolve_ty err.env) in
             let fn = (resolved err.env)::symbolic |> GTy.conj |> GTy.lb in

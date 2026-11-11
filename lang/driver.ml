@@ -97,7 +97,7 @@ let instantiate_weak ts =
    [treat_def] hoists out of a statement, whose typing raised [Failure]. *)
 type outcome =
   | Typed of TyScheme.t
-  | Untypeable of System.Error.t * Position.t
+  | Untypeable of Mlsem.Lang.Error.t * Position.t
   | Failed of string
 
 let on_outcome : (Variable.t -> outcome -> unit) ref = ref (fun _ _ -> ())
@@ -128,6 +128,7 @@ let treat_ast ?(post=Fun.id) v ctx ast =
     !on_outcome v (Typed ty) ;
     ctx
   with System.Error.Untypeable (err) ->
+    let err = Mlsem.Lang.Error.of_system err in
     Format.printf "%a:@? Untypeable: %s@." Variable.pp v (Error.title err) ;
     let loc = Eid.loc err.eid in
     if loc <> Position.dummy then Format.printf "%s@." (Position.string_of_pos loc) ;

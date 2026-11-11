@@ -1,4 +1,6 @@
-(** Printing of the typing errors reported by MLsem.
+(** Printing of the typing errors reported by MLsem (cf. [Mlsem.Lang.Error],
+    which recognizes the failures of the encodings of MLsem's language, e.g.
+    assignments).
 
     The errors are printed by MLsem's default printers; the witnesses are
     printed as R values by the printers registered by [Witnesses]. The
@@ -8,7 +10,7 @@
     application errors they stand for. *)
 
 open Mlsem.Types
-module SE = Mlsem.System.Error
+module SE = Mlsem.Lang.Error
 
 (* How the details of an error are printed: with the types involved, with a
    witness of the failure (a value of the given type that is not of the

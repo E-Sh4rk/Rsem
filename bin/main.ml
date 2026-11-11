@@ -14,9 +14,9 @@ let speclist =
     ("-gradual", Arg.Set Driver.gradual, "Give the dyn type to undefined functions") ;
     ("-errors", Arg.Symbol (["types" ; "witnesses" ; "both"], fun s ->
          Error.style := match s with
-           | "witnesses" -> Mlsem.System.Error.Witnesses
-           | "both" -> Mlsem.System.Error.Both
-           | _ -> Mlsem.System.Error.Types),
+           | "witnesses" -> Mlsem.Lang.Error.Witnesses
+           | "both" -> Mlsem.Lang.Error.Both
+           | _ -> Mlsem.Lang.Error.Types),
      " Explain typing errors with the types involved, \
       with a witness value, or both (default)")
   ]
