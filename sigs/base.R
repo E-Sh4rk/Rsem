@@ -312,6 +312,12 @@
 #| base::which : (x:lgl, arr.ind:lgl1?, useNames:lgl1?) -> INT<>
 #| base::nrow : (x:any) -> INT1<> | null
 #| base::ncol : (x:any) -> INT1<> | null
+# Two overloads could read the `dim` attribute, before this one:
+#   (x: any with { dim: 'd, any }) -> 'd & (INT<> | null)
+#   (x: any with { dim: absent, any }) -> null
+# They are not useful yet: no signature records the `dim` attribute (`matrix`
+# and `array` do not), so only this fallback ever applies.
+#| base::dim : (x:any) -> INT<> | null
 
 # `rep` is generic; its methods (e.g. for factors) keep the class.
 #| base::rep : (x:v('a), ...: any) -> v('a)
