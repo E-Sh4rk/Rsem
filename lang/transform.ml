@@ -541,9 +541,27 @@ let to_mlsem (cfg:cfg) e =
           add_let v e' e
         | None -> add_let v e' e
       in
-      (* The first parameter is bound outermost: a default value can refer to
-         the parameters before it ([function(x, r = range(x))]). *)
-      let e = List.fold_right (fun p e -> add_def e p) (pos@nopos) (aux e) in
+      (* Default values are evaluated lazily, so they can refer to any parameter
+         ([function(fill = if (na.pad) NA, na.pad = FALSE)]): parameters are bound
+         in dependency order (the first one outermost), falling back to the
+         declaration order for cycles. *)
+      let deps (_,o,_) =
+        let vs = ref VarSet.empty in
+        let collect ((_,e') as e) =
+          (match e' with Id v -> vs := VarSet.add v !vs | _ -> ()) ; e in
+        Option.iter (fun e -> ignore (Ast.map collect e)) o ;
+        !vs
+      in
+      let rec sort ps =
+        match ps with
+        | [] -> []
+        | ps ->
+          let vars = ps |> List.map (fun (v,_,_) -> v) |> VarSet.of_list in
+          let ready (v,_,_ as p) = VarSet.inter (deps p) (VarSet.remove v vars) |> VarSet.is_empty in
+          let p = match List.find_opt ready ps with Some p -> p | None -> List.hd ps in
+          p::sort (List.filter ((!=) p) ps)
+      in
+      let e = List.fold_right (fun p e -> add_def e p) (sort (pos@nopos)) (aux e) in
       let pos_tl, named_tl, e =
         if has_ell
         then
