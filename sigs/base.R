@@ -310,14 +310,26 @@
 # for the algebra.
 #| base::seq : (from:dbl?, to:dbl?, by:dbl?, length.out:dbl1?, along.with:any?, ...: any) -> INT|DBL
 #| base::which : (x:lgl, arr.ind:lgl1?, useNames:lgl1?) -> INT<>
+# `nrow` and `ncol` could also read the `dim` attribute (the `absent` case is
+# restricted to unclassed values: a data frame has no `dim`, yet `nrow` gives
+# its number of rows):
+#   (x:any with { dim: any, any }) -> INT1<>
+#   && (x:<> with { dim: absent, any }) -> null
+#   && (x:any) -> INT1<> | null
+# But on an argument that still contains inference variables, each overload is
+# tried alone, so every call on a parameter splits the inference in cases. It
+# made some definitions much slower (jsonlite's apply_by_pages from 1.4 s to
+# about 65 s), for a few more definitions typed (e.g. `seq_len(nrow(x))`).
 #| base::nrow : (x:any) -> INT1<> | null
 #| base::ncol : (x:any) -> INT1<> | null
-# Two overloads could read the `dim` attribute, before this one:
-#   (x: any with { dim: 'd, any }) -> 'd & (INT<> | null)
-#   (x: any with { dim: absent, any }) -> null
-# They are not useful yet: no signature records the `dim` attribute (`matrix`
-# and `array` do not), so only this fallback ever applies.
-#| base::dim : (x:any) -> INT<> | null
+# The `dim` attribute, when the type says whether it is there; the last
+# overload covers the values whose attributes are not known.
+#| base::dim : (x:any with { dim: 'd, any }) -> 'd & INT<>
+#|          && (x:any with { dim: absent, any }) -> null
+#|          && (x:any) -> INT<> | null
+# As in R, setting the dimensions drops the names and the dimnames.
+#| base::dim<- : (x:v('a)<`c> with { dim: any?, dimnames: any?, names: any?, `r }, v:dbl) -> v('a)<`c> with { dim: INT, dimnames: absent, names: absent, `r }
+#| base::dim<- : (x:v('a)<`c> with { dim: any?, dimnames: any?, names: any?, `r }, v:null) -> v('a)<`c> with { dim: absent, dimnames: absent, names: absent, `r }
 
 # `rep` is generic; its methods (e.g. for factors) keep the class.
 #| base::rep : (x:v('a), ...: any) -> v('a)
@@ -366,8 +378,10 @@
 #| base::vector : (mode: "raw", length: dbl1?) -> RAW<>
 #| base::vector : (mode: "list", length: dbl1?) -> { null&dyn }<>
 
-#| base::matrix : (data: absent, nrow: dbl1?, ncol: dbl1?, byrow: lgl1?, dimnames: list | null?) -> LGL<>
-#| base::matrix : (data: v('a), nrow: dbl1?, ncol: dbl1?, byrow: lgl1?, dimnames: list | null?) -> v('a)<>
+#| base::matrix : (data: absent, nrow: dbl1?, ncol: dbl1?, byrow: lgl1?, dimnames: list | null?) -> LGL<> with { dim: INT, dimnames: list? }
+#| base::matrix : (data: v('a), nrow: dbl1?, ncol: dbl1?, byrow: lgl1?, dimnames: list | null?) -> v('a)<> with { dim: INT, dimnames: list? }
+#| base::array : (data: absent, dim: dbl?, dimnames: list | null?) -> LGL<> with { dim: INT, dimnames: list? }
+#| base::array : (data: v('a), dim: dbl?, dimnames: list | null?) -> v('a)<> with { dim: INT, dimnames: list? }
 
 # ========== Functionals ==========
 
