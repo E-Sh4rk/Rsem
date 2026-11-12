@@ -430,7 +430,32 @@ let to_mlsem (cfg:cfg) e =
              method it is a signature of (if any). *)
           let alt ofun = Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun ; ogen=false }, arg) in
           let alt_ty ty = alt (Fun.const (proj ty |> TyScheme.mk_poly)) in
+          (* The union of the base signatures whose domain is not disjoint
+             from the argument: [d_1|...|d_n -> cd_1|...|cd_n], [cd_i] being
+             the codomain of the signature [i] on its domain [d_i]. It is
+             weaker than their intersection, but applies to an argument that
+             no signature alone covers (e.g. [INT1 | LGL1 | 'a] for
+             [is.numeric]). Only the known part of the argument is considered
+             (its inference variables being replaced by [empty]), with which
+             every domain would intersect. The alternative is left out (an
+             arrow that does not apply) when this part is covered by a single
+             domain, or intersects fewer than two of them: the other
+             alternatives then suffice. *)
+          let alt_union = alt (fun env ->
+            let open Mlsem_types in
+            let aty = arg_ty env |> Option.value ~default:Ty.any
+                      |> TVOp.bot_instance (TVOp.all_vars KNoInfer) in
+            MetaEnv.base sigs |> List.map proj |> GTy.mapl (fun tys ->
+              let doms = tys |> List.map Arrow.domain in
+              let dcds = List.combine tys doms |> List.filter_map (fun (ty, d) ->
+                if Ty.cap d aty |> Ty.is_empty then None
+                else Some (d, Arrow.apply ty d)) in
+              if List.length dcds < 2 || List.exists (Ty.leq aty) doms
+              then Arrow.mk Ty.empty Ty.any
+              else Arrow.mk (List.map fst dcds |> Ty.disj) (List.map snd dcds |> Ty.disj))
+            |> TyScheme.mk_poly) in
           let alts =
+            (None, alt_union)::
             (MetaEnv.base sigs@MetaEnv.methods_default sigs |> List.map (fun ty -> None, alt_ty ty))
             @(MetaEnv.methods_with_class sigs |> List.map (fun (cls, ty) -> Some cls, alt_ty ty))
             @(MetaEnv.symbolic sigs |> List.map (fun (cls, fsig) -> cls, alt (fun env ->

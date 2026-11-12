@@ -213,3 +213,9 @@ print.R6 <- function(x, ...) {
 rollmean <- function(x, k, fill = if (na.pad) NA, na.pad = FALSE, ...) {
   fill
 }
+
+num_to_char_R <- function(x, digits = NA, na_as_string = NA) {
+  if (is.na(digits)) digits <- NA_integer_
+  stopifnot(is.numeric(x))
+  stopifnot(is.numeric(digits))   # untypeable here
+}
