@@ -19,6 +19,10 @@
 #| stats::frequency : (x:any, ...: any) -> DBL1<>
 #| stats::start : (x:any, ...: any) -> DBL<>
 #| stats::end : (x:any, ...: any) -> DBL<>
+# The times of the observations, a time series itself. `time` is generic: the
+# methods of other classes (e.g. zoo's) give other types.
+#| stats::time : (x:<ts, ...>, ...: any) -> DBL<ts> with { tsp: DBL, any }
+#|             && (x:any, ...: any) -> any
 
 # The arithmetic of time series keeps their class (when both operands are
 # time series, it is computed on the intersection of their windows). As the
@@ -36,3 +40,8 @@
 # Subsetting a time series loses its time window, and so its class.
 #| stats::([].ts) : (x:v('a)<ts, ...>, ...: dbl|CHR) -> v('a)<>
 #| stats::([].ts) : (x:{any}<ts, ...>, ...: dbl|CHR) -> any
+
+# ========== Models ==========
+
+# The design matrix of a model, with the column of each term in `assign`.
+#| stats::model.matrix : (object:any, ...: any) -> DBL<> with { dim: INT, dimnames: list?, assign: INT, any }

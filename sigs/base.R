@@ -207,6 +207,10 @@
 #| base::class<- : (x:'a<...>, v:chr) -> 'a<...>
 #| base::class<- : (x:'a<...>, v:null) -> 'a<>
 #| base::unclass : (x:'a<...>) -> 'a<>
+# The class attribute only: `NULL` for a value without one, where `class`
+# gives the implicit class.
+#| base::oldClass : (x:<>) -> null
+#| base::oldClass : (x:~<>) -> CHR<>
 #| base::inherits : (x:any, what:chr, which:ff?) -> LGL1<>
 #| base::inherits : (x:any, what:chr, which:tt) -> INT<>
 
@@ -215,6 +219,9 @@
 
 # The attribute is selected by a literal name, so the label is polymorphic.
 #| base::attr : (x:any with { #k:'b, any }, which: #k, exact:lgl1?) -> 'b
+# Setting an attribute to `NULL` removes it.
+#| base::attr<- : (x:'a<`c> with { #k:any?, `r }, which: #k, v:~null & 'b) -> 'a<`c> with { #k:'b, `r }
+#| base::attr<- : (x:'a<`c> with { #k:any?, `r }, which: #k, v:null) -> 'a<`c> with { #k:absent, `r }
 
 # The attributes of `x` as a list, the row variable `r carrying them over
 # exactly: NULL when there are none, and the class (which is not part of the
@@ -229,6 +236,18 @@
 #| base::structure : (.Data:v('a), ...: any) -> v('a)
 #|                && (.Data:any, ...: any) -> any
 #| base::structure : (.Data:{'a}, ...: any) -> {'a}
+# The same for `attributes<-`, which sets them all (the class among them), or
+# removes them all with `NULL`.
+#| base::attributes<- : (x:v('a), v:{ any }) -> v('a)
+#| base::attributes<- : (x:{'a}, v:{ any }) -> {'a}
+#| base::attributes<- : (x:v('a), v:null) -> v('a)<>
+#| base::attributes<- : (x:{'a}, v:null) -> {'a}<>
+
+# Like `dim`: the `dimnames` attribute when the type says whether it is there,
+# and a list of names (or `NULL` for a dimension without names) otherwise.
+#| base::dimnames : (x:any with { dimnames: 'd, any }) -> 'd
+#|               && (x:any with { dimnames: absent, any }) -> null
+#|               && (x:any) -> { CHR<> | null }<> | null
 
 # ========== Types and predicates ==========
 
@@ -253,6 +272,13 @@
 #| base::is.numeric : (x:(DBL|INT)<~factor, ~Date, ~POSIXt, ~difftime, ...>) -> tt<>
 #|                 && (x:DBL|INT) -> LGL1<>
 #| base::is.numeric : (x:~(DBL|INT)) -> ff<>
+#| base::is.atomic : (x:vec) -> tt<>
+#| base::is.atomic : (x:~vec) -> ff<>
+# Whether `x` has a class attribute.
+#| base::is.object : (x:<>) -> ff<>
+#| base::is.object : (x:~<>) -> tt<>
+#| base::is.data.frame : (x:<data.frame, ...>) -> tt<>
+#|                    && (x:<~data.frame, ...>) -> ff<>
 #| base::is.list : (x:list) -> tt<>
 #|              && (x:any) -> LGL1<>
 #| base::is.environment : (x:env) -> tt<>
@@ -303,6 +329,17 @@
 #| base::rev : (x:{'a}) -> {'a}
 #| base::rev : (x:null) -> null
 #| base::seq_along : (along.with:any) -> INT<>
+# The positions of the elements of `x` in `table` (`nomatch`, `NA` by default,
+# for the missing ones).
+#| base::match : (x:vec1, table:vec|null, nomatch:vec1?, incomparables:any?, ...: any) -> INT1<>
+#|            && (x:vec|null, table:vec|null, nomatch:vec1?, incomparables:any?, ...: any) -> INT<>
+# `unique` is generic: the default method restores the class of factors and
+# of the date and time classes, and drops the other attributes. A value of
+# another type may have a class with a method: its result is unknown.
+#| base::unique : (x:v('a)<`c>, incomparables:any?, ...: any) -> v('a)<`c>
+#|             && (x:any, incomparables:any?, ...: any) -> any
+#| base::unique : (x:{'a}<`c>, incomparables:any?, ...: any) -> {'a}<`c>
+#| base::unique : (x:null, incomparables:any?, ...: any) -> null
 #| base::seq_len : (length.out:dbl1) -> INT<>
 # `seq` is generic: its methods (for dates, ...) keep the class. A single
 # `from` of length other than 1 is `seq_along(from)`. `to` and `by` must have
@@ -310,18 +347,18 @@
 # for the algebra.
 #| base::seq : (from:dbl?, to:dbl?, by:dbl?, length.out:dbl1?, along.with:any?, ...: any) -> INT|DBL
 #| base::which : (x:lgl, arr.ind:lgl1?, useNames:lgl1?) -> INT<>
-# `nrow` and `ncol` could also read the `dim` attribute (the `absent` case is
-# restricted to unclassed values: a data frame has no `dim`, yet `nrow` gives
-# its number of rows):
-#   (x:any with { dim: any, any }) -> INT1<>
-#   && (x:<> with { dim: absent, any }) -> null
-#   && (x:any) -> INT1<> | null
-# But on an argument that still contains inference variables, each overload is
-# tried alone, so every call on a parameter splits the inference in cases. It
-# made some definitions much slower (jsonlite's apply_by_pages from 1.4 s to
-# about 65 s), for a few more definitions typed (e.g. `seq_len(nrow(x))`).
-#| base::nrow : (x:any) -> INT1<> | null
-#| base::ncol : (x:any) -> INT1<> | null
+# `nrow` and `ncol` read the `dim` attribute. The `absent` case is restricted
+# to unclassed values: a data frame has no `dim`, yet `nrow` gives its number
+# of rows. On an argument that still contains inference variables, each
+# overload is tried alone, so every call on a parameter splits the inference
+# in cases: some definitions get much slower (jsonlite's apply_by_pages from
+# 1.4 s to about 65 s), but more of them are typed (e.g. `seq_len(nrow(x))`).
+#| base::nrow : (x:any with { dim: any, any }) -> INT1<>
+#|           && (x:<> with { dim: absent, any }) -> null
+#|           && (x:any) -> INT1<> | null
+#| base::ncol : (x:any with { dim: any, any }) -> INT1<>
+#|           && (x:<> with { dim: absent, any }) -> null
+#|           && (x:any) -> INT1<> | null
 # The `dim` attribute, when the type says whether it is there; the last
 # overload covers the values whose attributes are not known.
 #| base::dim : (x:any with { dim: 'd, any }) -> 'd & INT<>
@@ -335,10 +372,29 @@
 #| base::rep : (x:v('a), ...: any) -> v('a)
 #| base::rep : (x:{'a}, ...: any) -> {'a}
 #| base::rep : (x:null, ...: any) -> null
+# Not generic, but keeps the class (and drops the names).
+#| base::rep.int : (x:v('a)<`c>, times:dbl) -> v('a)<`c>
+#| base::rep.int : (x:{'a}, times:dbl) -> {'a}<>
+#| base::rep.int : (x:null, times:dbl) -> null
 
 #| base::as.list : (x:{'a}, ...: any) -> {'a}
 #|              && (x:any, ...: any) -> { any }<>
 #| base::as.list : (x:v('a), ...: any) -> { v1('a) }<>
+
+# `as.vector` drops every attribute of an atomic vector (a factor gives its
+# labels), and keeps the names of a list. A `mode` converts the elements. It is
+# generic: the last arrow of the first overload covers the values of other
+# classes, and covers every argument alone (see the conventions above).
+#| base::as.vector : (x:v('a)<~factor, ...>, mode:"any"?) -> v('a)<>
+#|                && (x:null, mode:"any"?) -> null
+#|                && (x:any, mode:chr1?) -> any
+#| base::as.vector : (x:<factor, ...>, mode:"any"?) -> CHR<>
+#| base::as.vector : (x:{'a}, mode:"any"|"list"?) -> {'a}<>
+#| base::as.vector : (x:vec, mode:"list") -> { any }<>
+#| base::as.vector : (x:vec|list|null, mode:"character") -> CHR<>
+#| base::as.vector : (x:vec|list|null, mode:"numeric"|"double") -> DBL<>
+#| base::as.vector : (x:vec|list|null, mode:"integer") -> INT<>
+#| base::as.vector : (x:vec|list|null, mode:"logical") -> LGL<>
 
 # A length of 1 gives a scalar: `vapply(x, f, logical(1))` asks `f` for one.
 #| base::logical : (length:1) -> LGL1<> && (length:dbl1?) -> LGL<>
@@ -382,6 +438,17 @@
 #| base::matrix : (data: v('a), nrow: dbl1?, ncol: dbl1?, byrow: lgl1?, dimnames: list | null?) -> v('a)<> with { dim: INT, dimnames: list? }
 #| base::array : (data: absent, dim: dbl?, dimnames: list | null?) -> LGL<> with { dim: INT, dimnames: list? }
 #| base::array : (data: v('a), dim: dbl?, dimnames: list | null?) -> v('a)<> with { dim: INT, dimnames: list? }
+# `as.matrix` is generic. The default method makes a vector a one-column
+# matrix, and returns a matrix unchanged; a data frame gives a matrix of the
+# mode of its columns, and the methods of other classes other matrices.
+#| base::as.matrix : (x:v('a), ...: any) -> v('a)<> with { dim: INT, dimnames: list?, any }
+#|                && (x:any, ...: any) -> any with { dim: INT, dimnames: list?, any }
+
+# The sums of the columns of a matrix or a data frame, named after them.
+#| base::colSums : (x:any, na.rm:lgl1?, dims:dbl1?) -> DBL<>
+
+# `as.data.frame` is generic; every method gives a data frame.
+#| base::as.data.frame : (x:any, ...: any) -> { any }<data.frame> with { names: CHR, any }
 
 # ========== Functionals ==========
 
@@ -450,6 +517,12 @@
 #|          && (x:dbl<`c>, base:dbl1?) -> DBL<`c>
 #| base::log10 : (x:dbl1<`c>) -> DBL1<`c>
 #|            && (x:dbl<`c>) -> DBL<`c>
+#| base::sqrt : (x:dbl1<`c>) -> DBL1<`c>
+#|           && (x:dbl<`c>) -> DBL<`c>
+
+# `mean` is generic; the methods of the date and time classes keep the class.
+#| base::mean : (x:dbl<`c>, ...: any) -> DBL1<`c>
+#|           && (x:any, ...: any) -> any
 
 # Of an integer (or logical) vector, the result is an integer.
 #| base::max : (...: int, na.rm:lgl1?) -> INT1
@@ -500,6 +573,9 @@
 #|              && (x:chr) -> CHR<>
 #| base::trimws : (x:chr1, which:chr1?) -> CHR1<>
 #|             && (x:chr, which:chr1?) -> CHR<>
+# Quotes each element of `x` (after `as.character`).
+#| base::sQuote : (x:vec1, q:any?) -> CHR1<>
+#|             && (x:any, q:any?) -> CHR<>
 #| base::sprintf : (fmt:chr1, ...: vec1) -> CHR1<>
 #|              && (fmt:chr, ...: any) -> CHR<>
 #| base::format : (x:vec1, ...: any) -> CHR1<>
@@ -687,6 +763,8 @@
 #| base::tempdir : (check:lgl1?) -> CHR1<>
 #| base::tempfile : (pattern:chr?, tmpdir:chr?, fileext:chr?) -> CHR<>
 #| base::getwd : () -> CHR1<>
+# Whether the directory was created (with a warning when it was not).
+#| base::dir.create : (path:chr, showWarnings:lgl1?, recursive:lgl1?, mode:any?) -> LGL1<>
 # Returns the previous working directory (invisibly).
 #| base::setwd : (dir:chr1) -> CHR1<>
 #| base::.libPaths : (new:chr?, include.site:lgl1?) -> CHR<>
@@ -719,8 +797,16 @@
 #| base::match.arg : (arg:chr|null, choices:chr?, several.ok:ff?) -> CHR1<>
 #|                && (arg:chr|null, choices:chr?, several.ok:lgl1) -> CHR<>
 
-# Its argument is the name of a formal, not evaluated.
-#| base::missing : (x:any) -> LGL1<>
+# Its argument is the name of a formal, not evaluated, or `...` (whether no
+# argument fills it), which a call passes along as its elements.
+#| base::missing : (...: any) -> LGL1<>
+# The expression of an argument (a promise), or `expr` with the variables of
+# `env` substituted: a symbol, a call or a constant.
+#| base::substitute : (expr:any?, env:any?) -> any
+# The elements of `yes` where `test` is true, and those of `no` elsewhere: the
+# result has the length (and the attributes) of `test`.
+#| base::ifelse : (test:dbl1, yes:v('a), no:v('a)) -> v1('a)<>
+#|             && (test:dbl, yes:v('a), no:v('a)) -> v('a)<>
 # The alternatives are evaluated lazily: the result is one of them, or `NULL`
 # (invisibly) when none matches and there is no default.
 #| base::switch : (EXPR:chr1|dbl1, ...: 'a) -> 'a | null
