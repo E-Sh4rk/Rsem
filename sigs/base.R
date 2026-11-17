@@ -141,19 +141,20 @@
 # ========== Comparisons and Boolean operators ==========
 
 # Contrarily to arithmetic, comparisons and Boolean operators do not keep the
-# class of their operands.
+# class of their operands. `NULL` is an empty vector: comparing it gives
+# `logical(0)`.
 #| base::(<) : ( e1:vec1, e2:vec1 ) -> LGL1<>
-#|          && ( e1:vec, e2:vec ) -> LGL<>
+#|          && ( e1:vec|null, e2:vec|null ) -> LGL<>
 #| base::(<=) : ( e1:vec1, e2:vec1 ) -> LGL1<>
-#|           && ( e1:vec, e2:vec ) -> LGL<>
+#|           && ( e1:vec|null, e2:vec|null ) -> LGL<>
 #| base::(>) : ( e1:vec1, e2:vec1 ) -> LGL1<>
-#|          && ( e1:vec, e2:vec ) -> LGL<>
+#|          && ( e1:vec|null, e2:vec|null ) -> LGL<>
 #| base::(>=) : ( e1:vec1, e2:vec1 ) -> LGL1<>
-#|           && ( e1:vec, e2:vec ) -> LGL<>
+#|           && ( e1:vec|null, e2:vec|null ) -> LGL<>
 #| base::(==) : ( e1:vec1, e2:vec1 ) -> LGL1<>
-#|           && ( e1:vec, e2:vec ) -> LGL<>
+#|           && ( e1:vec|null, e2:vec|null ) -> LGL<>
 #| base::(!=) : ( e1:vec1, e2:vec1 ) -> LGL1<>
-#|           && ( e1:vec, e2:vec ) -> LGL<>
+#|           && ( e1:vec|null, e2:vec|null ) -> LGL<>
 
 # `&&` and `||` have no signature: being short-circuiting, they are not typed
 # as applications but encoded as conditionals (cf. `encode_short_circuit` in
@@ -302,9 +303,10 @@
 #| base::identical : (x:any, y:any, ...: any) -> LGL1<>
 #| base::(%in%) : (x:vec1, table:vec|null) -> LGL1<>
 #|             && (x:vec|null, table:vec|null) -> LGL<>
-# Like `!`, they coerce numbers.
-#| base::all : (...: dbl, na.rm:lgl1?) -> LGL1<>
-#| base::any : (...: dbl, na.rm:lgl1?) -> LGL1<>
+# Like `!`, they coerce numbers. `NULL` is an empty vector (`any(NULL)` is
+# `FALSE`).
+#| base::all : (...: dbl|null, na.rm:lgl1?) -> LGL1<>
+#| base::any : (...: dbl|null, na.rm:lgl1?) -> LGL1<>
 
 # ========== Vectors and lists ==========
 
@@ -444,11 +446,26 @@
 #| base::as.matrix : (x:v('a), ...: any) -> v('a)<> with { dim: INT, dimnames: list?, any }
 #|                && (x:any, ...: any) -> any with { dim: INT, dimnames: list?, any }
 
-# The sums of the columns of a matrix or a data frame, named after them.
+# The sums of the columns (or rows) of a matrix or a data frame, named after
+# them.
 #| base::colSums : (x:any, na.rm:lgl1?, dims:dbl1?) -> DBL<>
+#| base::rowSums : (x:any, na.rm:lgl1?, dims:dbl1?) -> DBL<>
+
+# The vectors as the columns of a matrix (`NULL`s are dropped), of the mode of
+# the arguments. It is generic: a data frame among them gives a data frame.
+#| base::cbind : (...: v('a)|null, deparse.level:dbl1?) -> v('a)<> with { dim: INT, dimnames: list?, any }
+#|            && (...: any, deparse.level:dbl1?) -> any
+
+# The diagonal of a matrix, or a diagonal matrix: of a vector, with it on the
+# diagonal, and of a single number `n`, the identity of size `n`.
+#| base::diag : (x:dbl?, nrow:dbl1?, ncol:dbl1?, names:lgl1?) -> dbl<> with { dim: INT?, dimnames: list?, names: CHR?, any }
 
 # `as.data.frame` is generic; every method gives a data frame.
 #| base::as.data.frame : (x:any, ...: any) -> { any }<data.frame> with { names: CHR, any }
+#| base::data.frame : (...: any, row.names:any?, check.rows:lgl1?, check.names:lgl1?, fix.empty.names:lgl1?, stringsAsFactors:lgl1?) -> { any }<data.frame> with { names: CHR, any }
+# `summary` is generic: its methods give objects of their own classes, of
+# which the type says nothing (`dyn`: e.g. `summary(fit)$coefficients`).
+#| base::summary : (object:any, ...: any) -> dyn
 
 # ========== Functionals ==========
 
@@ -524,13 +541,18 @@
 #| base::mean : (x:dbl<`c>, ...: any) -> DBL1<`c>
 #|           && (x:any, ...: any) -> any
 
-# Of an integer (or logical) vector, the result is an integer.
-#| base::max : (...: int, na.rm:lgl1?) -> INT1
-#|          && (...: dbl, na.rm:lgl1?) -> dbl1
-#| base::min : (...: int, na.rm:lgl1?) -> INT1
-#|          && (...: dbl, na.rm:lgl1?) -> dbl1
-#| base::sum : (...: int, na.rm:lgl1?) -> INT1<>
-#|          && (...: dbl, na.rm:lgl1?) -> dbl1<>
+# Of an integer (or logical) vector, the result is an integer. `NULL` is an
+# empty vector: `min(NULL, 1)` is `1`, `min(NULL)` is `Inf` (a double, with a
+# warning), and `sum(NULL)` is `0L`. `max` and `min` keep the class of their
+# arguments (the minimum of dates is a date): a result of unknown class would
+# make the arithmetic on it consider the methods of every class (e.g. in
+# quadprog's solve.QP, `r * (r + 5)` with `r <- min(n, q)`).
+#| base::max : (...: int<`c>, na.rm:lgl1?) -> INT1<`c>
+#|          && (...: dbl<`c>|null, na.rm:lgl1?) -> dbl1<`c>
+#| base::min : (...: int<`c>, na.rm:lgl1?) -> INT1<`c>
+#|          && (...: dbl<`c>|null, na.rm:lgl1?) -> dbl1<`c>
+#| base::sum : (...: int|null, na.rm:lgl1?) -> INT1<>
+#|          && (...: dbl|null, na.rm:lgl1?) -> dbl1<>
 # The minimum and the maximum, a vector of length 2 (which the algebra cannot
 # say), of the mode of the arguments.
 #| base::range : (...: int, na.rm:lgl1?, finite:lgl1?) -> INT
@@ -567,10 +589,13 @@
 #|                && (text:chr, first:dbl, last:dbl?) -> CHR<>
 #| base::substr : (x:chr1, start:dbl1, stop:dbl1) -> CHR1<>
 #|             && (x:chr, start:dbl, stop:dbl) -> CHR<>
+# `NULL` gives `character(0)`.
 #| base::toupper : (x:chr1) -> CHR1<>
-#|              && (x:chr) -> CHR<>
+#|              && (x:chr|null) -> CHR<>
 #| base::tolower : (x:chr1) -> CHR1<>
-#|              && (x:chr) -> CHR<>
+#|              && (x:chr|null) -> CHR<>
+#| base::enc2utf8 : (x:chr1) -> CHR1<>
+#|               && (x:chr) -> CHR<>
 #| base::trimws : (x:chr1, which:chr1?) -> CHR1<>
 #|             && (x:chr, which:chr1?) -> CHR<>
 # Quotes each element of `x` (after `as.character`).
@@ -578,6 +603,11 @@
 #|             && (x:any, q:any?) -> CHR<>
 #| base::sprintf : (fmt:chr1, ...: vec1) -> CHR1<>
 #|              && (fmt:chr, ...: any) -> CHR<>
+# `sprintf` of the translated `fmt`.
+#| base::gettextf : (fmt:chr1, ...: vec1, domain:any?, trim:lgl1?) -> CHR1<>
+#|               && (fmt:chr, ...: any, domain:any?, trim:lgl1?) -> CHR<>
+# The lines of the source of an expression.
+#| base::deparse : (expr:any, width.cutoff:dbl1?, backtick:lgl1?, control:chr?, nlines:dbl1?) -> CHR<>
 #| base::format : (x:vec1, ...: any) -> CHR1<>
 #|             && (x:any, ...: any) -> CHR<>
 #| base::formatC : (x:vec1, ...: any) -> CHR1<>
@@ -731,6 +761,12 @@
 #|                    && (x:v('a)<factor, `c>, ...: dbl|CHR) -> v1('a)<factor, `c>
 #| base::([[]].factor) : (x:{any}<factor, ...>, ...: dbl|CHR) -> any
 
+# `getRversion` is not declared. A version is a list of integer vectors, which
+# compares with a string through its `Ops` method: as a class-overload of the
+# comparisons, or as a plain overload, that method would show in the type of
+# every comparison of a parameter, and without it, `getRversion() >= "4.0"`
+# fails where an unbound `getRversion` is `dyn` in gradual mode.
+
 # ========== Input and output ==========
 
 #| base::identity : ( x:'a ) -> 'a
@@ -746,6 +782,7 @@
 #| base::cat : ( ...: any, file:any?, sep:chr?, fill:any?, labels:chr?, append:lgl1? ) -> null
 #| base::sink : ( file:any?, append:lgl1?, type:chr1?, split:lgl1? ) -> null
 #| base::close : ( con:<connection, ...>, ...: any ) -> null
+#| base::message : ( ...: any, domain:any?, appendLF:lgl1? ) -> null
 
 # ========== Session and environment ==========
 
@@ -782,10 +819,16 @@
 # A pairlist of the frames of the calls on the stack, `NULL` at top level.
 #| base::sys.frames : () -> { env }<> | null
 #| base::ls : (name:any?, ...: any) -> CHR<>
+#| base::objects : (name:any?, ...: any) -> CHR<>
+#| base::exists : (x:chr1, where:any?, envir:any?, frame:dbl1?, mode:chr1?, inherits:lgl1?) -> LGL1<>
+# The calls on the stack, `NULL` at top level.
+#| base::sys.calls : () -> { any }<> | null
+# The kinds of random number generators in use (before the change).
+#| base::RNGkind : (kind:chr1|null?, normal.kind:chr1|null?, sample.kind:chr1|null?) -> CHR<>
 #| base::get : (x:chr1, ...: any) -> any
 
 #| base::.Platform : { OS.type: CHR1, file.sep: CHR1, path.sep: CHR1, GUI: CHR1, any }<>
-#| base::.Machine : { integer.max: INT1, double.eps: DBL1, double.xmax: DBL1, any }<>
+#| base::.Machine : { integer.max: INT1, double.eps: DBL1, double.xmax: DBL1, sizeof.pointer: INT1, any }<>
 #| base::pi : ^DBL1<>
 
 # ========== Control ==========
@@ -800,6 +843,11 @@
 # Its argument is the name of a formal, not evaluated, or `...` (whether no
 # argument fills it), which a call passes along as its elements.
 #| base::missing : (...: any) -> LGL1<>
+# The number of arguments of the call, and the number of elements of `...`.
+#| base::nargs : () -> INT1<>
+#| base::...length : () -> INT1<>
+# The formal arguments of a function (a pairlist), `NULL` for a primitive.
+#| base::formals : (fun:any?, envir:env?) -> { any }<> | null
 # The expression of an argument (a promise), or `expr` with the variables of
 # `env` substituted: a symbol, a call or a constant.
 #| base::substitute : (expr:any?, env:any?) -> any

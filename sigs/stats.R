@@ -45,3 +45,5 @@
 
 # The design matrix of a model, with the column of each term in `assign`.
 #| stats::model.matrix : (object:any, ...: any) -> DBL<> with { dim: INT, dimnames: list?, assign: INT, any }
+# A hierarchical clustering, from the methods of the classes that have one.
+#| stats::as.hclust : (x:any, ...: any) -> { merge: INT, height: DBL, order: INT, labels: CHR | null, method: CHR | null, call: any, dist.method: CHR | null, any }<hclust>
