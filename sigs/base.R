@@ -179,6 +179,13 @@
 
 #| base::($) : (x:{ #k:'a, any}, k: #k) -> 'a
 #| base::($<-) : (x:{ #k:any?, `r}<`c>, k: #k, v:'b) -> { #k:'b, `r}<`c>
+# Not declared (yet): `$` and `[[` of an environment (`e$x`, `e[["x"]]`), and
+# `$` of an element a list does not have, or of `NULL` (both `NULL` in R). As
+# separate overloads, each would add a case to the type of every definition
+# that projects a parameter (`x$k` on an unknown `x` would also be typed for
+# `x` an environment, or a list without `k`), and the absent element made
+# inference slower: on the dashboard's packages, it typed about 6 more
+# definitions, had 10 more timeouts and changed 183 signatures.
 
 # The default subsets drop the class (the classes whose methods keep it
 # overload them, cf. "S3 methods"), and so does `[[` of an atomic vector. A
@@ -892,6 +899,14 @@
 
 #| base::stop : (...: any) -> empty
 #| base::stopifnot : (...: any) -> null
+# TEMPORARY: S3 dispatch. `UseMethod` calls the method of the class of
+# `object` and returns its result from the generic, so the type of a generic
+# should be that of its methods (the union of their results). Until then,
+# dispatching gives `dyn`, as does `NextMethod` (the next method's result);
+# `.Generic` is the name of the generic, in a method.
+#| base::UseMethod : (generic:chr1, object:any?) -> dyn
+#| base::NextMethod : (generic:chr1|null?, object:any?, ...: any) -> dyn
+#| base::.Generic : dyn
 # Its argument is not evaluated: it is evaluated when the function exits.
 #| base::on.exit : (expr:any?, add:lgl1?, after:lgl1?) -> null
 # A warning (that the function is deprecated); returns `NULL` invisibly.
