@@ -47,7 +47,7 @@ module StrSet = Set.Make(String)
    the type (cf. [sigs_kind]). *)
 type t = { types : TyScheme.t Lazy.t VarMap.t ; kinds : kind Lazy.t VarMap.t ;
            senv : sigs VarMap.t ;
-           ns : Variable.t StrMap.t StrMap.t ;
+           ns : Variable.t StrMap.t StrMap.t ; self : string option ;
            ovl : (string * string) list ; bound : StrSet.t }
 
 let simplify_tl ty =
@@ -69,7 +69,7 @@ let initial =
         VarMap.add v (Lazy.from_val ts) types,
         VarMap.add v (lazy (kind_of_tyscheme ts)) kinds)
       (VarMap.empty, VarMap.empty) in
-  { types ; kinds ; senv=VarMap.empty ; ns=StrMap.empty ; ovl=[] ; bound=StrSet.empty }
+  { types ; kinds ; senv=VarMap.empty ; ns=StrMap.empty ; self=None ; ovl=[] ; bound=StrSet.empty }
 let get_sigs v senv =
   match VarMap.find_opt v senv with
   | None -> { base=[] ; methods=[] ; methods_default=[] ; symbolic=[] ; kind=KAny }
@@ -485,6 +485,9 @@ let ns_import ?names ?(except=[]) ns t =
   let imports = StrMap.find_opt imports_ns t.ns |> Option.value ~default:StrMap.empty in
   let imports = List.fold_left add imports names in
   { t with ns=StrMap.add imports_ns imports t.ns }
+
+let set_self name t = { t with self=Some name }
+let self t = t.self
 
 let search name t =
   List.find_map (fun ns -> ns_find ns name t) (imports_ns::search_path)

@@ -148,6 +148,10 @@ val ns_import : ?names:string list -> ?except:string list -> string -> t -> t
    The imports are a snapshot: [import(ns)] imports the names [ns] has at the
    time of the call. Call it after the signatures of [ns] are declared, and
    before the package is typed, in the order of the package's NAMESPACE. *)
+val set_self : string -> t -> t
+val self : t -> string option
+(* The name of the package being typed: its own [pkg::name] reaches its
+   top-level definitions (cf. [Scope.resolve_ns]). *)
 val search : string -> t -> Variable.t option
 (* [search name t] is the variable an unqualified [name] reaches when no
    top-level definition binds it: the one the package imports (cf.
