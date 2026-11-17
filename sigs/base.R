@@ -194,6 +194,9 @@
 #| base::([]) : (x:{'a}, ...: dbl|CHR) -> {'a}<>
 #| base::([]<-) : (x:v('a)<`c>, ...: dbl|CHR, v:v('a)) -> v('a)<`c>
 #| base::([]<-) : (x:{'a}<`c>, ...: dbl|CHR, v:{'a}) -> {'a}<`c>
+# `[` without method dispatch.
+#| base::.subset : (x:v('a), ...: dbl|CHR) -> v('a)<>
+#| base::.subset : (x:{'a}, ...: dbl|CHR) -> {'a}<>
 
 #| base::([[]]) : (x:v('a), ...: dbl|CHR) -> v1('a)<>
 #| base::([[]]) : (x:{'a}, ...: dbl) -> 'a
@@ -224,6 +227,7 @@
 
 #| base::names : (x:any) -> CHR<> | null
 #| base::names<- : (x:'a, v:chr|null) -> 'a
+#| base::rownames<- : (x:'a, v:vec|null) -> 'a
 
 # The attribute is selected by a literal name, so the label is polymorphic.
 #| base::attr : (x:any with { #k:'b, any }, which: #k, exact:lgl1?) -> 'b
@@ -279,6 +283,13 @@
 #| base::is.integer : (x:INT<~factor, ...>) -> tt<>
 #| base::is.integer : (x:~INT<~factor, ...>) -> ff<>
 #| base::is.unsorted : (x:any, na.rm:lgl1?, strictly:lgl1?) -> LGL1<>
+#| base::is.double : (x:DBL) -> tt<>
+#| base::is.double : (x:~DBL) -> ff<>
+# Like `dim`: whether the `dim` attribute is there, when the type says so.
+#| base::is.array : (x:any with { dim: any, any }) -> tt<>
+#|               && (x:any with { dim: absent, any }) -> ff<>
+#|               && (x:any) -> LGL1<>
+#| base::isNamespace : (ns:any) -> LGL1<>
 # Factors and the date and time classes are built on numbers, but are not
 # numeric for `is.numeric`: any other class keeps it `TRUE`.
 #| base::is.numeric : (x:(DBL|INT)<~factor, ~Date, ~POSIXt, ~difftime, ...>) -> tt<>
@@ -351,6 +362,15 @@
 #| base::pmatch : (x:vec1, table:vec|null, nomatch:vec1?, duplicates.ok:lgl1?) -> INT1<>
 #|             && (x:vec|null, table:vec|null, nomatch:vec1?, duplicates.ok:lgl1?) -> INT<>
 #| base::duplicated : (x:vec|list|null, incomparables:any?, ...: any) -> LGL<>
+# The position of the first duplicate, 0 when there is none.
+#| base::anyDuplicated : (x:vec|list|null, incomparables:any?, ...: any) -> INT1<>
+# `sort` and `order` are generic; `sort` keeps the class (e.g. of factors).
+#| base::sort : (x:v('a)<`c>, decreasing:lgl1?, ...: any) -> v('a)<`c>
+#| base::sort : (x:null, decreasing:lgl1?, ...: any) -> null
+#| base::order : (...: any, na.last:lgl1|null?, decreasing:lgl?, method:chr1?) -> INT<>
+# The elements of `x` for which `f` is true.
+#| base::Filter : (f:any, x:v('a)) -> v('a)
+#| base::Filter : (f:any, x:{'a}) -> {'a}
 # `unique` is generic: the default method restores the class of factors and
 # of the date and time classes, and drops the other attributes. A value of
 # another type may have a class with a method: its result is unknown.
@@ -587,6 +607,8 @@
 #|          && (...: dbl<`c>|null, na.rm:lgl1?) -> dbl1<`c>
 #| base::sum : (...: int|null, na.rm:lgl1?) -> INT1<>
 #|          && (...: dbl|null, na.rm:lgl1?) -> dbl1<>
+# Always a double (`prod(1:3)` is `6`, not `6L`).
+#| base::prod : (...: dbl|null, na.rm:lgl1?) -> DBL1<>
 # The parallel maxima and minima, elementwise; they keep the attributes of the
 # first argument.
 #| base::pmax : (...: int<`c>, na.rm:lgl1?) -> INT<`c>
@@ -635,6 +657,13 @@
 #|             && (x:chr, start:dbl, stop:dbl) -> CHR<>
 # `NULL` gives `character(0)`.
 #| base::toupper : (x:chr1) -> CHR1<>
+#| base::nzchar : (x:vec1, keepNA:lgl1?) -> LGL1<>
+#|             && (x:vec|null, keepNA:lgl1?) -> LGL<>
+#| base::abbreviate : (names.arg:chr|null, minlength:dbl1?, ...: any) -> CHR<>
+# Syntactically valid names (`unique = TRUE`: and distinct ones).
+#| base::make.names : (names:vec1, unique:lgl1?, allow_:lgl1?) -> CHR1<>
+#|                 && (names:vec|null, unique:lgl1?, allow_:lgl1?) -> CHR<>
+#| base::make.unique : (names:chr, sep:chr1?) -> CHR<>
 #|              && (x:chr|null) -> CHR<>
 #| base::tolower : (x:chr1) -> CHR1<>
 #|              && (x:chr|null) -> CHR<>
@@ -656,6 +685,8 @@
 #| base::deparse : (expr:any, width.cutoff:dbl1?, backtick:lgl1?, control:chr?, nlines:dbl1?) -> CHR<>
 #| base::format : (x:vec1, ...: any) -> CHR1<>
 #|             && (x:any, ...: any) -> CHR<>
+#| base::format.default : (x:vec1, ...: any) -> CHR1<>
+#|                     && (x:any, ...: any) -> CHR<>
 #| base::formatC : (x:vec1, ...: any) -> CHR1<>
 #|              && (x:any, ...: any) -> CHR<>
 #| base::strsplit : (x:chr, split:chr, fixed:lgl1?, perl:lgl1?) -> { CHR<> }<>
@@ -699,6 +730,9 @@
 #|              && (x:chr|date, ...: any) -> date
 #| base::as.POSIXct : (x:chr1, ...: any) -> posixct1
 #|                 && (x:chr|posixct, ...: any) -> posixct
+# The list-based date-times, with the components (`sec`, `min`, ...) as
+# elements.
+#| base::as.POSIXlt : (x:any, tz:chr1?, ...: any) -> { any }<POSIXlt, POSIXt>
 #| base::difftime : (time1:date1|posixct1, time2:date1|posixct1, tz:chr1?, units:chr1?) -> difftime1
 #|               && (time1:date|posixct, time2:date|posixct, tz:chr1?, units:chr1?) -> difftime
 #| base::as.difftime : (tim:dbl1, format:chr1?, units:chr1?, tz:chr1?) -> difftime1
@@ -709,6 +743,10 @@
 # one: its methods keep it, whichever it is.
 #| base::factor : (x:vec|null?, levels:vec?, labels:chr?, ordered:ff?, ...: any) -> INT<factor> with { levels: CHR, any }
 #| base::factor : (x:vec|null?, levels:vec?, labels:chr?, ordered:tt, ...: any) -> INT<ordered, factor> with { levels: CHR, any }
+# `I` marks a value to be used as is (e.g. a column of a data frame), adding
+# the `AsIs` class before its others.
+#| base::I : (x:v('a)<`c>) -> v('a)<AsIs, `c>
+#| base::I : (x:{'a}<`c>) -> {'a}<AsIs, `c>
 #| base::levels : (x:<factor, ...> with { levels: 'l, any }) -> 'l
 #|             && (x:any) -> CHR<> | null
 #| base::nlevels : (x:any) -> INT1<>
@@ -890,6 +928,9 @@
 # The kinds of random number generators in use (before the change).
 #| base::RNGkind : (kind:chr1|null?, normal.kind:chr1|null?, sample.kind:chr1|null?) -> CHR<>
 #| base::get : (x:chr1, ...: any) -> any
+# An exported object of a namespace (`pkg::name`), of which the type says
+# nothing.
+#| base::getExportedValue : (ns:chr1|env, name:chr1) -> dyn
 
 #| base::.Platform : { OS.type: CHR1, file.sep: CHR1, path.sep: CHR1, GUI: CHR1, any }<>
 #| base::.Machine : { integer.max: INT1, double.eps: DBL1, double.xmax: DBL1, sizeof.pointer: INT1, any }<>
@@ -911,6 +952,9 @@
 #| base::on.exit : (expr:any?, add:lgl1?, after:lgl1?) -> null
 # A warning (that the function is deprecated); returns `NULL` invisibly.
 #| base::.Deprecated : (new:chr1?, package:chr1|null?, msg:chr1?, old:chr1?) -> null
+# The value of `expr`, or the result of the handler (in `...`) of the
+# condition it signals, which the type does not say.
+#| base::tryCatch : (expr:any?, ...: any, finally:any?) -> dyn
 # A call or a symbol, built from a list (the function, then the arguments)
 # and from a string. The algebra has no type for them.
 #| base::as.call : (x:list) -> any
