@@ -54,9 +54,19 @@ let unresolved ?(search=true) str t =
     | Some v -> v
     | None -> MVariable.create Immut (Some str)
 
-(* [ns::name] does not depend on the scope: a name no signature has been
-   declared for is unbound, just like an unknown top-level name. *)
+(* [ns::name] is a top-level definition of the package when [ns] is the
+   package itself (cf. [MetaEnv.self]), and otherwise does not depend on the
+   scope: a name no signature has been declared for is unbound, just like an
+   unknown top-level name. *)
 let resolve_ns ns name t =
+  match MetaEnv.self t.tenv with
+  | Some self when String.equal self ns ->
+    (* The package's own [pkg::name]: its top-level definition. *)
+    begin match List.rev t.envs with
+    | tl::_ when StrMap.mem name tl -> StrMap.find name tl |> snd
+    | _ -> MVariable.create Immut (Some (ns^"::"^name))
+    end
+  | _ ->
   match MetaEnv.ns_find ns name t.tenv with
   | Some v -> v
   | None -> MVariable.create Immut (Some (ns^"::"^name))

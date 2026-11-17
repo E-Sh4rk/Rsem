@@ -47,7 +47,7 @@ module StrSet = Set.Make(String)
    the type (cf. [sigs_kind]). *)
 type t = { types : TyScheme.t Lazy.t VarMap.t ; kinds : kind Lazy.t VarMap.t ;
            senv : sigs VarMap.t ;
-           ns : Variable.t StrMap.t StrMap.t ;
+           ns : Variable.t StrMap.t StrMap.t ; self : string option ;
            ovl : (string * string) list ; bound : StrSet.t }
 
 let simplify_tl ty =
@@ -69,7 +69,7 @@ let initial =
         VarMap.add v (Lazy.from_val ts) types,
         VarMap.add v (lazy (kind_of_tyscheme ts)) kinds)
       (VarMap.empty, VarMap.empty) in
-  { types ; kinds ; senv=VarMap.empty ; ns=StrMap.empty ; ovl=[] ; bound=StrSet.empty }
+  { types ; kinds ; senv=VarMap.empty ; ns=StrMap.empty ; self=None ; ovl=[] ; bound=StrSet.empty }
 let get_sigs v senv =
   match VarMap.find_opt v senv with
   | None -> { base=[] ; methods=[] ; methods_default=[] ; symbolic=[] ; kind=KAny }
@@ -463,4 +463,31 @@ let ns_add_signature ns name s t =
 (* The packages R attaches by default, in the order of its search path. *)
 let search_path = ["stats"; "graphics"; "grDevices"; "utils"; "datasets"; "methods"; "base"]
 
-let search name t = List.find_map (fun ns -> ns_find ns name t) search_path
+(* The imports of the package being typed, as R's imports environment: a
+   namespace no R code can name, searched first (cf. [search]). *)
+let imports_ns = "<imports>"
+
+let ns_import ?names ?(except=[]) ns t =
+  let names = match names with
+    | Some names -> names
+    | None ->
+      StrMap.find_opt ns t.ns |> Option.value ~default:StrMap.empty
+      |> StrMap.bindings |> List.map fst
+  in
+  let names = List.filter (fun name -> not (List.mem name except)) names in
+  let add imports name =
+    let v = match ns_find ns name t with
+      | Some v -> v
+      | None -> Mlsem.Lang.MVariable.create Immut (Some (ns^"::"^name))
+    in
+    StrMap.add name v imports
+  in
+  let imports = StrMap.find_opt imports_ns t.ns |> Option.value ~default:StrMap.empty in
+  let imports = List.fold_left add imports names in
+  { t with ns=StrMap.add imports_ns imports t.ns }
+
+let set_self name t = { t with self=Some name }
+let self t = t.self
+
+let search name t =
+  List.find_map (fun ns -> ns_find ns name t) (imports_ns::search_path)
