@@ -137,7 +137,14 @@ val ns_find : string -> string -> t -> Variable.t option
 val ns_add_signature : string -> string -> signature -> t -> t
 (* [ns_add_signature ns name s t] declares [s] as a signature of [ns::name], in
    addition to the ones it already has. *)
+type import =
+  | Import of string * string list  (* [import(ns, except = ...)] *)
+  | ImportFrom of string * string list  (* [importFrom(ns, names...)] *)
+val set_imports : import list -> t -> t
+(* [set_imports imports t] sets the imports of the package being typed, in the
+   order of its NAMESPACE file. *)
 val search : string -> t -> Variable.t option
 (* [search name t] is the variable an unqualified [name] reaches when no
-   top-level definition binds it: the one of the first namespace of R's default
+   top-level definition binds it: the one of the last import that provides it
+   (cf. [set_imports]), or else the one of the first namespace of R's default
    search path (which ends with [base]) that declares [name]. *)

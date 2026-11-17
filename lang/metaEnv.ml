@@ -45,9 +45,11 @@ module StrSet = Set.Make(String)
    [kinds] maps each variable to whether its type is known to be a function or
    a non-function: it is kept apart, so that it can be known without forcing
    the type (cf. [sigs_kind]). *)
+type import = Import of string * string list | ImportFrom of string * string list
+
 type t = { types : TyScheme.t Lazy.t VarMap.t ; kinds : kind Lazy.t VarMap.t ;
            senv : sigs VarMap.t ;
-           ns : Variable.t StrMap.t StrMap.t ;
+           ns : Variable.t StrMap.t StrMap.t ; imports : import list ;
            ovl : (string * string) list ; bound : StrSet.t }
 
 let simplify_tl ty =
@@ -69,7 +71,7 @@ let initial =
         VarMap.add v (Lazy.from_val ts) types,
         VarMap.add v (lazy (kind_of_tyscheme ts)) kinds)
       (VarMap.empty, VarMap.empty) in
-  { types ; kinds ; senv=VarMap.empty ; ns=StrMap.empty ; ovl=[] ; bound=StrSet.empty }
+  { types ; kinds ; senv=VarMap.empty ; ns=StrMap.empty ; imports=[] ; ovl=[] ; bound=StrSet.empty }
 let get_sigs v senv =
   match VarMap.find_opt v senv with
   | None -> { base=[] ; methods=[] ; methods_default=[] ; symbolic=[] ; kind=KAny }
@@ -463,4 +465,20 @@ let ns_add_signature ns name s t =
 (* The packages R attaches by default, in the order of its search path. *)
 let search_path = ["stats"; "graphics"; "grDevices"; "utils"; "datasets"; "methods"; "base"]
 
-let search name t = List.find_map (fun ns -> ns_find ns name t) search_path
+let set_imports imports t = { t with imports }
+
+(* As in R, the imports come first, the last one that provides [name] winning.
+   A name imported by name is never looked up further: without a signature, it
+   is the unbound [ns::name]. *)
+let search name t =
+  let from_import = function
+    | Import (ns, except) -> if List.mem name except then None else ns_find ns name t
+    | ImportFrom (ns, names) ->
+      if not (List.mem name names) then None
+      else match ns_find ns name t with
+        | Some v -> Some v
+        | None -> Some (Mlsem.Lang.MVariable.create Immut (Some (ns^"::"^name)))
+  in
+  match List.find_map from_import (List.rev t.imports) with
+  | Some v -> Some v
+  | None -> List.find_map (fun ns -> ns_find ns name t) search_path
