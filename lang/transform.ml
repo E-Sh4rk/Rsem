@@ -339,7 +339,24 @@ let to_mlsem (cfg:cfg) e =
           | Ell, _ -> failwith "Unsupported argument after an ellipsis."
           end
       in
-      let (pos,named,ell,args) = parse_args args in
+      (* Named arguments match by name: they are moved between the positional
+         arguments and the ellipsis, the order [parse_args] expects. *)
+      let reorder args =
+        let rec split seen_ell args =
+          match args with
+          | [] -> [],[],[]
+          | ((MetaEnv.Positional, _) as a)::args ->
+            if seen_ell then failwith "Unsupported positional argument after an ellipsis." ;
+            let (p,n,e) = split seen_ell args in (a::p,n,e)
+          | ((MetaEnv.Named _, _) as a)::args ->
+            let (p,n,e) = split seen_ell args in (p,a::n,e)
+          | ((MetaEnv.Ell, _) as a)::args ->
+            if seen_ell then failwith "Unsupported argument after an ellipsis." ;
+            let (p,n,e) = split true args in (p,n,a::e)
+        in
+        let (p,n,e) = split false args in p @ n @ e
+      in
+      let (pos,named,ell,args) = parse_args (reorder args) in
       let es = args |> List.map snd |> List.map aux in
       (* Arg def is not generalized because it makes the Alt encoding slower. *)
       let arg_def = Eid.unique (), A.Constructor
