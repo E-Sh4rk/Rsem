@@ -268,6 +268,10 @@
 #|            && (x:any) -> LGL<>
 #| base::is.character : (x:CHR) -> tt<>
 #| base::is.character : (x:~CHR) -> ff<>
+# A factor is not an integer vector for `is.integer`.
+#| base::is.integer : (x:INT<~factor, ...>) -> tt<>
+#| base::is.integer : (x:~INT<~factor, ...>) -> ff<>
+#| base::is.unsorted : (x:any, na.rm:lgl1?, strictly:lgl1?) -> LGL1<>
 # Factors and the date and time classes are built on numbers, but are not
 # numeric for `is.numeric`: any other class keeps it `TRUE`.
 #| base::is.numeric : (x:(DBL|INT)<~factor, ~Date, ~POSIXt, ~difftime, ...>) -> tt<>
@@ -335,6 +339,11 @@
 # for the missing ones).
 #| base::match : (x:vec1, table:vec|null, nomatch:vec1?, incomparables:any?, ...: any) -> INT1<>
 #|            && (x:vec|null, table:vec|null, nomatch:vec1?, incomparables:any?, ...: any) -> INT<>
+# Partial matching: the position of the element of `table` that `x` is a
+# prefix of.
+#| base::pmatch : (x:vec1, table:vec|null, nomatch:vec1?, duplicates.ok:lgl1?) -> INT1<>
+#|             && (x:vec|null, table:vec|null, nomatch:vec1?, duplicates.ok:lgl1?) -> INT<>
+#| base::duplicated : (x:vec|list|null, incomparables:any?, ...: any) -> LGL<>
 # `unique` is generic: the default method restores the class of factors and
 # of the date and time classes, and drops the other attributes. A value of
 # another type may have a class with a method: its result is unknown.
@@ -343,6 +352,10 @@
 #| base::unique : (x:{'a}<`c>, incomparables:any?, ...: any) -> {'a}<`c>
 #| base::unique : (x:null, incomparables:any?, ...: any) -> null
 #| base::seq_len : (length.out:dbl1) -> INT<>
+# The number of rows (columns) of a matrix or a data frame, and the length
+# (1) of a vector.
+#| base::NROW : (x:any) -> INT1<>
+#| base::NCOL : (x:any) -> INT1<>
 # `seq` is generic: its methods (for dates, ...) keep the class. A single
 # `from` of length other than 1 is `seq_along(from)`. `to` and `by` must have
 # length 1, but are vectors here: `x[1L]`, their usual source, is not a scalar
@@ -421,9 +434,12 @@
 #|              && (x:v('a), y:vec|null) -> v('a)<>
 #| base::setdiff : (x:null, y:vec|null) -> null
 
-# Factors are the only class `unlist` keeps.
-#| base::unlist : (x:{v('a)<~factor, ...>}) -> v('a)<>
-#|             && (x:{v('a)}) -> v('a)
+# Factors are the only class `unlist` keeps. A vector is returned as it is,
+# and `NULL` (as is the empty list) is `NULL`.
+#| base::unlist : (x:{v('a)<~factor, ...>}, recursive:lgl1?, use.names:lgl1?) -> v('a)<>
+#|             && (x:{v('a)}, recursive:lgl1?, use.names:lgl1?) -> v('a)
+#| base::unlist : (x:v('a), recursive:lgl1?, use.names:lgl1?) -> v('a)
+#| base::unlist : (x:null, recursive:lgl1?, use.names:lgl1?) -> null
 
 #| base::(:) : ( from:int, to:dbl ) -> INT<>
 #|          && ( from:dbl, to:dbl ) -> (INT|DBL)<>
@@ -449,6 +465,13 @@
 # The sums of the columns (or rows) of a matrix or a data frame, named after
 # them.
 #| base::colSums : (x:any, na.rm:lgl1?, dims:dbl1?) -> DBL<>
+#| base::colnames : (x:any, do.NULL:lgl1?, prefix:chr1?) -> CHR<> | null
+# The row of each element of a matrix, as a matrix.
+#| base::row : (x:any, as.factor:ff?) -> INT<> with { dim: INT, any }
+# The transpose: a vector is a one-row matrix. `t` is generic: a data frame
+# gives a matrix (of the mode of its columns).
+#| base::t : (x:v('a)) -> v('a)<> with { dim: INT, dimnames: list?, any }
+#|        && (x:any) -> any with { dim: INT, dimnames: list?, any }
 #| base::rowSums : (x:any, na.rm:lgl1?, dims:dbl1?) -> DBL<>
 
 # The vectors as the columns of a matrix (`NULL`s are dropped), of the mode of
@@ -474,10 +497,14 @@
 # to only accept values without class.
 #| base::lapply : (X:v('a)<`c>, FUN:@(v1('a)<`c>, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}<>
 #| base::lapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> 'b, ...: `r) -> {'b}<>
+# Of `NULL`, the empty list (`FUN` is not called).
+#| base::lapply : (X:null, FUN:any, ...: any) -> { }<>
 
 #| base::vapply : (X:v('a)<>, FUN:@(v1('a)<>, X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<>
 #|             && (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<>
 #| base::vapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, FUN.VALUE:absent, ...: `r) -> v1('b), FUN.VALUE:v1('b), ...: `r) -> v('b)<>
+# Of `NULL`, an empty vector of the type of `FUN.VALUE` (`FUN` is not called).
+#| base::vapply : (X:null, FUN:any, FUN.VALUE:v1('b), ...: any) -> v('b)<>
 
 # `sapply` simplifies the result to a vector when `FUN` returns a scalar, and
 # to a matrix or a list otherwise.
@@ -553,6 +580,16 @@
 #|          && (...: dbl<`c>|null, na.rm:lgl1?) -> dbl1<`c>
 #| base::sum : (...: int|null, na.rm:lgl1?) -> INT1<>
 #|          && (...: dbl|null, na.rm:lgl1?) -> dbl1<>
+# The parallel maxima and minima, elementwise; they keep the attributes of the
+# first argument.
+#| base::pmax : (...: int<`c>, na.rm:lgl1?) -> INT<`c>
+#|           && (...: dbl<`c>, na.rm:lgl1?) -> dbl<`c>
+#| base::pmin : (...: int<`c>, na.rm:lgl1?) -> INT<`c>
+#|           && (...: dbl<`c>, na.rm:lgl1?) -> dbl<`c>
+# The lagged differences, of the mode of `x` (a logical gives an integer). It
+# is generic: the difference of dates is a `difftime`.
+#| base::diff : (x:(v('a)&dbl)<>, lag:dbl1?, differences:dbl1?, ...: any) -> (v('a)&(dbl\lgl) | INT)<>
+#|           && (x:any, lag:dbl1?, differences:dbl1?, ...: any) -> any
 # The minimum and the maximum, a vector of length 2 (which the algebra cannot
 # say), of the mode of the arguments.
 #| base::range : (...: int, na.rm:lgl1?, finite:lgl1?) -> INT
@@ -606,6 +643,8 @@
 # `sprintf` of the translated `fmt`.
 #| base::gettextf : (fmt:chr1, ...: vec1, domain:any?, trim:lgl1?) -> CHR1<>
 #|               && (fmt:chr, ...: any, domain:any?, trim:lgl1?) -> CHR<>
+# The singular or the plural message, depending on `n`.
+#| base::ngettext : (n:dbl1, msg1:chr1, msg2:chr1, domain:any?) -> CHR1<>
 # The lines of the source of an expression.
 #| base::deparse : (expr:any, width.cutoff:dbl1?, backtick:lgl1?, control:chr?, nlines:dbl1?) -> CHR<>
 #| base::format : (x:vec1, ...: any) -> CHR1<>
@@ -622,6 +661,9 @@
 
 #| base::grepl : (pattern:chr1, x:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> LGL1<>
 #|            && (pattern:chr1, x:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> LGL<>
+# The positions of the matches, or the matching elements with `value = TRUE`.
+#| base::grep : (pattern:chr1, x:chr|null, ignore.case:lgl1?, perl:lgl1?, value:ff?, fixed:lgl1?, useBytes:lgl1?, invert:lgl1?) -> INT<>
+#| base::grep : (pattern:chr1, x:chr|null, ignore.case:lgl1?, perl:lgl1?, value:tt, fixed:lgl1?, useBytes:lgl1?, invert:lgl1?) -> CHR<>
 #| base::sub : (pattern:chr1, replacement:chr1, x:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> CHR1<>
 #|          && (pattern:chr1, replacement:chr1, x:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> CHR<>
 #| base::gsub : (pattern:chr1, replacement:chr1, x:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> CHR1<>
@@ -782,6 +824,11 @@
 #| base::cat : ( ...: any, file:any?, sep:chr?, fill:any?, labels:chr?, append:lgl1? ) -> null
 #| base::sink : ( file:any?, append:lgl1?, type:chr1?, split:lgl1? ) -> null
 #| base::close : ( con:<connection, ...>, ...: any ) -> null
+# A file connection (its `conn_id` is an external pointer).
+#| base::file : ( description:chr1?, open:chr1?, ...: any ) -> INT1<file, connection>
+#| base::isOpen : ( con:<connection, ...>, rw:chr1? ) -> LGL1<>
+#| base::writeLines : ( text:chr?, con:(<connection, ...>)?, sep:chr1?, useBytes:lgl1? ) -> null
+#| base::sink.number : ( type:chr1? ) -> INT1<>
 #| base::message : ( ...: any, domain:any?, appendLF:lgl1? ) -> null
 
 # ========== Session and environment ==========
@@ -799,6 +846,16 @@
 #| base::capabilities : (what:chr?, ...: any) -> LGL<>
 #| base::tempdir : (check:lgl1?) -> CHR1<>
 #| base::tempfile : (pattern:chr?, tmpdir:chr?, fileext:chr?) -> CHR<>
+# 0 for success, 1 for failure.
+#| base::unlink : (x:chr, recursive:lgl1?, force:lgl1?, expand:lgl1?) -> INT1<>
+# The path of a file of an installed package, `""` when it is not found.
+#| base::system.file : (...: chr1, package:chr1?, lib.loc:chr|null?, mustWork:lgl1?) -> CHR1<>
+#|                  && (...: chr, package:chr1?, lib.loc:chr|null?, mustWork:lgl1?) -> CHR<>
+# Named: `sysname`, `release`, `user`, ...
+#| base::Sys.info : () -> CHR<> with { names: CHR, any }
+# The paths of the executables (`""` when not found), named after them.
+#| base::Sys.which : (names:chr1) -> CHR1<>
+#|                && (names:chr) -> CHR<>
 #| base::getwd : () -> CHR1<>
 # Whether the directory was created (with a warning when it was not).
 #| base::dir.create : (path:chr, showWarnings:lgl1?, recursive:lgl1?, mode:any?) -> LGL1<>
@@ -835,6 +892,18 @@
 
 #| base::stop : (...: any) -> empty
 #| base::stopifnot : (...: any) -> null
+# Its argument is not evaluated: it is evaluated when the function exits.
+#| base::on.exit : (expr:any?, add:lgl1?, after:lgl1?) -> null
+# A warning (that the function is deprecated); returns `NULL` invisibly.
+#| base::.Deprecated : (new:chr1?, package:chr1|null?, msg:chr1?, old:chr1?) -> null
+# A call or a symbol, built from a list (the function, then the arguments)
+# and from a string. The algebra has no type for them.
+#| base::as.call : (x:list) -> any
+#| base::as.symbol : (x:chr1) -> any
+# Folds `f` over `x`, from the left (or the right), starting from `init` (or
+# from the first element). Without `init`, the empty `x` gives `NULL`; with
+# `accumulate = TRUE`, the result is a list of the intermediate values.
+#| base::Reduce : (f:any, x:any, init:any?, right:lgl1?, accumulate:lgl1?, simplify:lgl1?) -> any
 # One of the choices (several with `several.ok = TRUE`). The default
 # `choices` are the caller's formals, which a signature cannot see.
 #| base::match.arg : (arg:chr|null, choices:chr?, several.ok:ff?) -> CHR1<>

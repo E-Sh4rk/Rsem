@@ -47,3 +47,16 @@
 #| stats::model.matrix : (object:any, ...: any) -> DBL<> with { dim: INT, dimnames: list?, assign: INT, any }
 # A hierarchical clustering, from the methods of the classes that have one.
 #| stats::as.hclust : (x:any, ...: any) -> { merge: INT, height: DBL, order: INT, labels: CHR | null, method: CHR | null, call: any, dist.method: CHR | null, any }<hclust>
+
+# The generics of models. `coef` gives the coefficients (a matrix for several
+# responses), `vcov` their covariance matrix.
+#| stats::coef : (object:any, ...: any) -> DBL<>
+#| stats::vcov : (object:any, ...: any) -> DBL<> with { dim: INT, dimnames: list?, any }
+# `x` with the omitted cases (`na.action` of class `exclude`) put back as
+# `NA`; without them (`NULL`), `x` itself.
+#| stats::naresid : (omit:any, x:'a, ...: any) -> 'a
+
+# ========== Distributions ==========
+
+#| stats::qnorm : (p:dbl1, mean:dbl1?, sd:dbl1?, lower.tail:lgl1?, log.p:lgl1?) -> DBL1<>
+#|             && (p:dbl, mean:dbl?, sd:dbl?, lower.tail:lgl1?, log.p:lgl1?) -> DBL<>
