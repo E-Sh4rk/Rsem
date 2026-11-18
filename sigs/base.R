@@ -228,6 +228,7 @@
 #| base::names : (x:any) -> CHR<> | null
 #| base::names<- : (x:'a, v:chr|null) -> 'a
 #| base::rownames<- : (x:'a, v:vec|null) -> 'a
+#| base::colnames<- : (x:'a, v:vec|null) -> 'a
 
 # The attribute is selected by a literal name, so the label is polymorphic.
 #| base::attr : (x:any with { #k:'b, any }, which: #k, exact:lgl1?) -> 'b
@@ -260,6 +261,10 @@
 #| base::dimnames : (x:any with { dimnames: 'd, any }) -> 'd
 #|               && (x:any with { dimnames: absent, any }) -> null
 #|               && (x:any) -> { CHR<> | null }<> | null
+# Setting the dimnames to `NULL` removes them. On a data frame (a method), they
+# set the row names and the names instead.
+#| base::dimnames<- : (x:'a<`c> with { dimnames: any?, `r }, v:list & 'b) -> 'a<`c> with { dimnames: 'b, `r }
+#| base::dimnames<- : (x:'a<`c> with { dimnames: any?, `r }, v:null) -> 'a<`c> with { dimnames: absent, `r }
 
 # ========== Types and predicates ==========
 
@@ -277,6 +282,9 @@
 #| base::is.null : (x:~null) -> ff<>
 #| base::is.na : (x:vec1) -> LGL1<>
 #|            && (x:any) -> LGL<>
+# Whether an element is `NA` (with `recursive = TRUE`, in the elements of the
+# lists too).
+#| base::anyNA : (x:any, recursive:lgl1?) -> LGL1<>
 #| base::is.character : (x:CHR) -> tt<>
 #| base::is.character : (x:~CHR) -> ff<>
 # A factor is not an integer vector for `is.integer`.
@@ -353,6 +361,8 @@
 #| base::rev : (x:{'a}) -> {'a}
 #| base::rev : (x:null) -> null
 #| base::seq_along : (along.with:any) -> INT<>
+# The length of each element (named after them).
+#| base::lengths : (x:any, use.names:lgl1?) -> INT<>
 # The positions of the elements of `x` in `table` (`nomatch`, `NA` by default,
 # for the missing ones).
 #| base::match : (x:vec1, table:vec|null, nomatch:vec1?, incomparables:any?, ...: any) -> INT1<>
@@ -495,6 +505,8 @@
 #| base::colnames : (x:any, do.NULL:lgl1?, prefix:chr1?) -> CHR<> | null
 # The row of each element of a matrix, as a matrix.
 #| base::row : (x:any, as.factor:ff?) -> INT<> with { dim: INT, any }
+#| base::col : (x:any, as.factor:ff?) -> INT<> with { dim: INT, any }
+#| base::rownames : (x:any, do.NULL:lgl1?, prefix:chr1?) -> CHR<> | null
 # The transpose: a vector is a one-row matrix. `t` is generic: a data frame
 # gives a matrix (of the mode of its columns).
 #| base::t : (x:v('a)) -> v('a)<> with { dim: INT, dimnames: list?, any }
@@ -539,6 +551,14 @@
 #|             && (X:v('a), FUN:@(v1('a), X:absent, FUN:absent, ...: `r) -> any, ...: `r) -> any
 #| base::sapply : (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> v1('b), ...: `r) -> v('b)<>
 #|             && (X:{'a}, FUN:@('a, X:absent, FUN:absent, ...: `r) -> any, ...: `r) -> any
+
+# `FUN` applied to the rows (`MARGIN = 1`) or the columns (2) of a matrix, the
+# results simplified as by `sapply`.
+#| base::apply : (X:any, MARGIN:dbl|chr, FUN:any, ...: any, simplify:lgl1?) -> any
+# `FUN` applied to the elements of the arguments in parallel. The results are
+# simplified as by `sapply`, unless `SIMPLIFY = FALSE`: then it is a list.
+#| base::mapply : (FUN:any, ...: any, MoreArgs:list|null?, SIMPLIFY:lgl1?, USE.NAMES:lgl1?) -> any
+#|             && (FUN:any, ...: any, MoreArgs:list|null?, SIMPLIFY:ff, USE.NAMES:lgl1?) -> { any }<>
 
 # Drawing one element gives a scalar; the size being a literal, the singleton
 # type of the argument is enough to say so. A single number `n` (at least 1)
@@ -674,6 +694,12 @@
 # Quotes each element of `x` (after `as.character`).
 #| base::sQuote : (x:vec1, q:any?) -> CHR1<>
 #|             && (x:any, q:any?) -> CHR<>
+#| base::dQuote : (x:vec1, q:any?) -> CHR1<>
+#|             && (x:any, q:any?) -> CHR<>
+# The paragraphs of `x` broken into lines of at most `width` characters: a
+# vector of the lines, or a list of them per element with `simplify = FALSE`.
+#| base::strwrap : (x:any, width:dbl1?, indent:dbl1?, exdent:dbl1?, prefix:chr1?, simplify:tt?, initial:chr1?) -> CHR<>
+#| base::strwrap : (x:any, width:dbl1?, indent:dbl1?, exdent:dbl1?, prefix:chr1?, simplify:ff, initial:chr1?) -> { CHR<> }<>
 #| base::sprintf : (fmt:chr1, ...: vec1) -> CHR1<>
 #|              && (fmt:chr, ...: any) -> CHR<>
 # `sprintf` of the translated `fmt`.
@@ -868,6 +894,7 @@
 #| base::write : ( x:any, file:(<connection, ...>|chr1)? ) -> null
 #| base::cat : ( ...: any, file:any?, sep:chr?, fill:any?, labels:chr?, append:lgl1? ) -> null
 #| base::sink : ( file:any?, append:lgl1?, type:chr1?, split:lgl1? ) -> null
+#| base::open : ( con:<connection, ...>, ...: any ) -> null
 #| base::close : ( con:<connection, ...>, ...: any ) -> null
 # A file connection (its `conn_id` is an external pointer).
 #| base::file : ( description:chr1?, open:chr1?, ...: any ) -> INT1<file, connection>
@@ -928,6 +955,8 @@
 # The kinds of random number generators in use (before the change).
 #| base::RNGkind : (kind:chr1|null?, normal.kind:chr1|null?, sample.kind:chr1|null?) -> CHR<>
 #| base::get : (x:chr1, ...: any) -> any
+# Like `get`, with `ifnotfound` (`NULL` by default) when there is no binding.
+#| base::get0 : (x:chr1, envir:any?, mode:chr1?, inherits:lgl1?, ifnotfound:any?) -> any
 # An exported object of a namespace (`pkg::name`), of which the type says
 # nothing.
 #| base::getExportedValue : (ns:chr1|env, name:chr1) -> dyn
@@ -944,17 +973,26 @@
 # `object` and returns its result from the generic, so the type of a generic
 # should be that of its methods (the union of their results). Until then,
 # dispatching gives `dyn`, as does `NextMethod` (the next method's result);
-# `.Generic` is the name of the generic, in a method.
+# `.Generic` is the name of the generic, in a method, `.Class` the classes
+# after the one of the method (with the classes already dispatched on as its
+# `previous` attribute), and `.Method` the names of the methods (in the `Ops`
+# group, one per operand).
 #| base::UseMethod : (generic:chr1, object:any?) -> dyn
 #| base::NextMethod : (generic:chr1|null?, object:any?, ...: any) -> dyn
 #| base::.Generic : dyn
+#| base::.Class : dyn
+#| base::.Method : dyn
 # Its argument is not evaluated: it is evaluated when the function exits.
 #| base::on.exit : (expr:any?, add:lgl1?, after:lgl1?) -> null
 # A warning (that the function is deprecated); returns `NULL` invisibly.
 #| base::.Deprecated : (new:chr1?, package:chr1|null?, msg:chr1?, old:chr1?) -> null
+# Signals a condition, and returns `NULL` when no handler takes it.
+#| base::signalCondition : (cond:any, message:any?, call:any?) -> null
+# The value of `expr` in `envir`: an expression whose type is not known.
+#| base::eval : (expr:any, envir:any?, enclos:any?) -> dyn
 # The value of `expr`, or the result of the handler (in `...`) of the
 # condition it signals, which the type does not say.
-#| base::tryCatch : (expr:any?, ...: any, finally:any?) -> dyn
+#| base::tryCatch : (expr:any, ...: any, finally:any?) -> dyn
 # A call or a symbol, built from a list (the function, then the arguments)
 # and from a string. The algebra has no type for them.
 #| base::as.call : (x:list) -> any
@@ -989,3 +1027,17 @@
 #| base::do.call : (what:any, args:{ any }, quote:lgl1?, envir:env?) -> any
 # Returns the message (invisibly), unless the warning is turned into an error.
 #| base::warning : (...: any) -> CHR1<>
+
+# ========== Other attached packages ==========
+
+# The functions of `methods` and `graphics`, which R attaches at startup:
+# their names are looked up after those of `stats` (cf. `search_path` in
+# lang/metaEnv.ml).
+
+# Whether `object` is of the class `class2`, or, without it, the classes
+# `object` is (and extends).
+#| methods::is : (object:any, class2:chr1) -> LGL1<>
+#| methods::is : (object:any, class2:absent) -> CHR<>
+# The graphical parameters: the previous values of the ones that are set (a
+# list, invisibly), or the value of the one that is queried.
+#| graphics::par : (...: any, no.readonly:lgl1?) -> any

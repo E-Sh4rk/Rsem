@@ -23,6 +23,11 @@
 # methods of other classes (e.g. zoo's) give other types.
 #| stats::time : (x:<ts, ...>, ...: any) -> DBL<ts> with { tsp: DBL, any }
 #|             && (x:any, ...: any) -> any
+# `as.ts` is generic. The default method makes a vector a time series, and
+# returns a time series unchanged; the methods of other classes (e.g. zoo's)
+# give time series as well.
+#| stats::as.ts : (x:(v('a)&dbl)<>, ...: any) -> v('a)<ts> with { tsp: DBL, any }
+#|             && (x:any, ...: any) -> <ts, ...> with { tsp: DBL, any }
 
 # The arithmetic of time series keeps their class (when both operands are
 # time series, it is computed on the intersection of their windows). As the
@@ -60,3 +65,7 @@
 
 #| stats::qnorm : (p:dbl1, mean:dbl1?, sd:dbl1?, lower.tail:lgl1?, log.p:lgl1?) -> DBL1<>
 #|             && (p:dbl, mean:dbl?, sd:dbl?, lower.tail:lgl1?, log.p:lgl1?) -> DBL<>
+# The residuals and the weights of a fitted model (the weights are `NULL` for
+# an unweighted one); both are generic.
+#| stats::residuals : (object:any, ...: any) -> DBL<>
+#| stats::weights : (object:any, ...: any) -> DBL<> | null
