@@ -677,6 +677,7 @@
 #|             && (x:chr, start:dbl, stop:dbl) -> CHR<>
 # `NULL` gives `character(0)`.
 #| base::toupper : (x:chr1) -> CHR1<>
+#|              && (x:chr|null) -> CHR<>
 #| base::nzchar : (x:vec1, keepNA:lgl1?) -> LGL1<>
 #|             && (x:vec|null, keepNA:lgl1?) -> LGL<>
 #| base::abbreviate : (names.arg:chr|null, minlength:dbl1?, ...: any) -> CHR<>
@@ -684,7 +685,6 @@
 #| base::make.names : (names:vec1, unique:lgl1?, allow_:lgl1?) -> CHR1<>
 #|                 && (names:vec|null, unique:lgl1?, allow_:lgl1?) -> CHR<>
 #| base::make.unique : (names:chr, sep:chr1?) -> CHR<>
-#|              && (x:chr|null) -> CHR<>
 #| base::tolower : (x:chr1) -> CHR1<>
 #|              && (x:chr|null) -> CHR<>
 #| base::enc2utf8 : (x:chr1) -> CHR1<>
