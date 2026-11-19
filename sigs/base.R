@@ -246,8 +246,10 @@
 
 # The attribute is selected by a literal name, so the label is polymorphic.
 #| base::attr : (x:any with { #k:'b, any }, which: #k, exact:lgl1?) -> 'b
-# An attribute that may be missing: `NULL` when it is.
-#| base::attr : (x:any with { #k:'b?, any }, which: #k, exact:lgl1?) -> 'b | null
+# Not declared: an attribute that may be missing (`NULL` when it is), as
+# `(x:any with { #k:'b?, any }, which: #k, ...) -> 'b | null`. A second
+# overload with a label variable makes rematch (`attr` of `regexpr` results)
+# run out of memory: more than 16 GB after 6 minutes, against 120 MB in 18 s.
 # Setting an attribute to `NULL` removes it.
 #| base::attr<- : (x:'a<`c> with { #k:any?, `r }, which: #k, v:~null & 'b) -> 'a<`c> with { #k:'b, `r }
 #| base::attr<- : (x:'a<`c> with { #k:any?, `r }, which: #k, v:null) -> 'a<`c> with { #k:absent, `r }
