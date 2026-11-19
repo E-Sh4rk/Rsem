@@ -222,9 +222,23 @@
 # gives the implicit class.
 #| base::oldClass : (x:<>) -> null
 #| base::oldClass : (x:~<>) -> CHR<>
+# Whether `x` has a class (of its class attribute: the implicit classes, such
+# as `integer` or `matrix`, are not tracked). With a literal `what`, the type
+# of `x` decides the result, so that the test narrows it (e.g.
+# `if (inherits(r, "try-error"))` after `try`). The algebra has no variables
+# for class names, so each class is an overload of its own, and a `what` that
+# is not a literal splits the inference in two cases per class: the cost grows
+# quickly (`function(x, cl) inherits(x, cl)` takes 0.3 s more with 3 classes,
+# 1 s with 5, and 22 s with 9; grouping the arrows is slower still). Only the
+# classes of `base` most tested this way are here.
 #| base::inherits : (x:any, what:chr, which:ff?) -> LGL1<>
 #| base::inherits : (x:any, what:chr, which:tt) -> INT<>
-
+#| base::inherits : (x:<"try-error", ...>, what:"try-error", which:ff?) -> tt<>
+#|               && (x:<~"try-error", ...>, what:"try-error", which:ff?) -> ff<>
+#| base::inherits : (x:<connection, ...>, what:"connection", which:ff?) -> tt<>
+#|               && (x:<~connection, ...>, what:"connection", which:ff?) -> ff<>
+#| base::inherits : (x:<AsIs, ...>, what:"AsIs", which:ff?) -> tt<>
+#|               && (x:<~AsIs, ...>, what:"AsIs", which:ff?) -> ff<>
 #| base::names : (x:any) -> CHR<> | null
 #| base::names<- : (x:'a, v:chr|null) -> 'a
 #| base::rownames<- : (x:'a, v:vec|null) -> 'a
@@ -232,6 +246,8 @@
 
 # The attribute is selected by a literal name, so the label is polymorphic.
 #| base::attr : (x:any with { #k:'b, any }, which: #k, exact:lgl1?) -> 'b
+# An attribute that may be missing: `NULL` when it is.
+#| base::attr : (x:any with { #k:'b?, any }, which: #k, exact:lgl1?) -> 'b | null
 # Setting an attribute to `NULL` removes it.
 #| base::attr<- : (x:'a<`c> with { #k:any?, `r }, which: #k, v:~null & 'b) -> 'a<`c> with { #k:'b, `r }
 #| base::attr<- : (x:'a<`c> with { #k:any?, `r }, which: #k, v:null) -> 'a<`c> with { #k:absent, `r }
@@ -990,9 +1006,21 @@
 #| base::signalCondition : (cond:any, message:any?, call:any?) -> null
 # The value of `expr` in `envir`: an expression whose type is not known.
 #| base::eval : (expr:any, envir:any?, enclos:any?) -> dyn
-# The value of `expr`, or the result of the handler (in `...`) of the
-# condition it signals, which the type does not say.
-#| base::tryCatch : (expr:any, ...: any, finally:any?) -> dyn
+# The value of `expr`, or the result of the handler (in `...`, named after the
+# class of the condition) of the condition it signals. A handler is given the
+# condition: a list with a `message` (a vector for rlang's conditions) and a
+# `call`. `finally` is evaluated last, for its effects. As arguments are
+# evaluated before the call, an `expr` that always signals (e.g. `stop()`)
+# makes the whole call `empty`.
+#| base::tryCatch : (expr:'a, ...: @({ message: CHR, call: any, any }) -> 'b, finally:any?) -> 'a | 'b
+# The value of `expr`, or, when it signals an error, the error message (of
+# class `try-error`, invisibly), with the condition as an attribute.
+#| base::try : (expr:'a, silent:lgl1?, outFile:any?) -> 'a | CHR1<"try-error"> with { condition: { message: CHR, call: any, any }, any }
+# The value of `expr`: a handler is called where the condition is signalled,
+# and its result is ignored (it returns, or leaves through a restart).
+#| base::withCallingHandlers : (expr:'a, ...: @({ message: CHR, call: any, any }) -> any) -> 'a
+# Leaves through a restart (e.g. "muffleWarning"): it never returns.
+#| base::invokeRestart : (r:chr1|list, ...: any) -> empty
 # A call or a symbol, built from a list (the function, then the arguments)
 # and from a string. The algebra has no type for them.
 #| base::as.call : (x:list) -> any
