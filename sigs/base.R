@@ -292,8 +292,11 @@
 #| base::unname : (obj:v('a), force:lgl1?) -> v('a)
 #| base::unname : (obj:{'a}, force:lgl1?) -> {'a}
 #| base::unname : (obj:null, force:lgl1?) -> null
-# Converts `x` to another storage mode, keeping its attributes.
-#| base::storage.mode<- : (x:vec<`c>, v:chr1) -> vec<`c>
+# Converts `x` to another storage mode, keeping its attributes. Not with a
+# class row variable: on a classed `x` (vctrs' vec_cast.difftime.difftime),
+# inference went from 6 s to over 30 s.
+#| base::storage.mode<- : (x:vec<>, v:chr1) -> vec<>
+#|                      && (x:vec, v:chr1) -> vec
 
 # ========== Types and predicates ==========
 
@@ -570,7 +573,9 @@
 # when there is none (all `NA`, or empty).
 #| base::which.max : (x:dbl|null) -> INT<>
 #| base::which.min : (x:dbl|null) -> INT<>
-# The vectors as the rows of a matrix: as `cbind`.
+# The vectors as the rows of a matrix: as `cbind`. The fallback is `any`,
+# not `dyn`: grouped with the arrow on `v('a)`, a `dyn` result takes over
+# (`rbind(1:2, 3:4)` would no longer be an integer matrix).
 #| base::rbind : (...: v('a)|null, deparse.level:dbl1?) -> v('a)<> with { dim: INT, dimnames: list?, any }
 #|            && (...: any, deparse.level:dbl1?) -> any
 # The outer product of two arrays, of dimension `c(dim(X), dim(Y))`. With the
@@ -582,8 +587,13 @@
 #| base::sweep : (x:dbl, MARGIN:dbl, STATS:dbl, FUN:("-"|"+"|"*"|"/")?, check.margin:lgl1?, ...: any) -> (DBL|INT)<> with { dim: INT, dimnames: list?, any }
 #|            && (x:any, MARGIN:dbl, STATS:any, FUN:any?, check.margin:lgl1?, ...: any) -> any
 # The matrix products, of numbers or logicals.
+# They are generic (e.g. Matrix's classes): on other values, a result of
+# which the type says nothing but its dimensions (`dyn`: e.g.
+# `1 / n * (a %*% b)`).
 #| base::(%*%) : (x:dbl, y:dbl) -> (DBL|INT)<> with { dim: INT, any }
+#|            && (x:any, y:any) -> dyn with { dim: INT, any }
 #| base::crossprod : (x:dbl, y:dbl|null?) -> (DBL|INT)<> with { dim: INT, dimnames: list?, any }
+#|                && (x:any, y:any?) -> dyn with { dim: INT, any }
 # The solution of `a %*% x = b`: of a vector `b`, a vector; of a matrix `b`
 # (or the inverse of `a`, without `b`), a matrix.
 #| base::solve : (a:dbl, b:dbl?, ...: any) -> DBL<> with { dim: INT?, dimnames: list?, any }
@@ -872,6 +882,8 @@
 # one: its methods keep it, whichever it is.
 #| base::factor : (x:vec|null?, levels:vec?, labels:chr?, ordered:ff?, ...: any) -> INT<factor> with { levels: CHR, any }
 #| base::factor : (x:vec|null?, levels:vec?, labels:chr?, ordered:tt, ...: any) -> INT<ordered, factor> with { levels: CHR, any }
+# An `ordered` not known statically (e.g. `is.ordered(x)`).
+#| base::factor : (x:vec|null?, levels:vec?, labels:chr?, ordered:lgl1, ...: any) -> INT<factor> with { levels: CHR, any } | INT<ordered, factor> with { levels: CHR, any }
 # `I` marks a value to be used as is (e.g. a column of a data frame), adding
 # the `AsIs` class before its others.
 #| base::I : (x:v('a)<`c>) -> v('a)<AsIs, `c>
@@ -1167,11 +1179,13 @@
 # The function `FUN` names (or is), of which the type says nothing.
 #| base::match.fun : (FUN:any, descend:lgl1?) -> dyn
 #| base::Negate : (f:any) -> dyn
-# The language objects, of which the type says nothing yet (cf. `as.symbol`).
-#| base::as.name : (x:chr1) -> any
-#| base::expression : (...: any) -> any
-#| base::parse : (file:any?, n:dbl1|null?, text:chr|null?, prompt:any?, keep.source:lgl1?, srcfile:any?, encoding:chr1?) -> any
-#| base::match.call : (definition:any?, call:any?, expand.dots:lgl1?, envir:env?) -> any
+# The language objects, of which the type says nothing yet: `dyn` rather
+# than `any`, so that their uses (e.g. `parse(text = s)[[1]]`) are not
+# rejected.
+#| base::as.name : (x:chr1) -> dyn
+#| base::expression : (...: any) -> dyn
+#| base::parse : (file:any?, n:dbl1|null?, text:chr|null?, prompt:any?, keep.source:lgl1?, srcfile:any?, encoding:chr1?) -> dyn
+#| base::match.call : (definition:any?, call:any?, expand.dots:lgl1?, envir:env?) -> dyn
 
 # ========== Other attached packages ==========
 

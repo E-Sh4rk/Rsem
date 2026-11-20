@@ -95,8 +95,10 @@
 # ========== Summaries ==========
 
 # The median, of the mode of `x` (an integer when the middle values are
-# equal); `median` is generic.
+# equal); `median` is generic: of another class, a result of which the type
+# says nothing.
 #| stats::median : (x:dbl, na.rm:lgl1?, ...: any) -> (DBL1|INT1)<>
+#|              && (x:any, na.rm:lgl1?, ...: any) -> dyn
 #| stats::weighted.mean : (x:dbl, w:dbl?, ...: any, na.rm:lgl1?) -> DBL1<>
 #| stats::sd : (x:dbl, na.rm:lgl1?) -> DBL1<>
 # The variance of a vector, or the covariance matrix of the columns of a
