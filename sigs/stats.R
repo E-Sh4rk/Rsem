@@ -16,6 +16,9 @@
 # A time series is a vector with the class `ts` and its time window, the
 # `tsp` attribute (start, end and frequency).
 #| stats::ts : (data:v('a)&dbl, start:dbl?, end:dbl?, frequency:dbl1?, ...: any) -> v('a)<ts> with { tsp: DBL, any }
+# The time window of a time series, `NULL` for other values.
+#| stats::tsp : (x:any with { tsp: 'a, any }) -> 'a
+#|           && (x:any) -> DBL<> | null
 #| stats::frequency : (x:any, ...: any) -> DBL1<>
 #| stats::start : (x:any, ...: any) -> DBL<>
 #| stats::end : (x:any, ...: any) -> DBL<>
@@ -51,10 +54,28 @@
 # The design matrix of a model, with the column of each term in `assign`.
 #| stats::model.matrix : (object:any, ...: any) -> DBL<> with { dim: INT, dimnames: list?, assign: INT, any }
 # A hierarchical clustering, from the methods of the classes that have one.
+#| stats::hclust : (d:any, method:chr1?, members:any?) -> { merge: INT, height: DBL, order: INT, labels: CHR | null, method: CHR | null, call: any, dist.method: CHR | null, any }<hclust>
 #| stats::as.hclust : (x:any, ...: any) -> { merge: INT, height: DBL, order: INT, labels: CHR | null, method: CHR | null, call: any, dist.method: CHR | null, any }<hclust>
+# The groups of a hierarchical clustering cut into `k` groups (or at the
+# height `h`): a group per observation (a matrix of them for several `k`).
+#| stats::cutree : (tree:any, k:dbl|null?, h:dbl|null?) -> INT<> with { dim: INT?, any }
+#| stats::as.dendrogram : (object:any, ...: any) -> { any }<dendrogram>
+# A distance matrix: its lower triangle as a vector, of class `dist`, with
+# the number of observations as `Size`.
+#| stats::as.dist : (m:any, diag:lgl1?, upper:lgl1?) -> DBL<dist> with { Size: INT1, any }
+#| stats::cophenetic : (x:any) -> DBL<dist> with { Size: INT1, any }
 
 # The generics of models. `coef` gives the coefficients (a matrix for several
 # responses), `vcov` their covariance matrix.
+# A model's predictions: of which the type, depending on the class of the
+# model, says nothing (as `summary`'s).
+#| stats::predict : (object:any, ...: any) -> dyn
+# The data frame of the variables of a model, with its `terms`.
+#| stats::model.frame : (formula:any, ...: any) -> { any }<data.frame> with { names: CHR, terms: any, any }
+# The diagonal of the hat matrix of a model.
+#| stats::hatvalues : (model:any, ...: any) -> DBL<>
+# A link function of a GLM family (`"logit"`, ...): its functions and name.
+#| stats::make.link : (link:chr1) -> { linkfun: (eta:dbl) -> DBL<>, linkinv: (eta:dbl) -> DBL<>, mu.eta: (eta:dbl) -> DBL<>, valideta: (eta:dbl) -> LGL1<>, name: CHR1, any }<"link-glm">
 #| stats::coef : (object:any, ...: any) -> DBL<>
 #| stats::vcov : (object:any, ...: any) -> DBL<> with { dim: INT, dimnames: list?, any }
 # `x` with the omitted cases (`na.action` of class `exclude`) put back as
@@ -65,6 +86,24 @@
 
 #| stats::qnorm : (p:dbl1, mean:dbl1?, sd:dbl1?, lower.tail:lgl1?, log.p:lgl1?) -> DBL1<>
 #|             && (p:dbl, mean:dbl?, sd:dbl?, lower.tail:lgl1?, log.p:lgl1?) -> DBL<>
+#| stats::qt : (p:dbl1, df:dbl1, ncp:dbl1?, lower.tail:lgl1?, log.p:lgl1?) -> DBL1<>
+#|          && (p:dbl, df:dbl, ncp:dbl?, lower.tail:lgl1?, log.p:lgl1?) -> DBL<>
+#| stats::qchisq : (p:dbl1, df:dbl1, ncp:dbl1?, lower.tail:lgl1?, log.p:lgl1?) -> DBL1<>
+#|              && (p:dbl, df:dbl, ncp:dbl?, lower.tail:lgl1?, log.p:lgl1?) -> DBL<>
+#| stats::runif : (n:dbl, min:dbl?, max:dbl?) -> DBL<>
+
+# ========== Summaries ==========
+
+# The median, of the mode of `x` (an integer when the middle values are
+# equal); `median` is generic.
+#| stats::median : (x:dbl, na.rm:lgl1?, ...: any) -> (DBL1|INT1)<>
+#| stats::weighted.mean : (x:dbl, w:dbl?, ...: any, na.rm:lgl1?) -> DBL1<>
+#| stats::sd : (x:dbl, na.rm:lgl1?) -> DBL1<>
+# The variance of a vector, or the covariance matrix of the columns of a
+# matrix (or between `x` and `y`).
+#| stats::var : (x:dbl, y:dbl|null?, na.rm:lgl1?, use:chr1?) -> DBL<> with { dim: INT?, dimnames: list?, any }
+#| stats::cov : (x:dbl, y:dbl|null?, use:chr1?, method:chr1?) -> DBL<> with { dim: INT?, dimnames: list?, any }
+
 # The residuals and the weights of a fitted model (the weights are `NULL` for
 # an unweighted one); both are generic.
 #| stats::residuals : (object:any, ...: any) -> DBL<>

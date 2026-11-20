@@ -284,6 +284,17 @@
 #| base::dimnames<- : (x:'a<`c> with { dimnames: any?, `r }, v:list & 'b) -> 'a<`c> with { dimnames: 'b, `r }
 #| base::dimnames<- : (x:'a<`c> with { dimnames: any?, `r }, v:null) -> 'a<`c> with { dimnames: absent, `r }
 
+# Sets the attributes of `x` from the list `v`, but keeps those of its own
+# that are incompatible (dim, names): as `attributes<-`.
+#| base::mostattributes<- : (x:v('a), v:{ any }) -> v('a)
+#| base::mostattributes<- : (x:{'a}, v:{ any }) -> {'a}
+# `x` without its names and dimnames.
+#| base::unname : (obj:v('a), force:lgl1?) -> v('a)
+#| base::unname : (obj:{'a}, force:lgl1?) -> {'a}
+#| base::unname : (obj:null, force:lgl1?) -> null
+# Converts `x` to another storage mode, keeping its attributes.
+#| base::storage.mode<- : (x:vec<`c>, v:chr1) -> vec<`c>
+
 # ========== Types and predicates ==========
 
 #| base::typeof : ( x: DBL ) -> "double"<>
@@ -355,6 +366,10 @@
 # `FALSE`).
 #| base::all : (...: dbl|null, na.rm:lgl1?) -> LGL1<>
 #| base::any : (...: dbl|null, na.rm:lgl1?) -> LGL1<>
+
+#| base::is.raw : (x:RAW) -> tt<>
+#| base::is.raw : (x:~RAW) -> ff<>
+#| base::is.ordered : (x:any) -> LGL1<>
 
 # ========== Vectors and lists ==========
 
@@ -547,6 +562,40 @@
 # which the type says nothing (`dyn`: e.g. `summary(fit)$coefficients`).
 #| base::summary : (object:any, ...: any) -> dyn
 
+#| base::raw : (length:dbl1?) -> RAW<>
+# `x` recycled (or truncated) to the length `length.out`, without attributes.
+#| base::rep_len : (x:v('a), length.out:dbl1) -> v('a)<>
+#| base::rep_len : (x:{'a}, length.out:dbl1) -> {'a}<>
+# The position of the first maximum (minimum), named after it: of length 0
+# when there is none (all `NA`, or empty).
+#| base::which.max : (x:dbl|null) -> INT<>
+#| base::which.min : (x:dbl|null) -> INT<>
+# The vectors as the rows of a matrix: as `cbind`.
+#| base::rbind : (...: v('a)|null, deparse.level:dbl1?) -> v('a)<> with { dim: INT, dimnames: list?, any }
+#|            && (...: any, deparse.level:dbl1?) -> any
+# The outer product of two arrays, of dimension `c(dim(X), dim(Y))`. With the
+# default `FUN` (`"*"`), as arithmetic; otherwise, what `FUN` gives.
+#| base::outer : (X:dbl, Y:dbl, FUN:"*"?) -> (DBL|INT)<> with { dim: INT, dimnames: list?, any }
+#|            && (X:any, Y:any, FUN:any?, ...: any) -> any
+# `x` with `STATS` swept out of its margins: with an arithmetic `FUN` (`"-"`
+# by default), a numeric array of the dimensions of `x`.
+#| base::sweep : (x:dbl, MARGIN:dbl, STATS:dbl, FUN:("-"|"+"|"*"|"/")?, check.margin:lgl1?, ...: any) -> (DBL|INT)<> with { dim: INT, dimnames: list?, any }
+#|            && (x:any, MARGIN:dbl, STATS:any, FUN:any?, check.margin:lgl1?, ...: any) -> any
+# The matrix products, of numbers or logicals.
+#| base::(%*%) : (x:dbl, y:dbl) -> (DBL|INT)<> with { dim: INT, any }
+#| base::crossprod : (x:dbl, y:dbl|null?) -> (DBL|INT)<> with { dim: INT, dimnames: list?, any }
+# The solution of `a %*% x = b`: of a vector `b`, a vector; of a matrix `b`
+# (or the inverse of `a`, without `b`), a matrix.
+#| base::solve : (a:dbl, b:dbl?, ...: any) -> DBL<> with { dim: INT?, dimnames: list?, any }
+# The groups of `x` defined by the factor `f`, in a list named after its
+# levels. The groups keep the class of `x` (e.g. of a factor).
+#| base::split : (x:v('a)<`c>, f:any, drop:lgl1?, ...: any) -> { v('a)<`c> }<>
+#| base::split : (x:{'a}<`c>, f:any, drop:lgl1?, ...: any) -> { {'a}<`c> }<>
+# The number of times each integer of `bin` occurs, from 1 to `nbins`.
+#| base::tabulate : (bin:dbl|null, nbins:dbl1?) -> INT<>
+# A contingency table: the counts of each combination of the factors.
+#| base::table : (...: any, exclude:any?, useNA:chr1?, dnn:any?, deparse.level:dbl1?) -> INT<table> with { dim: INT, dimnames: list, any }
+
 # ========== Functionals ==========
 
 # The extra arguments are passed along to `FUN`. The elements of a vector
@@ -677,6 +726,11 @@
 #| base::as.raw : (x:vec1) -> RAW1<>
 #|             && (x:vec|null) -> RAW<>
 
+#| base::asin : (x:dbl1<`c>) -> DBL1<`c>
+#|           && (x:dbl<`c>) -> DBL<`c>
+#| base::acos : (x:dbl1<`c>) -> DBL1<`c>
+#|           && (x:dbl<`c>) -> DBL<`c>
+
 # ========== Strings ==========
 
 # The result is a scalar when collapsed, or when every argument is one.
@@ -739,6 +793,24 @@
 #| base::normalizePath : (path:chr1, winslash:chr1?, mustWork:lgl1?) -> CHR1<>
 #|                    && (path:chr, winslash:chr1?, mustWork:lgl1?) -> CHR<>
 
+#| base::enc2native : (x:chr1) -> CHR1<>
+#|                 && (x:chr) -> CHR<>
+# The characters of `old` in `x` replaced by those of `new`.
+#| base::chartr : (old:chr1, new:chr1, x:chr1) -> CHR1<>
+#|             && (old:chr1, new:chr1, x:chr|null) -> CHR<>
+# `x` escaped (and quoted with `quote`), as `print` shows it.
+#| base::encodeString : (x:chr1, width:dbl1|null?, quote:chr1?, na.encode:lgl1?, justify:chr1?) -> CHR1<>
+#|                   && (x:chr, width:dbl1|null?, quote:chr1?, na.encode:lgl1?, justify:chr1?) -> CHR<>
+# The translations of the messages.
+#| base::gettext : (...: any, domain:any?, trim:lgl1?) -> CHR<>
+# The bytes of a string, and back: a string, or one string per byte with
+# `multiple = TRUE`.
+#| base::charToRaw : (x:chr1) -> RAW<>
+#| base::rawToChar : (x:RAW, multiple:ff?) -> CHR1<>
+#| base::rawToChar : (x:RAW, multiple:tt) -> CHR<>
+#| base::basename : (path:chr1) -> CHR1<>
+#|               && (path:chr) -> CHR<>
+
 # ========== Regular expressions ==========
 
 #| base::grepl : (pattern:chr1, x:chr1, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> LGL1<>
@@ -757,6 +829,10 @@
 #|              && (pattern:chr1, text:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?) -> INT<> with { match.length: INT, any }
 #|              && (pattern:chr1, text:chr1, ignore.case:lgl1?, perl:tt, fixed:lgl1?) -> INT1<> with { match.length: INT1, capture.start: INT, capture.length: INT, capture.names: CHR, any }
 #|              && (pattern:chr1, text:chr, ignore.case:lgl1?, perl:tt, fixed:lgl1?) -> INT<> with { match.length: INT, capture.start: INT, capture.length: INT, capture.names: CHR, any }
+
+# The positions of every match, per element of `text` (`-1` when there is
+# none), with their lengths as with `regexpr`.
+#| base::gregexpr : (pattern:chr1, text:chr, ignore.case:lgl1?, perl:lgl1?, fixed:lgl1?, useBytes:lgl1?) -> { INT<> with { match.length: INT, any } }<>
 
 # ========== S3 methods ==========
 
@@ -782,6 +858,15 @@
 #| base::as.difftime : (tim:dbl1, format:chr1?, units:chr1?, tz:chr1?) -> difftime1
 #|                  && (tim:dbl, format:chr1?, units:chr1?, tz:chr1?) -> difftime
 #| base::units : (x:<difftime, ...> with { units: 'u, any }) -> 'u
+# A date-time from the number of seconds since the epoch, without checks.
+#| base::.POSIXct : (xx:dbl1, tz:chr1|null?, cl:any?) -> posixct1
+#|               && (xx:dbl, tz:chr1|null?, cl:any?) -> posixct
+# The month (quarter) of each date, as a name (`"Q1"`, ...). They are
+# generic: the methods of other classes (e.g. zoo's) give names too.
+#| base::months : (x:date1|posixct1, abbreviate:lgl1?) -> CHR1<>
+#|             && (x:any, abbreviate:lgl1?) -> CHR<>
+#| base::quarters : (x:date1|posixct1, ...: any) -> CHR1<>
+#|               && (x:any, ...: any) -> CHR<>
 
 # The class of a factor is `factor`, or `ordered` and `factor` for an ordered
 # one: its methods keep it, whichever it is.
@@ -921,6 +1006,12 @@
 #| base::sink.number : ( type:chr1? ) -> INT1<>
 #| base::message : ( ...: any, domain:any?, appendLF:lgl1? ) -> null
 
+#| base::stdin : () -> INT1<terminal, connection>
+#| base::stderr : () -> INT1<terminal, connection>
+# Whether each file exists.
+#| base::file.exists : (...: chr) -> LGL<>
+#| base::packageStartupMessage : (...: any, domain:any?, appendLF:lgl1?) -> null
+
 # ========== Session and environment ==========
 
 #| base::Sys.getenv : (x:chr1, unset:chr1?) -> CHR1<>
@@ -982,6 +1073,15 @@
 #| base::.Platform : { OS.type: CHR1, file.sep: CHR1, path.sep: CHR1, GUI: CHR1, any }<>
 #| base::.Machine : { integer.max: INT1, double.eps: DBL1, double.xmax: DBL1, sizeof.pointer: INT1, any }<>
 #| base::pi : ^DBL1<>
+
+#| base::R.home : (component:chr1?) -> CHR1<>
+#| base::set.seed : (seed:dbl1|null, kind:chr1|null?, normal.kind:chr1|null?, sample.kind:chr1|null?) -> null
+#| base::baseenv : () -> env
+#| base::getNamespace : (name:chr1|env) -> env
+#| base::library.dynam.unload : (chname:chr1, libpath:chr1, verbose:lgl1?, file.ext:chr1?) -> null
+#| base::rm : (...: any, list:chr?, pos:any?, envir:env?, inherits:lgl1?) -> null
+# Binds `x` to a promise of `value`, evaluated when `x` is first used.
+#| base::delayedAssign : (x:chr1, value:any, eval.env:env?, assign.env:env?) -> null
 
 # ========== Control ==========
 
@@ -1057,6 +1157,21 @@
 #| base::do.call : (what:any, args:{ any }, quote:lgl1?, envir:env?) -> any
 # Returns the message (invisibly), unless the warning is turned into an error.
 #| base::warning : (...: any) -> CHR1<>
+
+# The value of `expr`, or, when it invokes one of the restarts of `...`, what
+# that restart returns: a function of the arguments given to
+# `invokeRestart`, which the type says nothing about.
+#| base::withRestarts : (expr:'a, ...: any) -> 'a | dyn
+# `TRUE`, or a description of the differences.
+#| base::all.equal : (target:any, current:any, ...: any) -> tt<> | CHR<>
+# The function `FUN` names (or is), of which the type says nothing.
+#| base::match.fun : (FUN:any, descend:lgl1?) -> dyn
+#| base::Negate : (f:any) -> dyn
+# The language objects, of which the type says nothing yet (cf. `as.symbol`).
+#| base::as.name : (x:chr1) -> any
+#| base::expression : (...: any) -> any
+#| base::parse : (file:any?, n:dbl1|null?, text:chr|null?, prompt:any?, keep.source:lgl1?, srcfile:any?, encoding:chr1?) -> any
+#| base::match.call : (definition:any?, call:any?, expand.dots:lgl1?, envir:env?) -> any
 
 # ========== Other attached packages ==========
 
