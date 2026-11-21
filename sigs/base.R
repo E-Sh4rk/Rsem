@@ -103,10 +103,13 @@
 # The result keeps the classes of the operands (those of `e1` if it has some,
 # and those of `e2` otherwise): both share a class row variable, which a row
 # can instantiate with a union, e.g. `x + 1` has the classes of `x` or none.
+# `NULL` is an empty vector: with a binary operator, it gives an empty vector
+# (`NULL - 1` is `numeric(0)`), in the vector overload, which adds no
+# overload. Unary `-NULL` is an error.
 #| base::(-) : ( e1:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
 #|          && ( e1:dbl1<`c> ) -> dbl1<`c>
 #|          && ( e1:DBL1<`c> ) -> DBL1<`c>
-#| base::(-) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(-) : ( e1:(v('a)&dbl)<`c> | null, e2:(v('a)&dbl)<`c> | null ) -> (v('a)&(dbl\lgl) | INT)<`c>
 #|          && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
 #|          && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
 #|          && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
@@ -114,28 +117,28 @@
 #| base::(+) : ( e1:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
 #|          && ( e1:dbl1<`c> ) -> dbl1<`c>
 #|          && ( e1:DBL1<`c> ) -> DBL1<`c>
-#| base::(+) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(+) : ( e1:(v('a)&dbl)<`c> | null, e2:(v('a)&dbl)<`c> | null ) -> (v('a)&(dbl\lgl) | INT)<`c>
 #|          && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
 #|          && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
 #|          && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
 
-#| base::(*) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(*) : ( e1:(v('a)&dbl)<`c> | null, e2:(v('a)&dbl)<`c> | null ) -> (v('a)&(dbl\lgl) | INT)<`c>
 #|          && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
 #|          && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
 #|          && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
-#| base::(%%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(%%) : ( e1:(v('a)&dbl)<`c> | null, e2:(v('a)&dbl)<`c> | null ) -> (v('a)&(dbl\lgl) | INT)<`c>
 #|           && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
 #|           && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
 #|           && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
-#| base::(%/%) : ( e1:(v('a)&dbl)<`c>, e2:(v('a)&dbl)<`c> ) -> (v('a)&(dbl\lgl) | INT)<`c>
+#| base::(%/%) : ( e1:(v('a)&dbl)<`c> | null, e2:(v('a)&dbl)<`c> | null ) -> (v('a)&(dbl\lgl) | INT)<`c>
 #|            && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> dbl1<`c>
 #|            && ( e1:DBL1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
 #|            && ( e1:dbl1<`c>, e2:DBL1<`c> ) -> DBL1<`c>
 
 # Always a double, even for integer operands (`1L / 2L` is `0.5`).
-#| base::(/) : ( e1:dbl<`c>, e2:dbl<`c> ) -> DBL<`c>
+#| base::(/) : ( e1:dbl<`c> | null, e2:dbl<`c> | null ) -> DBL<`c>
 #|          && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
-#| base::(^) : ( e1:dbl<`c>, e2:dbl<`c> ) -> DBL<`c>
+#| base::(^) : ( e1:dbl<`c> | null, e2:dbl<`c> | null ) -> DBL<`c>
 #|          && ( e1:dbl1<`c>, e2:dbl1<`c> ) -> DBL1<`c>
 
 # ========== Comparisons and Boolean operators ==========
@@ -387,9 +390,13 @@
 # of `x` (which the default method in fact drops, but then `x` has typically
 # none). This takes a single overload: a third one on vectors makes inference
 # blow up in memory (e.g. on rematch::re_match_all1 with --gradual).
+# After a list, atomic vectors give their elements to the result:
+# `c(list(), all = FALSE)` is `list(all = FALSE)`. A vector followed by a list
+# gives a list too, but an overload for it would also match the calls of
+# vectors only.
 #| base::c : ( x:v('p)<`c>, ...: v('p)|null ) -> v('p)<`c>
 #|        && ( ...: v('p)|null ) -> v('p) | null
-#| base::c : ( x:{'a}, ...: {'a}|null ) -> {'a}<>
+#| base::c : ( x:{'a}, ...: {'a}|v('p)|null ) -> {'a | v1('p)<>}<>
 #|        && ( ...: {'a}|null ) -> {'a}<> | null
 
 #| base::length : (x:any) -> INT1<>
@@ -424,6 +431,10 @@
 #|             && (x:any, incomparables:any?, ...: any) -> any
 #| base::unique : (x:{'a}<`c>, incomparables:any?, ...: any) -> {'a}<`c>
 #| base::unique : (x:null, incomparables:any?, ...: any) -> null
+# The default method drops the class.
+#| base::unique.default : (x:v('a), incomparables:any?, ...: any) -> v('a)<>
+#|                     && (x:{'a}, incomparables:any?, ...: any) -> {'a}<>
+#|                     && (x:null, incomparables:any?, ...: any) -> null
 #| base::seq_len : (length.out:dbl1) -> INT<>
 # The number of rows (columns) of a matrix or a data frame, and the length
 # (1) of a vector.
@@ -687,6 +698,17 @@
 #|            && (x:dbl<`c>) -> DBL<`c>
 #| base::sqrt : (x:dbl1<`c>) -> DBL1<`c>
 #|           && (x:dbl<`c>) -> DBL<`c>
+#| base::exp : (x:dbl1<`c>) -> DBL1<`c>
+#|          && (x:dbl<`c>) -> DBL<`c>
+# The cumulative functions drop the class (not the names). `cumprod` is a
+# double even for integers, the others are like arithmetic.
+#| base::cumsum : (x:(v('a)&dbl)<`c>) -> (v('a)&(dbl\lgl) | INT)<>
+#| base::cummax : (x:(v('a)&dbl)<`c>) -> (v('a)&(dbl\lgl) | INT)<>
+#| base::cummin : (x:(v('a)&dbl)<`c>) -> (v('a)&(dbl\lgl) | INT)<>
+#| base::cumprod : (x:dbl<`c>) -> DBL<>
+# The binomial coefficients, always doubles.
+#| base::choose : (n:dbl1, k:dbl1) -> DBL1<>
+#|             && (n:dbl, k:dbl) -> DBL<>
 
 # `mean` is generic; the methods of the date and time classes keep the class.
 #| base::mean : (x:dbl<`c>, ...: any) -> DBL1<`c>
@@ -721,6 +743,9 @@
 #| base::range : (...: int, na.rm:lgl1?, finite:lgl1?) -> INT
 #|            && (...: dbl, na.rm:lgl1?, finite:lgl1?) -> dbl
 #|            && (...: CHR, na.rm:lgl1?, finite:lgl1?) -> CHR
+#| base::range.default : (...: int, na.rm:lgl1?, finite:lgl1?) -> INT
+#|                    && (...: dbl, na.rm:lgl1?, finite:lgl1?) -> dbl
+#|                    && (...: CHR, na.rm:lgl1?, finite:lgl1?) -> CHR
 
 # The conversions drop every attribute.
 #| base::as.integer : (x:vec1) -> INT1<>
@@ -863,6 +888,9 @@
 # The list-based date-times, with the components (`sec`, `min`, ...) as
 # elements.
 #| base::as.POSIXlt : (x:any, tz:chr1?, ...: any) -> { any }<POSIXlt, POSIXt>
+# Their methods, which packages also call directly.
+#| base::as.POSIXlt.POSIXct : (x:posixct, tz:chr1?, ...: any) -> { any }<POSIXlt, POSIXt>
+#| base::as.POSIXct.POSIXlt : (x:{ any }<POSIXlt, POSIXt>, tz:chr1?, ...: any) -> posixct
 #| base::difftime : (time1:date1|posixct1, time2:date1|posixct1, tz:chr1?, units:chr1?) -> difftime1
 #|               && (time1:date|posixct, time2:date|posixct, tz:chr1?, units:chr1?) -> difftime
 #| base::as.difftime : (tim:dbl1, format:chr1?, units:chr1?, tz:chr1?) -> difftime1
@@ -1014,6 +1042,10 @@
 # A file connection (its `conn_id` is an external pointer).
 #| base::file : ( description:chr1?, open:chr1?, ...: any ) -> INT1<file, connection>
 #| base::isOpen : ( con:<connection, ...>, rw:chr1? ) -> LGL1<>
+#| base::isatty : ( con:any ) -> LGL1<>
+#| base::flush : ( con:<connection, ...> ) -> null
+# A connection to a raw vector, read from, or written to (`open = "w"`).
+#| base::rawConnection : ( object:RAW, open:chr1? ) -> INT1<rawConnection, connection>
 #| base::writeLines : ( text:chr?, con:(<connection, ...>)?, sep:chr1?, useBytes:lgl1? ) -> null
 #| base::sink.number : ( type:chr1? ) -> INT1<>
 #| base::message : ( ...: any, domain:any?, appendLF:lgl1? ) -> null
@@ -1022,6 +1054,7 @@
 #| base::stderr : () -> INT1<terminal, connection>
 # Whether each file exists.
 #| base::file.exists : (...: chr) -> LGL<>
+#| base::dir.exists : (paths:chr) -> LGL<>
 #| base::packageStartupMessage : (...: any, domain:any?, appendLF:lgl1?) -> null
 
 # ========== Session and environment ==========
@@ -1061,6 +1094,16 @@
 # Environments. `environment()` of a primitive is `NULL`.
 #| base::parent.frame : (n:dbl1?) -> env
 #| base::environment : (fun:null?) -> env
+#| base::environmentName : (env:any) -> CHR1<>
+#| base::isNamespaceLoaded : (name:chr1) -> LGL1<>
+#| base::is.vector : (x:any, mode:chr1?) -> LGL1<>
+#| base::isS4 : (object:any) -> LGL1<>
+#| base::is.pairlist : (x:any) -> LGL1<>
+# The column of the maximum of each row of a matrix.
+#| base::max.col : (m:dbl, ties.method:chr1?) -> INT<>
+# Sets the step of the torture of the garbage collector, and returns the
+# previous one.
+#| base::gctorture2 : (step:dbl1, wait:dbl1?, inhibit_release:lgl1?) -> INT1<>
 #|                  && (fun:any) -> env | null
 #| base::new.env : (hash:lgl1?, parent:env?, size:dbl1?) -> env
 #| base::emptyenv : () -> env
@@ -1200,3 +1243,7 @@
 # The graphical parameters: the previous values of the ones that are set (a
 # list, invisibly), or the value of the one that is queried.
 #| graphics::par : (...: any, no.readonly:lgl1?) -> any
+# Adds lines to the current plot.
+#| graphics::lines : (x:any, ...: any) -> null
+# Defines a method of the S4 generic `f`, and returns `f` (invisibly).
+#| methods::setMethod : (f:chr1, signature:any?, definition:any?, where:any?, valueClass:any?, sealed:lgl1?) -> CHR1<>

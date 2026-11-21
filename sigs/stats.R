@@ -110,3 +110,7 @@
 # an unweighted one); both are generic.
 #| stats::residuals : (object:any, ...: any) -> DBL<>
 #| stats::weights : (object:any, ...: any) -> DBL<> | null
+
+# The summary of a linear model: a list of its statistics (`fstatistic`
+# only when the model has more than an intercept).
+#| stats::summary.lm : (object:any, correlation:lgl1?, symbolic.cor:lgl1?, ...: any) -> { call: lang, terms: any, residuals: DBL, coefficients: DBL, aliased: LGL, sigma: DBL1, df: INT, r.squared: DBL1, adj.r.squared: DBL1, fstatistic: DBL?, cov.unscaled: DBL, any }<summary.lm>
