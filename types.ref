@@ -86,7 +86,7 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<>
 
 test_dots1: Untypeable: untypeable coercion
 expected: { `r }
-given: list<> | 'I1109
+given: list<> | 'I1473
 expression may be: new.env()
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
@@ -104,6 +104,8 @@ rollmean: ∀'a. (((x: any, k: any, fill: 'a?, na.pad: any?, ...: any) -> (LGL1 
 
 num_to_char_R: ((x: DBL | INT, digits: any?, na_as_string: any?) | (x: ~(DBL |
  INT), digits: any?, na_as_string: any?) -> null)<>
+
+pred: (() -> (DBL | INT)<>)<>
 
 
 ===== Processing tests/04_s3.r =====
@@ -240,7 +242,7 @@ annot_dot_use: (() -> CHR1)<>
 
 .dot_local: (() -> dbl)<>
 
-annot_pow: ∀`a. (((x: dbl1<. | `a>) -> DBL1<. | `a>) & ((x: dbl<. | `a>) ->
+annot_pow: ∀`a. (((x: dbl1<. | `a>) -> DBL1<. | `a>) & ((x: dbl<. | `a> | null) ->
  DBL<. | `a>))<>
 
 annot_tilde: ((x: any, y: any) -> any)<>
@@ -329,8 +331,9 @@ loop_in_local: DBL1 | INT1
 
 to_json: ∀'a. ((x: 'a, force: any?) -> 'a)<>
 
-local_c: ∀'a,`a. (((x: (DBL | v('a))<`a>) -> (DBL | v('a))<`a>) & ((x: (DBL |
- v('a)) | null) -> (DBL | v('a)) | null))<>
+local_c: ∀'a,'b,`a. (((x: (DBL | v('b))<`a>) -> (DBL | v('b))<`a>) & ((x: (DBL |
+ v('b)) | null) -> (DBL | v('b)) | null) & ((x: { 'a }) -> { DBL1<> |
+ 'a }<>))<>
 
 local: ∀'a. ((e: 'a) -> 'a)<>
 
@@ -344,32 +347,23 @@ shadow_fn: (() -> 3.<>)<>
 
 
 ===== Processing tests/07_namespace.r =====
-ns_call: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<>
+ns_call: (((x: CHR) -> CHR1) & ((x: any) -> any) & ((x: dbl) -> (DBL1 | INT1)<>))<>
 
-ns_call_num: (() -> dbl1)<>
+ns_call_num: (() -> (DBL1 | INT1)<>)<>
 
-ns_internal: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<>
+ns_internal: (((x: CHR) -> CHR1) & ((x: any) -> any) & ((x: dbl) -> (DBL1 | INT1)<>))<>
 
 ns_value: (() -> dbl1)<>
 
-ns_string: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<>
+ns_string: (((x: CHR) -> CHR1) & ((x: any) -> any) & ((x: dbl) -> (DBL1 | INT1)<>))<>
 
-ns_shadow: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<>
+ns_shadow: (((x: CHR) -> CHR1) & ((x: any) -> any) & ((x: dbl) -> (DBL1 | INT1)<>))<>
 
 ns_global: ((x: { dbl }) -> dbl1)<>
 
-ns_global_ns: (((x: CHR) -> CHR1) & ((x: dbl) -> dbl1))<>
+ns_global_ns: (((x: CHR) -> CHR1) & ((x: any) -> any) & ((x: dbl) -> (DBL1 | INT1)<>))<>
 
-ns_first_class: (() -> dbl1)<>
-
-ns_err: Untypeable: untypeable application of stats::median
-Line 41, characters 21-43
-argument: @({ 1.<> }<>)
-failing call: stats::median(list())
-
-ns_unknown: Untypeable: unbound variable
-Line 44, characters 26-35
-name: stats::sd
+ns_first_class: (() -> (DBL1 | INT1)<>)<>
 
 ns_search: (() -> INT1<>)<>
 
@@ -389,12 +383,12 @@ ns_skip: (() -> "double"<>)<>
 
 ns_no_skip: (() -> "not a function"<>)<>
 
-ns_print: ∀'a. (((x: 'a & <@print, ...>) -> CHR1 | LGL1) & ((x: 'a & <~@print, ...>)
+ns_print: ∀'a. (((x: 'a & <@print, ...>) -> CHR1 | LGL1) & ((x: 'a \ <@print, ...>)
  -> 'a))<>
 
 ns_print_rec: CHR1
 
-ns_method: ∀'a. (((x: 'a & <@print, ...>) -> CHR1 | LGL1) & ((x: 'a & <~@print, ...>)
+ns_method: ∀'a. (((x: 'a & <@print, ...>) -> CHR1 | LGL1) & ((x: 'a \ <@print, ...>)
  -> 'a))<>
 
 ns_method_direct: ((x: <ns_df, ...>) -> LGL1)<>
@@ -423,7 +417,7 @@ execute: ((n: dbl) -> null)<>
 
 
 ===== Processing tests/02_simple/empty-while.r =====
-execute: ((n: vec) -> null)<>
+execute: ((n: vec | null) -> null)<>
 
 
 ===== Processing tests/02_simple/lapply-dots.r =====
@@ -439,7 +433,7 @@ execute: ((n: dbl) -> null)<>
 
 
 ===== Processing tests/02_simple/list-while.r =====
-execute: ((n: vec) -> null)<>
+execute: ((n: vec | null) -> null)<>
 
 
 ===== Processing tests/02_simple/matrix-for.r =====
@@ -447,9 +441,9 @@ execute: ((n: dbl1) -> null)<>
 
 
 ===== Processing tests/02_simple/repeat.r =====
-break_repeat: ((n: vec) -> DBL1<>)<>
+break_repeat: ((n: vec | null) -> DBL1<>)<>
 
-next_repeat: ((n: vec) -> DBL1<>)<>
+next_repeat: ((n: vec | null) -> DBL1<>)<>
 
 inner_repeat: (() -> "a"<>)<>
 
@@ -459,11 +453,11 @@ execute: ((n: dbl) -> null)<>
 
 
 ===== Processing tests/02_simple/scalar-while.r =====
-execute: ((n: vec) -> null)<>
+execute: ((n: vec | null) -> null)<>
 
 
 ===== Processing tests/02_simple/super-while.r =====
-execute: ((n: vec) -> null)<>
+execute: ((n: vec | null) -> null)<>
 
 
 ===== Processing tests/02_simple/vector-for.r =====

@@ -37,12 +37,6 @@ ns_first_class <- function() {
   f(1)
 }
 
-# The arguments are checked against the declared signatures.
-ns_err <- function() stats::median(list(1))
-
-# A name with no declared signature is unbound.
-ns_unknown <- function(x) stats::sd(x)
-
 # ========== Search path ==========
 
 # The functions of R are declared in their namespace (cf. 00_defs.r). An

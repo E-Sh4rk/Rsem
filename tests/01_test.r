@@ -219,3 +219,5 @@ num_to_char_R <- function(x, digits = NA, na_as_string = NA) {
   stopifnot(is.numeric(x))
   stopifnot(is.numeric(digits))   # untypeable here
 }
+
+pred <- function() NULL - 1

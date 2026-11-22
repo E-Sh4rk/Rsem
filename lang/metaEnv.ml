@@ -98,6 +98,11 @@ let class_ty restr =
    restriction requires a class. *)
 let is_required restr = List.exists fst restr
 
+(* The values that are not attributed (e.g. [NULL]) have no class: they never
+   dispatch to a class-overload, and are admitted by any restriction that
+   requires no class. *)
+let unattributed = Rstt.Ty.neg Rstt.Attr.any
+
 (* [restrict_first_param restr ty] intersects the type of the first parameter
    (if any) of every arrow of the function signature [ty] with the values
    [restr] admits (cf. [class_ty]), or that are absent if [restr] requires no
@@ -107,7 +112,8 @@ let restrict_first_param restr ty =
   if restr = [] || is_fun_sig ty |> not then ty else
   let restr =
     let cty = class_ty restr in
-    (if is_required restr then Ty.O.required cty else Ty.O.optional cty) |> Ty.F.mk_descr
+    (if is_required restr then Ty.O.required cty
+     else Ty.O.optional (Ty.cup cty unattributed)) |> Ty.F.mk_descr
   in
   let restrict_field fty = Ty.F.cap fty restr in
   let restrict_dom dom =
@@ -146,7 +152,7 @@ let restrict_first_param' restr b =
   if restr = [] then b else
   let restr =
     let cty = TTy (class_ty restr) in
-    if is_required restr then cty else TOption cty
+    if is_required restr then cty else TOption (TCup (cty, TTy unattributed))
   in
   let restrict a =
     match a.Rstt.Arg.pos_named with
@@ -308,9 +314,7 @@ let methods_default_ty m sigs t =
   Arrow.mk dom ret |> Attr.mk_content |> GTy.mk
 
 (* A partition of the R values the first argument of an application of the
-   generic [m] may take, following its dispatch (as all R values are
-   attributed, it does not have to cover the other types): the values whose
-   class has
+   generic [m] may take, following its dispatch: the values whose class has
    no class-overload of [m] ([<~@m, ...>], which the base signatures cover),
    those of the class [c_i] of each of its class-overloads that have none of
    the classes of the class-overloads declared after it
@@ -320,7 +324,7 @@ let dispatch_partition m t =
   match overloads m t with
   | [] -> []
   | clss ->
-    let base = class_ty [false, method_class m] in
+    let base = Ty.cup (class_ty [false, method_class m]) unattributed in
     let rec meths clss =
       match clss with
       | [] -> []
