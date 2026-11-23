@@ -1292,6 +1292,23 @@
 #| base::srcref : (srcfile:env, lloc:dbl) -> INT<srcref> with { srcfile: env, any }
 # Calls an internal function of R, of which the type says nothing.
 #| base::.Internal : (call:any) -> dyn
+# The call given to `.Internal` is typed as an ordinary call, so the internal
+# functions a package calls this way need a signature. These are the byte-code
+# compiler's (package compiler). Byte code, closures and profiling counts have
+# no type of their own: `dyn`.
+#| base::mkCode : (code:any, consts:any) -> dyn
+#| base::bcClose : (formals:any, body:any, env:env) -> dyn
+#| base::bodyCode : (fun:any) -> dyn
+#| base::bcVersion : () -> INT1<>
+#| base::getconst : (constBuf:any, n:dbl1) -> dyn
+#| base::growconst : (constBuf:any) -> dyn
+#| base::putconst : (constBuf:any, constCount:dbl1, x:any) -> INT1<>
+#| base::is.builtin.internal : (x:any) -> LGL1<>
+#| base::bcprofstart : () -> null
+#| base::bcprofstop : () -> null
+#| base::bcprofcounts : () -> dyn
+#| base::load.from.file : (file:chr1) -> dyn
+#| base::save.to.file : (value:any, file:chr1, ascii:lgl1) -> null
 # Writes `x` as R code, and returns it (invisibly).
 #| base::dput : (x:'a, file:any?, control:any?) -> 'a
 # The labels of an object: generic.
