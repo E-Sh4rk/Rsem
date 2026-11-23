@@ -253,6 +253,9 @@
 # `(x:any with { #k:'b?, any }, which: #k, ...) -> 'b | null`. A second
 # overload with a label variable makes rematch (`attr` of `regexpr` results)
 # run out of memory: more than 16 GB after 6 minutes, against 120 MB in 18 s.
+# An environment's attributes (e.g. the `name` of a package's), of which the
+# type says nothing.
+#| base::attr : (x:env, which:chr1, exact:lgl1?) -> dyn
 # Setting an attribute to `NULL` removes it.
 #| base::attr<- : (x:'a<`c> with { #k:any?, `r }, which: #k, v:~null & 'b) -> 'a<`c> with { #k:'b, `r }
 #| base::attr<- : (x:'a<`c> with { #k:any?, `r }, which: #k, v:null) -> 'a<`c> with { #k:absent, `r }
@@ -403,6 +406,10 @@
 #| base::rev : (x:v('a)) -> v('a)
 #| base::rev : (x:{'a}) -> {'a}
 #| base::rev : (x:null) -> null
+# `values` inserted after the `after` first elements of `x` (at its end by
+# default).
+#| base::append : (x:v('a)|null, values:v('a)|null, after:dbl1?) -> v('a)<>
+#| base::append : (x:{'a}, values:{'a}|v('p)|null, after:dbl1?) -> {'a | v1('p)<>}<>
 #| base::seq_along : (along.with:any) -> INT<>
 # The length of each element (named after them).
 #| base::lengths : (x:any, use.names:lgl1?) -> INT<>
@@ -421,6 +428,10 @@
 #| base::sort : (x:v('a)<`c>, decreasing:lgl1?, ...: any) -> v('a)<`c>
 #| base::sort : (x:null, decreasing:lgl1?, ...: any) -> null
 #| base::order : (...: any, na.last:lgl1|null?, decreasing:lgl?, method:chr1?) -> INT<>
+# The ranks of the elements: doubles with ties averaged (the default),
+# integers with the other `ties.method`s.
+#| base::rank : (x:dbl1|chr1, na.last:any?, ties.method:chr1?) -> (DBL1|INT1)<>
+#|           && (x:dbl|chr, na.last:any?, ties.method:chr1?) -> (DBL|INT)<>
 # The elements of `x` for which `f` is true.
 #| base::Filter : (f:any, x:v('a)) -> v('a)
 #| base::Filter : (f:any, x:{'a}) -> {'a}
@@ -822,6 +833,9 @@
 #|                     && (x:any, ...: any) -> CHR<>
 #| base::formatC : (x:vec1, ...: any) -> CHR1<>
 #|              && (x:any, ...: any) -> CHR<>
+# `x` formatted with marks between groups of digits (`big.mark`, ...).
+#| base::prettyNum : (x:vec1, big.mark:chr1?, ...: any) -> CHR1<>
+#|                && (x:vec, big.mark:chr1?, ...: any) -> CHR<>
 #| base::strsplit : (x:chr, split:chr, fixed:lgl1?, perl:lgl1?) -> { CHR<> }<>
 #| base::file.path : (...: chr1, fsep:chr1?) -> CHR1<>
 #|                && (...: chr, fsep:chr1?) -> CHR<>
@@ -845,6 +859,10 @@
 #| base::rawToChar : (x:RAW, multiple:tt) -> CHR<>
 #| base::basename : (path:chr1) -> CHR1<>
 #|               && (path:chr) -> CHR<>
+#| base::dirname : (path:chr1) -> CHR1<>
+#|              && (path:chr) -> CHR<>
+#| base::startsWith : (x:chr1, prefix:chr1) -> LGL1<>
+#|                 && (x:chr, prefix:chr) -> LGL<>
 
 # ========== Regular expressions ==========
 
@@ -1138,6 +1156,28 @@
 # Binds `x` to a promise of `value`, evaluated when `x` is first used.
 #| base::delayedAssign : (x:chr1, value:any, eval.env:env?, assign.env:env?) -> null
 
+# The global environment, and the namespace of base.
+#| base::.GlobalEnv : env
+#| base::.BaseNamespaceEnv : env
+#| base::parent.env : (env:env) -> env
+# Binds `x` to `value`, and returns `value` (invisibly).
+#| base::assign : (x:chr1, value:'a, pos:any?, envir:env?, inherits:lgl1?, immediate:lgl1?) -> 'a
+# The names of the attached environments and packages.
+#| base::search : () -> CHR<>
+# Attaches a database (an environment, a list or a file) to the search path,
+# and returns its environment.
+#| base::attach : (what:any, pos:dbl1?, name:chr1?, warn.conflicts:lgl1?) -> env
+#| base::detach : (name:any?, pos:dbl1?, unload:lgl1?, character.only:lgl1?, force:lgl1?) -> null
+# Attaches a package, and returns the attached packages (invisibly).
+#| base::library : (package:any?, help:any?, pos:dbl1?, lib.loc:chr|null?, character.only:lgl1?, logical.return:lgl1?, warn.conflicts:lgl1?, quietly:lgl1?, verbose:lgl1?, ...: any) -> CHR<>
+#| base::save : (...: any) -> null
+# `TRUE` and `FALSE`, as variables (which a program can rebind).
+#| base::T : tt<>
+#| base::F : ff<>
+# The version of R (`R.version`), a list of class `simple.list`.
+#| base::version : { major: CHR1, minor: CHR1, language: CHR1, version.string: CHR1, any }<"simple.list">
+#| base::R.version : { major: CHR1, minor: CHR1, language: CHR1, version.string: CHR1, any }<"simple.list">
+
 # ========== Control ==========
 
 #| base::stop : (...: any) -> empty
@@ -1229,6 +1269,28 @@
 #| base::expression : (...: any) -> dyn
 #| base::parse : (file:any?, n:dbl1|null?, text:chr|null?, prompt:any?, keep.source:lgl1?, srcfile:any?, encoding:chr1?) -> dyn
 #| base::match.call : (definition:any?, call:any?, expand.dots:lgl1?, envir:env?) -> dyn
+# Its argument is not evaluated (it is the result). The body of a function,
+# its formals as a function (`args`), and a call built from the name of a
+# function: language objects too.
+#| base::quote : (expr:any) -> dyn
+#| base::body : (fun:any?) -> dyn
+#| base::args : (name:any) -> dyn
+#| base::call : (name:chr1, ...: any) -> dyn
+#| base::is.name : (x:any) -> LGL1<>
+#| base::is.symbol : (x:any) -> LGL1<>
+#| base::mode : (x:any) -> CHR1<>
+#| base::asS4 : (object:'a, flag:lgl1?, complete:lgl1?) -> 'a
+# A reference to source code: its positions, with its file (an environment).
+#| base::srcref : (srcfile:env, lloc:dbl) -> INT<srcref> with { srcfile: env, any }
+# Calls an internal function of R, of which the type says nothing.
+#| base::.Internal : (call:any) -> dyn
+# Writes `x` as R code, and returns it (invisibly).
+#| base::dput : (x:'a, file:any?, control:any?) -> 'a
+# The labels of an object: generic.
+#| base::labels : (object:any, ...: any) -> dyn
+# The message of a condition: generic.
+#| base::conditionMessage : (c:any) -> dyn
+#| base::simpleError : (message:chr, call:any?) -> { message: CHR, call: any, any }<simpleError, error, condition>
 
 # ========== Other attached packages ==========
 
