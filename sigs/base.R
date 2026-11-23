@@ -182,6 +182,14 @@
 
 #| base::($) : (x:{ #k:'a, any}, k: #k) -> 'a
 #| base::($<-) : (x:{ #k:any?, `r}<`c>, k: #k, v:'b) -> { #k:'b, `r}<`c>
+# The bindings of an environment (`e$x`, `e$x <- v`, e.g. R6 objects), of
+# which the type says nothing: without label variables, so that inference
+# stays cheap. Not for lists whose type says nothing of the element (a data
+# frame read from a file): an overload `(x:list, k:chr1) -> dyn` also
+# applies to the lists that have it, and its `dyn` replaces their precise
+# result (`list(a = 1)$a + 1` was no longer `DBL1`).
+#| base::($) : (x:env, k:chr1) -> dyn
+#| base::($<-) : (x:env, k:chr1, v:any) -> env
 # Not declared (yet): `$` and `[[` of an environment (`e$x`, `e[["x"]]`), and
 # `$` of an element a list does not have, or of `NULL` (both `NULL` in R). As
 # separate overloads, each would add a case to the type of every definition
