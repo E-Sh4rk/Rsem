@@ -1159,7 +1159,13 @@
 #| base::set.seed : (seed:dbl1|null, kind:chr1|null?, normal.kind:chr1|null?, sample.kind:chr1|null?) -> null
 #| base::baseenv : () -> env
 #| base::getNamespace : (name:chr1|env) -> env
-#| base::library.dynam.unload : (chname:chr1, libpath:chr1, verbose:lgl1?, file.ext:chr1?) -> null
+# Loads (unloads) the DLL of a package. A DLL is described by a "DLLInfo"
+# list, whose `$` is also a method that finds a native symbol of the DLL
+# (hence the `any` for other names). Without `chname`, `library.dynam` returns
+# the DLLs loaded by packages, a "DLLInfoList".
+#| base::library.dynam : (chname:absent, package:any?, lib.loc:any?, verbose:lgl1?, file.ext:chr1?, ...: any) -> { { name: CHR1, path: CHR1, dynamicLookup: LGL1, handle: externalptr<DLLHandle>, info: externalptr<DLLInfoReference>, forceSymbols: LGL1, any }<DLLInfo> }<DLLInfoList>
+#| base::library.dynam : (chname:chr1, package:chr, lib.loc:chr|null?, verbose:lgl1?, file.ext:chr1?, ...: any) -> { name: CHR1, path: CHR1, dynamicLookup: LGL1, handle: externalptr<DLLHandle>, info: externalptr<DLLInfoReference>, forceSymbols: LGL1, any }<DLLInfo>
+#| base::library.dynam.unload : (chname:chr1, libpath:chr1, verbose:lgl1?, file.ext:chr1?) -> { name: CHR1, path: CHR1, dynamicLookup: LGL1, handle: externalptr<DLLHandle>, info: externalptr<DLLInfoReference>, forceSymbols: LGL1, any }<DLLInfo>
 #| base::rm : (...: any, list:chr?, pos:any?, envir:env?, inherits:lgl1?) -> null
 # Binds `x` to a promise of `value`, evaluated when `x` is first used.
 #| base::delayedAssign : (x:chr1, value:any, eval.env:env?, assign.env:env?) -> null
