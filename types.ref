@@ -137,12 +137,12 @@ m_square: dbl1<@area, ...>
 m_circle: dbl1<@area, ...>
 
 m_default: Untypeable: untypeable application of some_shape
-Line 47, characters 13-26
+Line 48, characters 13-26
 argument: @(0.<>)
 failing call: some_shape(0)
 
 any_shape: Untypeable: untypeable coercion
-Line 55, characters 25-32
+Line 56, characters 25-32
 expected: vec1
 given: any
 expression may be: new.env()
@@ -202,7 +202,7 @@ plain_list: "b"<>
 plain_round: dbl1<>
 
 next_val: Untypeable: untypeable coercion
-Line 108, characters 24-29
+Line 109, characters 24-29
 expected: dbl1
 given: (DBL | INT)<difftime> | (DBL | INT)<ts, ...> | DBL1<~@"+", ...> | LGL<> | dbl<Date, ...> | <POSIXt, ...>
 expression may be: structure(new.env(), class = "POSIXt")
@@ -403,6 +403,14 @@ ns_area: (((s: <@area, ...>) -> any) & ((s: dbl1<~@area, ...>) -> dbl1))<>
 ns_area_global: (((s: <@area, ...>) -> any) & ((s: dbl1<~@area, ...>) -> dbl1))<>
 
 ns_area_square: CHR1
+
+
+===== Processing tests/08_aliases.r =====
+num_with_suffix: Untypeable: untypeable coercion
+Line 9, characters 2-58
+expected: 'a<num_with_suffix, `c>
+given: any
+expression may be: new.env()
 
 
 ===== Processing tests/02_simple/break-for.r =====

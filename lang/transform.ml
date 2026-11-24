@@ -97,9 +97,9 @@ let first_arg_has_class cls arg =
   | exception _ -> false
 
 (* The partition of the call-site arguments of an application of the
-   variable [v] following its dispatch, if it is a generic with class-overloads
-   and its first positional argument [pos] (cf. [ArgBuilder]) is passed: the
-   arguments whose first positional one is in each part of
+   variable [v] following its dispatch, if it is a method (cf.
+   [MetaEnv.new_method]) and its first positional argument [pos] (cf.
+   [ArgBuilder]) is passed: the arguments whose first positional one is in each part of
    [MetaEnv.dispatch_partition]. Each part has as many positional arguments
    as the call ([pos]), as a call-site argument keeps track of their number
    (an argument passed but absent differs from none passed). It is empty

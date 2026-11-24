@@ -2,6 +2,8 @@
 
 # The class-overloads used below (cf. 04_s3.r). For a method of a namespace,
 # the namespace is written before the generic, as in `base::print.ns_df`.
+#| method print
+#| method shapes::area
 #| new print @ ns_rec
 #| new base::print @ ns_df
 #| new shapes::area @ ns_square

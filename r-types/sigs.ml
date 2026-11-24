@@ -24,11 +24,17 @@ type alias_def = string * (string,string,string) Builder.t
    cannot be split unambiguously (e.g. [as.data.frame.foo]). *)
 type class_def = string option * string * string
 
+(* Declaration of a method, i.e. a generic that dispatches on the class of its
+   first argument, written [method generic]: its namespace, if any, and its
+   name. Only methods can have class-overloads. *)
+type method_def = string option * string
+
 type t =
 | Sig of sig_def
 | LocalSig of local_sig_def
 | NsSig of ns_sig_def
 | Alias of alias_def
+| Method of method_def
 | NewClass of class_def
 
 (* Offset the parsing of [str] reached before failing. *)

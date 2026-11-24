@@ -36,6 +36,7 @@ rule token = parse
 | ':'     { TY (read_ty (Buffer.create 17) lexbuf) }
 | '='     { TYEQ (read_ty (Buffer.create 17) lexbuf) }
 | "new"   { NEW }
+| "method" { METHOD }
 | id as s { ID s }
 | '(' (sym as s) ')' { SYM s }
 (* A user-defined infix operator: [%] and anything but [%] up to the next [%]

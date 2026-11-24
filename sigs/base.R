@@ -48,6 +48,22 @@
 #   - an overload with label variables (e.g. `#k`) is never grouped with other
 #     ones: it would make the whole group symbolic.
 
+# ========== Methods ==========
+
+# The generics that dispatch on the class of their first argument. Only those
+# declared here can have class-overloads. Their other signatures do not apply to
+# a first argument whose class has a method (e.g. `<@as.character, ...>`): a
+# default signature covers it, whose result is the union of the results of the
+# class-overloads (`empty` if there is none). A method is thus declared even when
+# no class-overload of it is.
+#| method base::(+)
+#| method base::(-)
+#| method base::(*)
+#| method base::(/)
+#| method base::([])
+#| method base::([[]])
+#| method base::as.character
+
 # ========== Class-overloads ==========
 
 # The S3 methods `base` defines for its own classes. They are declared before

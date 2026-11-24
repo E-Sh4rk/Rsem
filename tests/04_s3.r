@@ -9,6 +9,7 @@
 # class-overload, the ones declared after it), and the signature of the method
 # `area.square` is also added as an overload of `area`, whose first parameter
 # is restricted to the values of class `square`.
+#| method area
 #| new area @ square
 #| new area @ circle
 

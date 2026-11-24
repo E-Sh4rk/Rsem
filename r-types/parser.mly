@@ -3,7 +3,7 @@
 %}
 
 %token<string> ID SYM TY TYEQ
-%token NEW COLONCOLON SLASH AT EOF
+%token METHOD NEW COLONCOLON SLASH AT EOF
 %start<Sigs.sig_def> sig_def
 %start<Sigs.alias_def> alias_def
 %start<Sigs.t> def
@@ -18,15 +18,18 @@ def_:
 | def=ns_sig_def { let (ns,id,ty) = def in Sigs.NsSig (ns,id,ty) }
 | def=local_sig_def { let (f,id,ty) = def in Sigs.LocalSig (f,id,ty) }
 | def=alias_def { let (id,ty) = def in Sigs.Alias (id, ty) }
+| METHOD g=name { Sigs.Method (None, g) }
+| METHOD ns=ID COLONCOLON g=name { Sigs.Method (Some ns, g) }
 | NEW g=name AT cls=ID { Sigs.NewClass (None, g, cls) }
 | NEW ns=ID COLONCOLON g=name AT cls=ID { Sigs.NewClass (Some ns, g, cls) }
 
-(* [new] is a keyword only when it introduces a class-overload declaration:
-   it remains usable as a regular identifier elsewhere. *)
+(* [new] and [method] are keywords only when they introduce a declaration: they
+   remain usable as regular identifiers elsewhere. *)
 %inline name:
 | id=ID { id }
 | id=SYM { id }
 | NEW { "new" }
+| METHOD { "method" }
 
 sig_def:
 | id=name ty=TY { (id, Sigs.parse_annot ty) }
@@ -42,3 +45,4 @@ local_sig_def:
 
 alias_def:
 | id=ID ty=TYEQ { (id, Rstt_repl.IO.parse_type ty) }
+| METHOD ty=TYEQ { ("method", Rstt_repl.IO.parse_type ty) }

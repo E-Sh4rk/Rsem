@@ -343,6 +343,8 @@ let add_sig ctx str tye =
   let senv = VarMap.add v sigs ctx.senv in
   { ctx with idenv ; tenv ; senv }
 
+let add_method ctx m = { ctx with tenv=MetaEnv.new_method m ctx.tenv }
+
 let add_class ctx ns m cls =
   { ctx with tenv=MetaEnv.new_class_overload m cls ctx.tenv ;
              covl=StrMap.add (qualified ns (m^"."^cls)) (m, cls) ctx.covl }
@@ -390,15 +392,16 @@ let add_ns_sig ctx ns str tye =
     |> add_to_generic ctx (Some ns) str sign in
   { ctx with tenv }
 
-(* Every declaration but a class-overload may build types that mention
+(* Every declaration but a method or a class-overload may build types that mention
    classes: the classes declared so far must be declared to rstt first. *)
 let add_def ctx offset def =
-  begin match def with Sigs.NewClass _ -> () | _ -> MetaEnv.declare_classes ctx.tenv end ;
+  begin match def with Sigs.Method _ | Sigs.NewClass _ -> () | _ -> MetaEnv.declare_classes ctx.tenv end ;
   match def with
   | Sigs.Sig (str, tye) -> add_sig ctx str tye
   | Sigs.LocalSig (f, str, tye) -> add_local_sig ctx offset f str tye
   | Sigs.NsSig (ns, str, tye) -> add_ns_sig ctx ns str tye
   | Sigs.Alias (str, tye) -> add_alias ctx str tye
+  | Sigs.Method (_, m) -> add_method ctx m
   | Sigs.NewClass (ns, m, cls) -> add_class ctx ns m cls
 
 (* Name of the top-level definition the offset [offset] falls into, if any. *)
@@ -489,18 +492,20 @@ let parse fn =
     let tree = Boilerplate.map_program () prog in
     Some (Parser.of_parser tree, res.extras)
 
-(* Declares the class-overloads of an already-parsed program, and nothing
-   else. As they determine the class hierarchy and the restrictions of the
+(* Declares the methods and class-overloads of an already-parsed program, and
+   nothing else. As they determine the class hierarchy and the restrictions of the
    signatures, they must be known before any signature is treated: when
    several programs are checked together, this is called on all of them before
    [process] is called on the first. Declaring them again in [process] has then
-   no effect. An annotation that cannot be parsed is skipped here, [process]
-   reports it. *)
+   no effect. An annotation that cannot be parsed, or a declaration that
+   is invalid (e.g. a class-overload of a function not declared as a method), is
+   skipped here: [process] reports it. *)
 let declare_overloads ctx (_, extras) =
   let annots = try annotations extras with Failure _ -> [] in
   annots |> List.fold_left (fun ctx (_, str) ->
     match IO.parse_def str with
-    | Sigs.NewClass (ns, m, cls) -> add_class ctx ns m cls
+    | Sigs.Method (_, m) -> (try add_method ctx m with Failure _ -> ctx)
+    | Sigs.NewClass (ns, m, cls) -> (try add_class ctx ns m cls with Failure _ -> ctx)
     | _ | exception _ -> ctx
   ) ctx
 

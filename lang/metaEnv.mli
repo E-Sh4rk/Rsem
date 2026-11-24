@@ -25,8 +25,8 @@ val fsig_ty : ?polymorphic:bool -> fsig -> GTy.t
    @raise Invalid_argument if [is_resolved] is false. *)
 
 type sigs
-(* Signatures declared for a variable. Those of a generic [m] with
-   class-overloads (a "method") are of three kinds:
+(* Signatures declared for a variable. Those of a method [m], i.e. a generic
+   declared as such (cf. [new_method]), are of three kinds:
    - its base signatures, i.e. the ones declared for [m] itself. Their first
      parameter is restricted to the values whose class has no class-overload
      of [m], i.e. to [<~@m, ...>] (with [@m] the method class of [m]);
@@ -36,7 +36,8 @@ type sigs
      [c_(i+1), ..., c_n] are the classes of the class-overloads of [m]
      declared after the one for [c_i] (which take precedence over it);
    - the default signature of its methods,
-     [(X: <@m, ...>, ...: any) -> ret], which covers the values the base
+     [(x: <@m, ...>, ...: any) -> ret] (with [x] the name of the first
+     parameter of the base signatures), which covers the values the base
      signatures do not apply to, i.e. [<@m, ...>] (a class implies the method
      classes it implements, so these are the values of the classes that have
      a class-overload of [m], whatever their other classes are). The
@@ -45,9 +46,9 @@ type sigs
      method cover all the values its base signatures cover, and those of
      unknown classes (e.g. [dbl]) in particular. [ret] is the union of the
      return types of the signatures of the methods (their type variables
-     instantiated with their largest instance), or [any] if one of its
-     class-overloads has no signature or one that still contains label
-     variables, or if type variables remain.
+     instantiated with their largest instance; [empty] if it has none), or
+     [any] if one of its class-overloads has no signature or one that still
+     contains label variables, or if type variables remain.
    A function that is not a method only has base signatures (whose first
    parameter is not restricted). Each kind only lists the signatures that
    could be converted to a type: the function signatures that still contain
@@ -92,12 +93,17 @@ val add_signature : ?cls:string -> name:string -> Variable.t -> signature -> t -
 val set_from_tyscheme : Variable.t -> TyScheme.t -> t -> t
 (* The type of [v] is restricted as a signature of its name would be. *)
 
+val new_method : string -> t -> t
+(* [new_method m t] declares that the functions named [m] are methods, i.e.
+   generics that dispatch on the class of their first argument, whether they
+   have class-overloads or not. It has no effect if it has already been declared.
+   @raise Failure if [m] has already been given a type. *)
 val new_class_overload : string -> string -> t -> t
-(* [new_class_overload m cls t] declares the class-overload of the generic
+(* [new_class_overload m cls t] declares the class-overload of the method
    named [m] for the class [cls], after the ones already declared: [cls] will
    implement the method class of [m]. It has no effect if it already does.
-   @raise Failure if [cls] has already been declared (cf. [declare_classes]) or
-   [m] given a type. *)
+   @raise Failure if [m] has not been declared as a method (cf. [new_method]),
+   [cls] has already been declared (cf. [declare_classes]) or [m] given a type. *)
 val declare_classes : t -> unit
 (* Declares the classes of the class-overloads of [t] that have not been
    declared yet, with their methods. It must be called before any type
@@ -107,7 +113,7 @@ val dispatch_partition : string -> t -> Ty.t list
 (* [dispatch_partition m t] partitions the R values of the first argument of an
    application of the generic [m] following its dispatch: [<~@m, ...>], then
    [<c_i, ~c_(i+1), ..., ~c_n, ...>] for each class-overload of [m], and the
-   rest. It is empty if [m] is not a method. *)
+   rest ([<@m, ...>] if it has none). It is empty if [m] is not a method. *)
 val class_overload_sig : string -> fsig -> fsig
 val class_overload_ty : string -> GTy.t -> GTy.t
 (* Restriction of the signature of a class-overload for the class [cls]: its
