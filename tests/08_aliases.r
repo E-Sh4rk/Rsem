@@ -1,5 +1,5 @@
 
-#| numeric = <@is.numeric, @as.numeric, ...> | (INT|DBL)<~factor>
+#| numeric = <@is.numeric, @as.numeric, ...> | (INT|DBL)<~factor, ...>
 #| character = <@as.character, ...> | vec
 
 #| num_with_suffix : (x: 'a<`c> & numeric, suffix: character) -> 'a<num_with_suffix, `c>
