@@ -3,6 +3,8 @@
 
 ===== Processing sigs/stats.R =====
 
+===== Processing sigs/utils.R =====
+
 ===== Processing tests/00_defs.r =====
 
 ===== Processing tests/01_test.r =====
@@ -36,14 +38,14 @@ f_succ_succ: ((a: dbl1<>) -> dbl1<>)<>
 
 f_req: ((a: dbl<>) -> dbl<>)<>
 
-f_opt: ∀'a,'b,`a. (((a: ('a & DBL1<~@"-", . | `a>)?) -> DBL1<~@"-", . | `a>) &
- ((a: ('a & dbl1<~@"-", . | `a>)?) -> dbl1<~@"-", . | `a>) & ((a: ('a & (DBL
- | dbl & v('b))<~@"-", . | `a>)?) -> (DBL | INT)<~@"-", . | `a> | ((DBL |
- INT)<~@"-", . | `a> | (DBL | dbl & v('b))<~@"-", . | `a>) & 'a) & ((a: ('a &
- (DBL1<~@"-", . | `a> | (dbl & v('b))<~@"-", . | `a>))?) ->
- (DBL1<~@"-", . | `a> | (INT | (DBL | INT) & v('b))<~@"-", . | `a>) |
- (DBL1<~@"-", . | `a> | (INT | (DBL | INT) & v('b))<~@"-", . | `a> | (dbl &
- v('b))<~@"-", . | `a>) & 'a))<>
+f_opt: ∀'a,'b,`a. (((a: ((DBL | dbl & v('b))<~@"-", . | `a> & 'a)?) -> (DBL |
+ INT)<~@"-", . | `a> | ((DBL | INT)<~@"-", . | `a> | (DBL | dbl &
+ v('b))<~@"-", . | `a>) & 'a) & ((a: ((DBL1<~@"-", . | `a> | (dbl &
+ v('b))<~@"-", . | `a>) & 'a)?) -> (DBL1<~@"-", . | `a> | (INT | (DBL | INT)
+ & v('b))<~@"-", . | `a>) | (DBL1<~@"-", . | `a> | (INT | (DBL | INT) &
+ v('b))<~@"-", . | `a> | (dbl & v('b))<~@"-", . | `a>) & 'a) &
+ ((a: (DBL1<~@"-", . | `a> & 'a)?) -> DBL1<~@"-", . | `a>) &
+ ((a: (dbl1<~@"-", . | `a> & 'a)?) -> dbl1<~@"-", . | `a>))<>
 
 f_opt_ann: ((a: dbl) -> dbl) & ((a: null?) -> lgl1)
 
@@ -85,18 +87,19 @@ test_classes: ∀'a. ((x: 'a<...>) -> 'a<...>)<>
 dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<>
 
 test_dots1: Untypeable: untypeable coercion
+Line 187, characters 14-131073
 expected: { `r }
-given: list<> | 'I1473
+given: list<> | 'I1595
 expression may be: new.env()
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
 
 test_dots3: ∀'a. ((...: 'a) -> { 'a }<>)<>
 
-print.R6: ∀'a,'b,`a. ((x: 'a & vec, ...: ('b, `a)) | (x: 'a &
- { print: @(...: ('b, empty? | `a)) -> any, any }, ...: ('b, `a)) | (x: 'a &
- { print: ~arrow, any }, ...: ('b, `a)) | (x: 'a & { ~arrow }, ...: ('b, `a))
- -> 'a)<>
+print.R6: ∀'a,'b,`a. ((x: vec & 'a, ...: ('b, `a)) | (x: { print: @(...: ('b, empty? |
+ `a)) -> any, any } & 'a, ...: ('b, `a)) | (x: { print: ~(empty ->
+ any), any } & 'a, ...: ('b, `a)) | (x: { ~(empty -> any) } &
+ 'a, ...: ('b, `a)) -> 'a)<>
 
 rollmean: ∀'a. (((x: any, k: any, fill: 'a?, na.pad: any?, ...: any) -> (LGL1 \
  ^LGL1)<> | null | 'a) & ((x: any, k: any, fill: 'a?, na.pad: ff?, ...: any)
@@ -383,13 +386,13 @@ ns_skip: (() -> "double"<>)<>
 
 ns_no_skip: (() -> "not a function"<>)<>
 
-ns_print: ∀'a. (((x: 'a & <@print, ...>) -> CHR1 | LGL1) & ((x: 'a \ <@print, ...>)
- -> 'a))<>
+ns_print: ∀'a. (((x: 'a \ <@print, ...>) -> 'a) & ((x: <@print, ...> & 'a) -> CHR1 |
+ LGL1))<>
 
 ns_print_rec: CHR1
 
-ns_method: ∀'a. (((x: 'a & <@print, ...>) -> CHR1 | LGL1) & ((x: 'a \ <@print, ...>)
- -> 'a))<>
+ns_method: ∀'a. (((x: 'a \ <@print, ...>) -> 'a) & ((x: <@print, ...> & 'a) -> CHR1 |
+ LGL1))<>
 
 ns_method_direct: ((x: <ns_df, ...>) -> LGL1)<>
 
@@ -417,7 +420,7 @@ execute: ((n: dbl) -> null)<>
 
 
 ===== Processing tests/02_simple/empty-while.r =====
-execute: ((n: vec | null) -> null)<>
+execute: ((n: null | vec) -> null)<>
 
 
 ===== Processing tests/02_simple/lapply-dots.r =====
@@ -433,7 +436,7 @@ execute: ((n: dbl) -> null)<>
 
 
 ===== Processing tests/02_simple/list-while.r =====
-execute: ((n: vec | null) -> null)<>
+execute: ((n: null | vec) -> null)<>
 
 
 ===== Processing tests/02_simple/matrix-for.r =====
@@ -441,9 +444,9 @@ execute: ((n: dbl1) -> null)<>
 
 
 ===== Processing tests/02_simple/repeat.r =====
-break_repeat: ((n: vec | null) -> DBL1<>)<>
+break_repeat: ((n: null | vec) -> DBL1<>)<>
 
-next_repeat: ((n: vec | null) -> DBL1<>)<>
+next_repeat: ((n: null | vec) -> DBL1<>)<>
 
 inner_repeat: (() -> "a"<>)<>
 
@@ -453,11 +456,11 @@ execute: ((n: dbl) -> null)<>
 
 
 ===== Processing tests/02_simple/scalar-while.r =====
-execute: ((n: vec | null) -> null)<>
+execute: ((n: null | vec) -> null)<>
 
 
 ===== Processing tests/02_simple/super-while.r =====
-execute: ((n: vec | null) -> null)<>
+execute: ((n: null | vec) -> null)<>
 
 
 ===== Processing tests/02_simple/vector-for.r =====
@@ -512,7 +515,7 @@ iter: dbl1<>
 
 mandelbrot: (size: dbl1<>) -> dbl1
 
-execute: ((n: dbl1<>?) -> dbl1)<>
+execute: ((n: (dbl1<>)?) -> dbl1)<>
 
 verifyResult: (result: dbl1, innerIterations: any) -> lgl1
 
