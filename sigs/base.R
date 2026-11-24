@@ -242,8 +242,8 @@
 # quickly (`function(x, cl) inherits(x, cl)` takes 0.3 s more with 3 classes,
 # 1 s with 5, and 22 s with 9; grouping the arrows is slower still). Only the
 # classes of `base` most tested this way are here.
-#| base::inherits : (x:any, what:chr, which:ff?) -> LGL1<>
-#| base::inherits : (x:any, what:chr, which:tt) -> INT<>
+#| base::inherits : (x:any, what:CHR, which:ff?) -> LGL1<>
+#| base::inherits : (x:any, what:CHR, which:tt) -> INT<>
 #| base::inherits : (x:<"try-error", ...>, what:"try-error", which:ff?) -> tt<>
 #|               && (x:<~"try-error", ...>, what:"try-error", which:ff?) -> ff<>
 #| base::inherits : (x:<connection, ...>, what:"connection", which:ff?) -> tt<>
@@ -263,7 +263,7 @@
 # run out of memory: more than 16 GB after 6 minutes, against 120 MB in 18 s.
 # An environment's attributes (e.g. the `name` of a package's), of which the
 # type says nothing.
-#| base::attr : (x:env, which:chr1, exact:lgl1?) -> dyn
+#| base::attr : (x:env, which:CHR1, exact:lgl1?) -> dyn
 # Setting an attribute to `NULL` removes it.
 #| base::attr<- : (x:'a<`c> with { #k:any?, `r }, which: #k, v:~null & 'b) -> 'a<`c> with { #k:'b, `r }
 #| base::attr<- : (x:'a<`c> with { #k:any?, `r }, which: #k, v:null) -> 'a<`c> with { #k:absent, `r }
@@ -309,8 +309,8 @@
 # Converts `x` to another storage mode, keeping its attributes. Not with a
 # class row variable: on a classed `x` (vctrs' vec_cast.difftime.difftime),
 # inference went from 6 s to over 30 s.
-#| base::storage.mode<- : (x:vec<>, v:chr1) -> vec<>
-#|                      && (x:vec, v:chr1) -> vec
+#| base::storage.mode<- : (x:vec<>, v:CHR1) -> vec<>
+#|                      && (x:vec, v:CHR1) -> vec
 
 # ========== Types and predicates ==========
 
@@ -435,11 +435,11 @@
 # `sort` and `order` are generic; `sort` keeps the class (e.g. of factors).
 #| base::sort : (x:v('a)<`c>, decreasing:lgl1?, ...: any) -> v('a)<`c>
 #| base::sort : (x:null, decreasing:lgl1?, ...: any) -> null
-#| base::order : (...: any, na.last:lgl1|null?, decreasing:lgl?, method:chr1?) -> INT<>
+#| base::order : (...: any, na.last:lgl1|null?, decreasing:lgl?, method:CHR1?) -> INT<>
 # The ranks of the elements: doubles with ties averaged (the default),
 # integers with the other `ties.method`s.
-#| base::rank : (x:dbl1|chr1, na.last:any?, ties.method:chr1?) -> (DBL1|INT1)<>
-#|           && (x:dbl|chr, na.last:any?, ties.method:chr1?) -> (DBL|INT)<>
+#| base::rank : (x:dbl1|chr1, na.last:any?, ties.method:CHR1?) -> (DBL1|INT1)<>
+#|           && (x:dbl|chr, na.last:any?, ties.method:CHR1?) -> (DBL|INT)<>
 # The elements of `x` for which `f` is true.
 #| base::Filter : (f:any, x:v('a)) -> v('a)
 #| base::Filter : (f:any, x:{'a}) -> {'a}
@@ -505,7 +505,7 @@
 # classes, and covers every argument alone (see the conventions above).
 #| base::as.vector : (x:v('a)<~factor, ...>, mode:"any"?) -> v('a)<>
 #|                && (x:null, mode:"any"?) -> null
-#|                && (x:any, mode:chr1?) -> any
+#|                && (x:any, mode:CHR1?) -> any
 #| base::as.vector : (x:<factor, ...>, mode:"any"?) -> CHR<>
 #| base::as.vector : (x:{'a}, mode:"any"|"list"?) -> {'a}<>
 #| base::as.vector : (x:vec, mode:"list") -> { any }<>
@@ -634,7 +634,7 @@
 # The number of times each integer of `bin` occurs, from 1 to `nbins`.
 #| base::tabulate : (bin:dbl|null, nbins:dbl1?) -> INT<>
 # A contingency table: the counts of each combination of the factors.
-#| base::table : (...: any, exclude:any?, useNA:chr1?, dnn:any?, deparse.level:dbl1?) -> INT<table> with { dim: INT, dimnames: list, any }
+#| base::table : (...: any, exclude:any?, useNA:CHR1?, dnn:any?, deparse.level:dbl1?) -> INT<table> with { dim: INT, dimnames: list, any }
 
 # ========== Functionals ==========
 
@@ -788,15 +788,15 @@
 # ========== Strings ==========
 
 # The result is a scalar when collapsed, or when every argument is one.
-#| base::paste : (...: vec1, sep:chr1?, collapse:(chr1|null)?) -> CHR1<>
-#|            && (...: any, sep:chr1?, collapse:chr1) -> CHR1<>
-#|            && (...: any, sep:chr1?, collapse:(chr1|null)?) -> CHR<>
+#| base::paste : (...: vec1, sep:CHR1?, collapse:(chr1|null)?) -> CHR1<>
+#|            && (...: any, sep:CHR1?, collapse:chr1) -> CHR1<>
+#|            && (...: any, sep:CHR1?, collapse:(chr1|null)?) -> CHR<>
 #| base::paste0 : (...: vec1, collapse:(chr1|null)?) -> CHR1<>
 #|             && (...: any, collapse:chr1) -> CHR1<>
 #|             && (...: any, collapse:(chr1|null)?) -> CHR<>
 
-#| base::nchar : (x:chr1, type:chr1?) -> INT1<>
-#|            && (x:chr, type:chr1?) -> INT<>
+#| base::nchar : (x:chr1, type:CHR1?) -> INT1<>
+#|            && (x:chr, type:CHR1?) -> INT<>
 #| base::substring : (text:chr1, first:dbl1, last:dbl1?) -> CHR1<>
 #|                && (text:chr, first:dbl, last:dbl?) -> CHR<>
 #| base::substr : (x:chr1, start:dbl1, stop:dbl1) -> CHR1<>
@@ -810,13 +810,13 @@
 # Syntactically valid names (`unique = TRUE`: and distinct ones).
 #| base::make.names : (names:vec1, unique:lgl1?, allow_:lgl1?) -> CHR1<>
 #|                 && (names:vec|null, unique:lgl1?, allow_:lgl1?) -> CHR<>
-#| base::make.unique : (names:chr, sep:chr1?) -> CHR<>
+#| base::make.unique : (names:CHR, sep:CHR1?) -> CHR<>
 #| base::tolower : (x:chr1) -> CHR1<>
 #|              && (x:chr|null) -> CHR<>
-#| base::enc2utf8 : (x:chr1) -> CHR1<>
-#|               && (x:chr) -> CHR<>
-#| base::trimws : (x:chr1, which:chr1?) -> CHR1<>
-#|             && (x:chr, which:chr1?) -> CHR<>
+#| base::enc2utf8 : (x:CHR1) -> CHR1<>
+#|               && (x:CHR) -> CHR<>
+#| base::trimws : (x:chr1, which:CHR1?) -> CHR1<>
+#|             && (x:chr, which:CHR1?) -> CHR<>
 # Quotes each element of `x` (after `as.character`).
 #| base::sQuote : (x:vec1, q:any?) -> CHR1<>
 #|             && (x:any, q:any?) -> CHR<>
@@ -826,13 +826,13 @@
 # vector of the lines, or a list of them per element with `simplify = FALSE`.
 #| base::strwrap : (x:any, width:dbl1?, indent:dbl1?, exdent:dbl1?, prefix:chr1?, simplify:tt?, initial:chr1?) -> CHR<>
 #| base::strwrap : (x:any, width:dbl1?, indent:dbl1?, exdent:dbl1?, prefix:chr1?, simplify:ff, initial:chr1?) -> { CHR<> }<>
-#| base::sprintf : (fmt:chr1, ...: vec1) -> CHR1<>
-#|              && (fmt:chr, ...: any) -> CHR<>
+#| base::sprintf : (fmt:CHR1, ...: vec1) -> CHR1<>
+#|              && (fmt:CHR, ...: any) -> CHR<>
 # `sprintf` of the translated `fmt`.
 #| base::gettextf : (fmt:chr1, ...: vec1, domain:any?, trim:lgl1?) -> CHR1<>
 #|               && (fmt:chr, ...: any, domain:any?, trim:lgl1?) -> CHR<>
 # The singular or the plural message, depending on `n`.
-#| base::ngettext : (n:dbl1, msg1:chr1, msg2:chr1, domain:any?) -> CHR1<>
+#| base::ngettext : (n:dbl1, msg1:CHR1, msg2:CHR1, domain:any?) -> CHR1<>
 # The lines of the source of an expression.
 #| base::deparse : (expr:any, width.cutoff:dbl1?, backtick:lgl1?, control:chr?, nlines:dbl1?) -> CHR<>
 #| base::format : (x:vec1, ...: any) -> CHR1<>
@@ -844,33 +844,35 @@
 # `x` formatted with marks between groups of digits (`big.mark`, ...).
 #| base::prettyNum : (x:vec1, big.mark:chr1?, ...: any) -> CHR1<>
 #|                && (x:vec, big.mark:chr1?, ...: any) -> CHR<>
-#| base::strsplit : (x:chr, split:chr, fixed:lgl1?, perl:lgl1?) -> { CHR<> }<>
+#| base::strsplit : (x:CHR, split:chr, fixed:lgl1?, perl:lgl1?) -> { CHR<> }<>
 #| base::file.path : (...: chr1, fsep:chr1?) -> CHR1<>
 #|                && (...: chr, fsep:chr1?) -> CHR<>
-#| base::normalizePath : (path:chr1, winslash:chr1?, mustWork:lgl1?) -> CHR1<>
-#|                    && (path:chr, winslash:chr1?, mustWork:lgl1?) -> CHR<>
+# Unlike most path functions, `path` must be a character vector: R does not
+# coerce it (`normalizePath(1)` is an error).
+#| base::normalizePath : (path:CHR1, winslash:chr1?, mustWork:lgl1?) -> CHR1<>
+#|                    && (path:CHR, winslash:chr1?, mustWork:lgl1?) -> CHR<>
 
-#| base::enc2native : (x:chr1) -> CHR1<>
-#|                 && (x:chr) -> CHR<>
+#| base::enc2native : (x:CHR1) -> CHR1<>
+#|                 && (x:CHR) -> CHR<>
 # The characters of `old` in `x` replaced by those of `new`.
-#| base::chartr : (old:chr1, new:chr1, x:chr1) -> CHR1<>
-#|             && (old:chr1, new:chr1, x:chr|null) -> CHR<>
+#| base::chartr : (old:CHR1, new:CHR1, x:chr1) -> CHR1<>
+#|             && (old:CHR1, new:CHR1, x:chr|null) -> CHR<>
 # `x` escaped (and quoted with `quote`), as `print` shows it.
-#| base::encodeString : (x:chr1, width:dbl1|null?, quote:chr1?, na.encode:lgl1?, justify:chr1?) -> CHR1<>
-#|                   && (x:chr, width:dbl1|null?, quote:chr1?, na.encode:lgl1?, justify:chr1?) -> CHR<>
+#| base::encodeString : (x:chr1, width:dbl1|null?, quote:CHR1?, na.encode:lgl1?, justify:CHR1?) -> CHR1<>
+#|                   && (x:chr, width:dbl1|null?, quote:CHR1?, na.encode:lgl1?, justify:CHR1?) -> CHR<>
 # The translations of the messages.
 #| base::gettext : (...: any, domain:any?, trim:lgl1?) -> CHR<>
 # The bytes of a string, and back: a string, or one string per byte with
 # `multiple = TRUE`.
-#| base::charToRaw : (x:chr1) -> RAW<>
+#| base::charToRaw : (x:CHR1) -> RAW<>
 #| base::rawToChar : (x:RAW, multiple:ff?) -> CHR1<>
 #| base::rawToChar : (x:RAW, multiple:tt) -> CHR<>
-#| base::basename : (path:chr1) -> CHR1<>
-#|               && (path:chr) -> CHR<>
-#| base::dirname : (path:chr1) -> CHR1<>
-#|              && (path:chr) -> CHR<>
-#| base::startsWith : (x:chr1, prefix:chr1) -> LGL1<>
-#|                 && (x:chr, prefix:chr) -> LGL<>
+#| base::basename : (path:CHR1) -> CHR1<>
+#|               && (path:CHR) -> CHR<>
+#| base::dirname : (path:CHR1) -> CHR1<>
+#|              && (path:CHR) -> CHR<>
+#| base::startsWith : (x:CHR1, prefix:CHR1) -> LGL1<>
+#|                 && (x:CHR, prefix:CHR) -> LGL<>
 
 # ========== Regular expressions ==========
 
@@ -913,14 +915,14 @@
 #|                 && (x:chr|posixct, ...: any) -> posixct
 # The list-based date-times, with the components (`sec`, `min`, ...) as
 # elements.
-#| base::as.POSIXlt : (x:any, tz:chr1?, ...: any) -> { any }<POSIXlt, POSIXt>
+#| base::as.POSIXlt : (x:any, tz:CHR1?, ...: any) -> { any }<POSIXlt, POSIXt>
 # Their methods, which packages also call directly.
-#| base::as.POSIXlt.POSIXct : (x:posixct, tz:chr1?, ...: any) -> { any }<POSIXlt, POSIXt>
-#| base::as.POSIXct.POSIXlt : (x:{ any }<POSIXlt, POSIXt>, tz:chr1?, ...: any) -> posixct
-#| base::difftime : (time1:date1|posixct1, time2:date1|posixct1, tz:chr1?, units:chr1?) -> difftime1
-#|               && (time1:date|posixct, time2:date|posixct, tz:chr1?, units:chr1?) -> difftime
-#| base::as.difftime : (tim:dbl1, format:chr1?, units:chr1?, tz:chr1?) -> difftime1
-#|                  && (tim:dbl, format:chr1?, units:chr1?, tz:chr1?) -> difftime
+#| base::as.POSIXlt.POSIXct : (x:posixct, tz:CHR1?, ...: any) -> { any }<POSIXlt, POSIXt>
+#| base::as.POSIXct.POSIXlt : (x:{ any }<POSIXlt, POSIXt>, tz:CHR1?, ...: any) -> posixct
+#| base::difftime : (time1:date1|posixct1, time2:date1|posixct1, tz:chr1?, units:CHR1?) -> difftime1
+#|               && (time1:date|posixct, time2:date|posixct, tz:chr1?, units:CHR1?) -> difftime
+#| base::as.difftime : (tim:dbl1, format:CHR1?, units:CHR1?, tz:CHR1?) -> difftime1
+#|                  && (tim:dbl, format:CHR1?, units:CHR1?, tz:CHR1?) -> difftime
 #| base::units : (x:<difftime, ...> with { units: 'u, any }) -> 'u
 # A date-time from the number of seconds since the epoch, without checks.
 #| base::.POSIXct : (xx:dbl1, tz:chr1|null?, cl:any?) -> posixct1
@@ -1061,26 +1063,26 @@
 #| base::invisible : () -> null
 #| base::stdout : () -> INT1<terminal, connection>
 #| base::write : ( x:any, file:(<connection, ...>|chr1)? ) -> null
-#| base::cat : ( ...: any, file:any?, sep:chr?, fill:any?, labels:chr?, append:lgl1? ) -> null
-#| base::sink : ( file:any?, append:lgl1?, type:chr1?, split:lgl1? ) -> null
+#| base::cat : ( ...: any, file:any?, sep:CHR?, fill:any?, labels:CHR?, append:lgl1? ) -> null
+#| base::sink : ( file:any?, append:lgl1?, type:CHR1?, split:lgl1? ) -> null
 #| base::open : ( con:<connection, ...>, ...: any ) -> null
 #| base::close : ( con:<connection, ...>, ...: any ) -> null
 # A file connection (its `conn_id` is an external pointer).
-#| base::file : ( description:chr1?, open:chr1?, ...: any ) -> INT1<file, connection>
+#| base::file : ( description:CHR1?, open:CHR1?, ...: any ) -> INT1<file, connection>
 #| base::isOpen : ( con:<connection, ...>, rw:chr1? ) -> LGL1<>
 #| base::isatty : ( con:any ) -> LGL1<>
 #| base::flush : ( con:<connection, ...> ) -> null
 # A connection to a raw vector, read from, or written to (`open = "w"`).
-#| base::rawConnection : ( object:RAW, open:chr1? ) -> INT1<rawConnection, connection>
-#| base::writeLines : ( text:chr?, con:(<connection, ...>)?, sep:chr1?, useBytes:lgl1? ) -> null
-#| base::sink.number : ( type:chr1? ) -> INT1<>
+#| base::rawConnection : ( object:RAW, open:CHR1? ) -> INT1<rawConnection, connection>
+#| base::writeLines : ( text:CHR?, con:(<connection, ...>)?, sep:CHR1?, useBytes:lgl1? ) -> null
+#| base::sink.number : ( type:CHR1? ) -> INT1<>
 #| base::message : ( ...: any, domain:any?, appendLF:lgl1? ) -> null
 
 #| base::stdin : () -> INT1<terminal, connection>
 #| base::stderr : () -> INT1<terminal, connection>
 # Whether each file exists.
-#| base::file.exists : (...: chr) -> LGL<>
-#| base::dir.exists : (paths:chr) -> LGL<>
+#| base::file.exists : (...: CHR) -> LGL<>
+#| base::dir.exists : (paths:CHR) -> LGL<>
 #| base::packageStartupMessage : (...: any, domain:any?, appendLF:lgl1?) -> null
 
 # ========== Session and environment ==========
@@ -1089,15 +1091,15 @@
 #|                 && (x:chr, unset:chr1?) -> CHR<>
 #| base::Sys.setenv : (...: any) -> LGL<>
 #| base::Sys.time : () -> DBL1<POSIXct, POSIXt>
-#| base::getOption : (x:chr1, default:'a?) -> 'a | null
+#| base::getOption : (x:CHR1, default:'a?) -> 'a | null
 #| base::options : (...: any) -> { any }<>
 #| base::l10n_info : () -> { any }<>
 #| base::interactive : () -> LGL1<>
-#| base::Sys.getlocale : (category:chr1?) -> CHR1<>
-#| base::Sys.setlocale : (category:chr1?, locale:chr1?) -> CHR1<>
+#| base::Sys.getlocale : (category:CHR1?) -> CHR1<>
+#| base::Sys.setlocale : (category:CHR1?, locale:CHR1?) -> CHR1<>
 #| base::capabilities : (what:chr?, ...: any) -> LGL<>
 #| base::tempdir : (check:lgl1?) -> CHR1<>
-#| base::tempfile : (pattern:chr?, tmpdir:chr?, fileext:chr?) -> CHR<>
+#| base::tempfile : (pattern:CHR?, tmpdir:CHR?, fileext:CHR?) -> CHR<>
 # 0 for success, 1 for failure.
 #| base::unlink : (x:chr, recursive:lgl1?, force:lgl1?, expand:lgl1?) -> INT1<>
 # The path of a file of an installed package, `""` when it is not found.
@@ -1110,23 +1112,23 @@
 #|                && (names:chr) -> CHR<>
 #| base::getwd : () -> CHR1<>
 # Whether the directory was created (with a warning when it was not).
-#| base::dir.create : (path:chr, showWarnings:lgl1?, recursive:lgl1?, mode:any?) -> LGL1<>
+#| base::dir.create : (path:CHR, showWarnings:lgl1?, recursive:lgl1?, mode:any?) -> LGL1<>
 # Returns the previous working directory (invisibly).
-#| base::setwd : (dir:chr1) -> CHR1<>
-#| base::.libPaths : (new:chr?, include.site:lgl1?) -> CHR<>
+#| base::setwd : (dir:CHR1) -> CHR1<>
+#| base::.libPaths : (new:CHR?, include.site:lgl1?) -> CHR<>
 #| base::requireNamespace : (package:chr1, ...: any, quietly:lgl1?) -> LGL1<>
-#| base::asNamespace : (ns:chr1|env, base.OK:lgl1?) -> env
+#| base::asNamespace : (ns:CHR1|env, base.OK:lgl1?) -> env
 
 # Environments. `environment()` of a primitive is `NULL`.
 #| base::parent.frame : (n:dbl1?) -> env
 #| base::environment : (fun:null?) -> env
 #| base::environmentName : (env:any) -> CHR1<>
 #| base::isNamespaceLoaded : (name:chr1) -> LGL1<>
-#| base::is.vector : (x:any, mode:chr1?) -> LGL1<>
+#| base::is.vector : (x:any, mode:CHR1?) -> LGL1<>
 #| base::isS4 : (object:any) -> LGL1<>
 #| base::is.pairlist : (x:any) -> LGL1<>
 # The column of the maximum of each row of a matrix.
-#| base::max.col : (m:dbl, ties.method:chr1?) -> INT<>
+#| base::max.col : (m:dbl, ties.method:CHR1?) -> INT<>
 # Sets the step of the torture of the garbage collector, and returns the
 # previous one.
 #| base::gctorture2 : (step:dbl1, wait:dbl1?, inhibit_release:lgl1?) -> INT1<>
@@ -1139,51 +1141,52 @@
 #| base::sys.frames : () -> { env }<> | null
 #| base::ls : (name:any?, ...: any) -> CHR<>
 #| base::objects : (name:any?, ...: any) -> CHR<>
-#| base::exists : (x:chr1, where:any?, envir:any?, frame:dbl1?, mode:chr1?, inherits:lgl1?) -> LGL1<>
+#| base::exists : (x:CHR1, where:any?, envir:any?, frame:dbl1?, mode:CHR1?, inherits:lgl1?) -> LGL1<>
 # The calls on the stack, `NULL` at top level.
 #| base::sys.calls : () -> { any }<> | null
 # The kinds of random number generators in use (before the change).
-#| base::RNGkind : (kind:chr1|null?, normal.kind:chr1|null?, sample.kind:chr1|null?) -> CHR<>
-#| base::get : (x:chr1, ...: any) -> any
+#| base::RNGkind : (kind:CHR1|null?, normal.kind:CHR1|null?, sample.kind:CHR1|null?) -> CHR<>
+#| base::get : (x:CHR1, ...: any) -> any
 # Like `get`, with `ifnotfound` (`NULL` by default) when there is no binding.
-#| base::get0 : (x:chr1, envir:any?, mode:chr1?, inherits:lgl1?, ifnotfound:any?) -> any
+#| base::get0 : (x:CHR1, envir:any?, mode:CHR1?, inherits:lgl1?, ifnotfound:any?) -> any
 # An exported object of a namespace (`pkg::name`), of which the type says
 # nothing.
-#| base::getExportedValue : (ns:chr1|env, name:chr1) -> dyn
+#| base::getExportedValue : (ns:CHR1|env, name:CHR1) -> dyn
 
 #| base::.Platform : { OS.type: CHR1, file.sep: CHR1, path.sep: CHR1, GUI: CHR1, any }<>
 #| base::.Machine : { integer.max: INT1, double.eps: DBL1, double.xmax: DBL1, sizeof.pointer: INT1, any }<>
 #| base::pi : ^DBL1<>
 
 #| base::R.home : (component:chr1?) -> CHR1<>
-#| base::set.seed : (seed:dbl1|null, kind:chr1|null?, normal.kind:chr1|null?, sample.kind:chr1|null?) -> null
+#| base::set.seed : (seed:dbl1|null, kind:CHR1|null?, normal.kind:CHR1|null?, sample.kind:CHR1|null?) -> null
 #| base::baseenv : () -> env
 #| base::getNamespace : (name:chr1|env) -> env
 # Loads (unloads) the DLL of a package. A DLL is described by a "DLLInfo"
 # list, whose `$` is also a method that finds a native symbol of the DLL
 # (hence the `any` for other names). Without `chname`, `library.dynam` returns
-# the DLLs loaded by packages, a "DLLInfoList".
+# the DLLs loaded by packages, a "DLLInfoList". `libpath` goes to
+# `normalizePath`, which does not coerce it.
 #| base::library.dynam : (chname:absent, package:any?, lib.loc:any?, verbose:lgl1?, file.ext:chr1?, ...: any) -> { { name: CHR1, path: CHR1, dynamicLookup: LGL1, handle: externalptr<DLLHandle>, info: externalptr<DLLInfoReference>, forceSymbols: LGL1, any }<DLLInfo> }<DLLInfoList>
 #| base::library.dynam : (chname:chr1, package:chr, lib.loc:chr|null?, verbose:lgl1?, file.ext:chr1?, ...: any) -> { name: CHR1, path: CHR1, dynamicLookup: LGL1, handle: externalptr<DLLHandle>, info: externalptr<DLLInfoReference>, forceSymbols: LGL1, any }<DLLInfo>
-#| base::library.dynam.unload : (chname:chr1, libpath:chr1, verbose:lgl1?, file.ext:chr1?) -> { name: CHR1, path: CHR1, dynamicLookup: LGL1, handle: externalptr<DLLHandle>, info: externalptr<DLLInfoReference>, forceSymbols: LGL1, any }<DLLInfo>
-#| base::rm : (...: any, list:chr?, pos:any?, envir:env?, inherits:lgl1?) -> null
+#| base::library.dynam.unload : (chname:chr1, libpath:CHR1, verbose:lgl1?, file.ext:chr1?) -> { name: CHR1, path: CHR1, dynamicLookup: LGL1, handle: externalptr<DLLHandle>, info: externalptr<DLLInfoReference>, forceSymbols: LGL1, any }<DLLInfo>
+#| base::rm : (...: any, list:CHR?, pos:any?, envir:env?, inherits:lgl1?) -> null
 # Binds `x` to a promise of `value`, evaluated when `x` is first used.
-#| base::delayedAssign : (x:chr1, value:any, eval.env:env?, assign.env:env?) -> null
+#| base::delayedAssign : (x:CHR1, value:any, eval.env:env?, assign.env:env?) -> null
 
 # The global environment, and the namespace of base.
 #| base::.GlobalEnv : env
 #| base::.BaseNamespaceEnv : env
 #| base::parent.env : (env:env) -> env
 # Binds `x` to `value`, and returns `value` (invisibly).
-#| base::assign : (x:chr1, value:'a, pos:any?, envir:env?, inherits:lgl1?, immediate:lgl1?) -> 'a
+#| base::assign : (x:CHR1, value:'a, pos:any?, envir:env?, inherits:lgl1?, immediate:lgl1?) -> 'a
 # The names of the attached environments and packages.
 #| base::search : () -> CHR<>
 # Attaches a database (an environment, a list or a file) to the search path,
 # and returns its environment.
-#| base::attach : (what:any, pos:dbl1?, name:chr1?, warn.conflicts:lgl1?) -> env
+#| base::attach : (what:any, pos:dbl1?, name:CHR1?, warn.conflicts:lgl1?) -> env
 #| base::detach : (name:any?, pos:dbl1?, unload:lgl1?, character.only:lgl1?, force:lgl1?) -> null
 # Attaches a package, and returns the attached packages (invisibly).
-#| base::library : (package:any?, help:any?, pos:dbl1?, lib.loc:chr|null?, character.only:lgl1?, logical.return:lgl1?, warn.conflicts:lgl1?, quietly:lgl1?, verbose:lgl1?, ...: any) -> CHR<>
+#| base::library : (package:any?, help:any?, pos:dbl1?, lib.loc:CHR|null?, character.only:lgl1?, logical.return:lgl1?, warn.conflicts:lgl1?, quietly:lgl1?, verbose:lgl1?, ...: any) -> CHR<>
 #| base::save : (...: any) -> null
 # `TRUE` and `FALSE`, as variables (which a program can rebind).
 #| base::T : tt<>
@@ -1204,8 +1207,8 @@
 # after the one of the method (with the classes already dispatched on as its
 # `previous` attribute), and `.Method` the names of the methods (in the `Ops`
 # group, one per operand).
-#| base::UseMethod : (generic:chr1, object:any?) -> dyn
-#| base::NextMethod : (generic:chr1|null?, object:any?, ...: any) -> dyn
+#| base::UseMethod : (generic:CHR1, object:any?) -> dyn
+#| base::NextMethod : (generic:CHR1|null?, object:any?, ...: any) -> dyn
 #| base::.Generic : dyn
 #| base::.Class : dyn
 #| base::.Method : dyn
@@ -1242,8 +1245,8 @@
 #| base::Reduce : (f:any, x:any, init:any?, right:lgl1?, accumulate:lgl1?, simplify:lgl1?) -> any
 # One of the choices (several with `several.ok = TRUE`). The default
 # `choices` are the caller's formals, which a signature cannot see.
-#| base::match.arg : (arg:chr|null, choices:chr?, several.ok:ff?) -> CHR1<>
-#|                && (arg:chr|null, choices:chr?, several.ok:lgl1) -> CHR<>
+#| base::match.arg : (arg:CHR|null, choices:chr?, several.ok:ff?) -> CHR1<>
+#|                && (arg:CHR|null, choices:chr?, several.ok:lgl1) -> CHR<>
 
 # Its argument is the name of a formal, not evaluated, or `...` (whether no
 # argument fills it), which a call passes along as its elements.
@@ -1289,7 +1292,7 @@
 #| base::quote : (expr:any) -> dyn
 #| base::body : (fun:any?) -> dyn
 #| base::args : (name:any) -> dyn
-#| base::call : (name:chr1, ...: any) -> dyn
+#| base::call : (name:CHR1, ...: any) -> dyn
 #| base::is.name : (x:any) -> LGL1<>
 #| base::is.symbol : (x:any) -> LGL1<>
 #| base::mode : (x:any) -> CHR1<>
@@ -1331,7 +1334,7 @@
 
 # Whether `object` is of the class `class2`, or, without it, the classes
 # `object` is (and extends).
-#| methods::is : (object:any, class2:chr1) -> LGL1<>
+#| methods::is : (object:any, class2:CHR1) -> LGL1<>
 #| methods::is : (object:any, class2:absent) -> CHR<>
 # The graphical parameters: the previous values of the ones that are set (a
 # list, invisibly), or the value of the one that is queried.
@@ -1339,4 +1342,4 @@
 # Adds lines to the current plot.
 #| graphics::lines : (x:any, ...: any) -> null
 # Defines a method of the S4 generic `f`, and returns `f` (invisibly).
-#| methods::setMethod : (f:chr1, signature:any?, definition:any?, where:any?, valueClass:any?, sealed:lgl1?) -> CHR1<>
+#| methods::setMethod : (f:CHR1, signature:any?, definition:any?, where:any?, valueClass:any?, sealed:lgl1?) -> CHR1<>

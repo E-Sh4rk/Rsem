@@ -103,8 +103,8 @@
 #| stats::sd : (x:dbl, na.rm:lgl1?) -> DBL1<>
 # The variance of a vector, or the covariance matrix of the columns of a
 # matrix (or between `x` and `y`).
-#| stats::var : (x:dbl, y:dbl|null?, na.rm:lgl1?, use:chr1?) -> DBL<> with { dim: INT?, dimnames: list?, any }
-#| stats::cov : (x:dbl, y:dbl|null?, use:chr1?, method:chr1?) -> DBL<> with { dim: INT?, dimnames: list?, any }
+#| stats::var : (x:dbl, y:dbl|null?, na.rm:lgl1?, use:CHR1?) -> DBL<> with { dim: INT?, dimnames: list?, any }
+#| stats::cov : (x:dbl, y:dbl|null?, use:CHR1?, method:CHR1?) -> DBL<> with { dim: INT?, dimnames: list?, any }
 
 # The residuals and the weights of a fitted model (the weights are `NULL` for
 # an unweighted one); both are generic.

@@ -57,8 +57,8 @@
 
 # What the expressions print, one string per line; written to `file` instead
 # (returning `NULL`) when there is one.
-#| utils::capture.output : (...: any, file:null?, append:lgl1?, type:chr?, split:lgl1?) -> CHR<>
-#| utils::capture.output : (...: any, file:~null, append:lgl1?, type:chr?, split:lgl1?) -> null
+#| utils::capture.output : (...: any, file:null?, append:lgl1?, type:CHR?, split:lgl1?) -> CHR<>
+#| utils::capture.output : (...: any, file:~null, append:lgl1?, type:CHR?, split:lgl1?) -> null
 
 # Prints the structure of an object; `NULL` (invisibly).
 #| utils::str : (object:any, ...: any) -> null
@@ -76,16 +76,16 @@
 # ========== Files and URLs ==========
 
 # The exit status of the download (0 for success).
-#| utils::download.file : (url:chr, destfile:chr, method:chr1?, quiet:lgl1?, mode:chr1?, cacheOK:lgl1?, extra:any?, headers:any?, ...: any) -> INT1<>
+#| utils::download.file : (url:CHR, destfile:CHR, method:CHR1?, quiet:lgl1?, mode:CHR1?, cacheOK:lgl1?, extra:any?, headers:any?, ...: any) -> INT1<>
 # Archives: the status of `tar` and `zip`; the extracted files of `unzip` (or,
 # with `list = TRUE`, a data frame of the files the archive holds).
-#| utils::tar : (tarfile:any, files:chr|null?, ...: any) -> INT1<>
-#| utils::zip : (zipfile:chr1, files:chr, flags:chr1?, extras:chr?, zip:chr1?) -> INT1<>
-#| utils::unzip : (zipfile:chr1, files:chr|null?, list:ff?, ...: any) -> CHR<>
-#| utils::unzip : (zipfile:chr1, files:chr|null?, list:tt, ...: any) -> { any }<data.frame> with { names: CHR, any }
+#| utils::tar : (tarfile:any, files:CHR|null?, ...: any) -> INT1<>
+#| utils::zip : (zipfile:CHR1, files:CHR, flags:chr1?, extras:chr?, zip:CHR1?) -> INT1<>
+#| utils::unzip : (zipfile:CHR1, files:CHR|null?, list:ff?, ...: any) -> CHR<>
+#| utils::unzip : (zipfile:CHR1, files:CHR|null?, list:tt, ...: any) -> { any }<data.frame> with { names: CHR, any }
 # Percent-encodes the characters of the URLs.
-#| utils::URLencode : (URL:chr1, reserved:lgl1?, repeated:lgl1?) -> CHR1<>
-#|                 && (URL:chr, reserved:lgl1?, repeated:lgl1?) -> CHR<>
+#| utils::URLencode : (URL:CHR1, reserved:lgl1?, repeated:lgl1?) -> CHR1<>
+#|                 && (URL:CHR, reserved:lgl1?, repeated:lgl1?) -> CHR<>
 # The short (8.3) form of Windows paths.
 #| utils::shortPathName : (path:chr1) -> CHR1<>
 #|                     && (path:chr) -> CHR<>
@@ -117,11 +117,11 @@
 # packages.
 #| utils::sessionInfo : (...: any) -> { any }<sessionInfo>
 # An object of a namespace, exported or not, of which the type says nothing.
-#| utils::getFromNamespace : (x:chr1, ns:any, pos:any?, envir:any?) -> dyn
+#| utils::getFromNamespace : (x:CHR1, ns:any, pos:any?, envir:any?) -> dyn
 # The memory an object uses, in bytes.
 #| utils::object.size : (x:any) -> DBL1<object_size>
 # Loads data sets into `envir`; the names of the data sets (invisibly).
-#| utils::data : (...: any, list:chr?, package:chr|null?, lib.loc:chr|null?, verbose:lgl1?, envir:env?, overwrite:lgl1?) -> CHR<>
+#| utils::data : (...: any, list:CHR?, package:CHR|null?, lib.loc:chr|null?, verbose:lgl1?, envir:env?, overwrite:lgl1?) -> CHR<>
 # Documentation, vignettes and demos, of which the type says nothing.
 #| utils::help : (...: any) -> dyn
 #| utils::vignette : (...: any) -> dyn
