@@ -38,14 +38,16 @@ f_succ_succ: ((a: dbl1<>) -> dbl1<>)<>
 
 f_req: ((a: dbl<>) -> dbl<>)<>
 
-f_opt: ∀'a,'b,`a. (((a: ((DBL | dbl & v('b))<~@"-", . | `a> & 'a)?) -> (DBL |
- INT)<~@"-", . | `a> | ((DBL | INT)<~@"-", . | `a> | (DBL | dbl &
- v('b))<~@"-", . | `a>) & 'a) & ((a: ((DBL1<~@"-", . | `a> | (dbl &
- v('b))<~@"-", . | `a>) & 'a)?) -> (DBL1<~@"-", . | `a> | (INT | (DBL | INT)
- & v('b))<~@"-", . | `a>) | (DBL1<~@"-", . | `a> | (INT | (DBL | INT) &
- v('b))<~@"-", . | `a> | (dbl & v('b))<~@"-", . | `a>) & 'a) &
- ((a: (DBL1<~@"-", . | `a> & 'a)?) -> DBL1<~@"-", . | `a>) &
- ((a: (dbl1<~@"-", . | `a> & 'a)?) -> dbl1<~@"-", . | `a>))<>
+f_opt: ∀'a,'b,`a. (((a: ((DBL | dbl & v('b))<~@"-", ~@">", . | `a> & 'a)?) -> (DBL
+ | INT)<~@"-", ~@">", . | `a> | ((DBL | INT)<~@"-", ~@">", . | `a> | (DBL |
+ dbl & v('b))<~@"-", ~@">", . | `a>) & 'a) &
+ ((a: ((DBL1<~@"-", ~@">", . | `a> | (dbl & v('b))<~@"-", ~@">", . | `a>) &
+ 'a)?) -> (DBL1<~@"-", ~@">", . | `a> | (INT | (DBL | INT) &
+ v('b))<~@"-", ~@">", . | `a>) | (DBL1<~@"-", ~@">", . | `a> | (INT | (DBL |
+ INT) & v('b))<~@"-", ~@">", . | `a> | (dbl & v('b))<~@"-", ~@">", . | `a>) &
+ 'a) & ((a: (DBL1<~@"-", ~@">", . | `a> & 'a)?) ->
+ DBL1<~@"-", ~@">", . | `a>) & ((a: (dbl1<~@"-", ~@">", . | `a> & 'a)?) ->
+ dbl1<~@"-", ~@">", . | `a>))<>
 
 f_opt_ann: ((a: dbl) -> dbl) & ((a: null?) -> lgl1)
 
@@ -89,24 +91,31 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<>
 test_dots1: Untypeable: untypeable coercion
 Line 187, characters 14-131073
 expected: { `r }
-given: list<> | 'I1595
+given: list<> | 'I1609
 expression may be: new.env()
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
 
 test_dots3: ∀'a. ((...: 'a) -> { 'a }<>)<>
 
-print.R6: ∀'a,'b,`a. ((x: vec & 'a, ...: ('b, `a)) | (x: { print: @(...: ('b, empty? |
- `a)) -> any, any } & 'a, ...: ('b, `a)) | (x: { print: ~(empty ->
- any), any } & 'a, ...: ('b, `a)) | (x: { ~(empty -> any) } &
- 'a, ...: ('b, `a)) -> 'a)<>
+print.R6: ∀'a,'b,`a. ((x: vec<@format, ...> & 'a, ...: ('b, `a)) |
+ (x: vec<~@format, ...> & 'a, ...: ('b, `a)) |
+ (x: { print: @(...: ('b, empty? | `a)) -> any, any } & 'a, ...: ('b, `a)) |
+ (x: { print: ~(empty -> any), any }<@format, ...> & 'a, ...: ('b, `a)) |
+ (x: { print: ~(empty -> any), any }<~@format, ...> & 'a, ...: ('b, `a)) |
+ (x: { ~(empty -> any) }<@format, ...> & 'a, ...: ('b, `a)) |
+ (x: { ~(empty -> any) }<~@format, ...> & 'a, ...: ('b, `a)) -> 'a)<>
 
 rollmean: ∀'a. (((x: any, k: any, fill: 'a?, na.pad: any?, ...: any) -> (LGL1 \
  ^LGL1)<> | null | 'a) & ((x: any, k: any, fill: 'a?, na.pad: ff?, ...: any)
  -> null | 'a))<>
 
-num_to_char_R: ((x: DBL | INT, digits: any?, na_as_string: any?) | (x: ~(DBL |
- INT), digits: any?, na_as_string: any?) -> null)<>
+num_to_char_R: ((x: <@is.numeric, ...>, digits: (~(<@is.na, ...> |
+ <@is.numeric, ...>))?, na_as_string: any?) | (x: DBL<~@is.numeric, ...> |
+ INT<~@is.numeric, ...>, digits: (~(<@is.na, ...> |
+ <@is.numeric, ...>))?, na_as_string: any?) | (x: ~((DBL | INT) |
+ <@is.numeric, ...>), digits: (~(<@is.na, ...> |
+ <@is.numeric, ...>))?, na_as_string: any?) -> null)<>
 
 pred: (() -> (DBL | INT)<>)<>
 
@@ -310,8 +319,9 @@ annot_dot_use: (() -> CHR1)<>
 
 .dot_local: (() -> dbl)<>
 
-annot_pow: ∀`a. (((x: dbl1<. | `a>) -> DBL1<. | `a>) & ((x: dbl<. | `a> | null) ->
- DBL<. | `a>))<>
+annot_pow: ∀`a. (((x: <@"^", ...>) -> any) & ((x: dbl1<~@"^", . | `a>) ->
+ DBL1<~@"^", . | `a>) & ((x: dbl<~@"^", . | `a> | null) ->
+ DBL<~@"^", . | `a>))<>
 
 annot_tilde: ((x: any, y: any) -> any)<>
 
@@ -418,9 +428,9 @@ loop_in_local: DBL1 | INT1
 
 to_json: ∀'a. ((x: 'a, force: any?) -> 'a)<>
 
-local_c: ∀'a,'b,`a. (((x: (DBL | v('b))<`a>) -> (DBL | v('b))<`a>) & ((x: (DBL |
- v('b)) | null) -> (DBL | v('b)) | null) & ((x: { 'a }) -> { DBL1<> |
- 'a }<>))<>
+local_c: ∀'a,'b,`a. (((x: (DBL | v('b))<~@c, `a>) -> (DBL | v('b))<`a>) & ((x: (DBL |
+ v('b)) | null) -> (DBL | v('b)) | null) & ((x: <@c, ...>) -> any) &
+ ((x: { 'a }<~@c, ...>) -> { DBL1<> | 'a }<>))<>
 
 local: ∀'a. ((e: 'a) -> 'a)<>
 
@@ -434,21 +444,31 @@ shadow_fn: (() -> 3.<>)<>
 
 
 ===== Processing tests/07_namespace.r =====
-ns_call: (((x: CHR) -> CHR1) & ((x: any) -> any) & ((x: dbl) -> (DBL1 | INT1)<>))<>
+ns_call: (((x: <@median, ...>) | (x: ~<@median, ...>) -> any) &
+ ((x: CHR<~@median, ...>) -> CHR1) & ((x: dbl<~@median, ...>) -> (DBL1 |
+ INT1)<>))<>
 
 ns_call_num: (() -> (DBL1 | INT1)<>)<>
 
-ns_internal: (((x: CHR) -> CHR1) & ((x: any) -> any) & ((x: dbl) -> (DBL1 | INT1)<>))<>
+ns_internal: (((x: <@median, ...>) | (x: ~<@median, ...>) -> any) &
+ ((x: CHR<~@median, ...>) -> CHR1) & ((x: dbl<~@median, ...>) -> (DBL1 |
+ INT1)<>))<>
 
 ns_value: (() -> dbl1)<>
 
-ns_string: (((x: CHR) -> CHR1) & ((x: any) -> any) & ((x: dbl) -> (DBL1 | INT1)<>))<>
+ns_string: (((x: <@median, ...>) | (x: ~<@median, ...>) -> any) &
+ ((x: CHR<~@median, ...>) -> CHR1) & ((x: dbl<~@median, ...>) -> (DBL1 |
+ INT1)<>))<>
 
-ns_shadow: (((x: CHR) -> CHR1) & ((x: any) -> any) & ((x: dbl) -> (DBL1 | INT1)<>))<>
+ns_shadow: (((x: <@median, ...>) | (x: ~<@median, ...>) -> any) &
+ ((x: CHR<~@median, ...>) -> CHR1) & ((x: dbl<~@median, ...>) -> (DBL1 |
+ INT1)<>))<>
 
 ns_global: ((x: { dbl }) -> dbl1)<>
 
-ns_global_ns: (((x: CHR) -> CHR1) & ((x: any) -> any) & ((x: dbl) -> (DBL1 | INT1)<>))<>
+ns_global_ns: (((x: <@median, ...>) | (x: ~<@median, ...>) -> any) &
+ ((x: CHR<~@median, ...>) -> CHR1) & ((x: dbl<~@median, ...>) -> (DBL1 |
+ INT1)<>))<>
 
 ns_first_class: (() -> (DBL1 | INT1)<>)<>
 
@@ -470,13 +490,11 @@ ns_skip: (() -> "double"<>)<>
 
 ns_no_skip: (() -> "not a function"<>)<>
 
-ns_print: ∀'a. (((x: 'a \ <@print, ...>) -> 'a) & ((x: <@print, ...> & 'a) -> CHR1 |
- LGL1))<>
+ns_print: ∀'a. (((x: 'a \ <@print, ...>) -> 'a) & ((x: <@print, ...> & 'a) -> any))<>
 
 ns_print_rec: CHR1
 
-ns_method: ∀'a. (((x: 'a \ <@print, ...>) -> 'a) & ((x: <@print, ...> & 'a) -> CHR1 |
- LGL1))<>
+ns_method: ∀'a. (((x: 'a \ <@print, ...>) -> 'a) & ((x: <@print, ...> & 'a) -> any))<>
 
 ns_method_direct: ((x: <ns_df, ...>) -> LGL1)<>
 
