@@ -149,6 +149,29 @@ expression may be: new.env()
 
 default_area: (s: dbl1<~@area, ...>) -> dbl1
 
+l_square: "square"
+
+l_default: lgl1
+
+l_unknown: (x: dbl1<@label, ...>) -> CHR
+
+l_precise: Untypeable: untypeable coercion
+Line 82, characters 25-33
+expected: "square"
+given: CHR
+expression may be: NA_character_
+
+c_unknown: (((x: <@clone, ...>) -> dbl<circle, ...> | dbl<square, ...>) &
+ ((x: dbl1<~@clone, ...>) -> dbl1<circle>))<>
+
+chr_unknown: (x: <@as.character, ...>) -> CHR
+
+chr_precise: Untypeable: untypeable coercion
+Line 93, characters 27-42
+expected: empty
+given: CHR
+expression may be: NA_character_
+
 today: date1
 
 tomorrow: date1
@@ -202,7 +225,7 @@ plain_list: "b"<>
 plain_round: dbl1<>
 
 next_val: Untypeable: untypeable coercion
-Line 109, characters 24-29
+Line 142, characters 24-29
 expected: dbl1
 given: (DBL | INT)<difftime> | (DBL | INT)<ts, ...> | DBL1<~@"+", ...> | LGL<> | dbl<Date, ...> | <POSIXt, ...>
 expression may be: structure(new.env(), class = "POSIXt")

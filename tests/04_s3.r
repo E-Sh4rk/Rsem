@@ -59,6 +59,39 @@ any_shape <- function(s) area(s)
 #| default_area : (s: dbl1<~@area, ...>) -> dbl1
 default_area <- function(s) area(s)
 
+# ========== Return type of a method ==========
+
+# The return type of a method can be declared. Its class-overloads must return a
+# subtype of it (but not its other signatures), and it is the type given to a
+# value of unknown class, rather than the union of the results of its
+# class-overloads. It can mention classes whose class-overloads are declared
+# afterward.
+#| method label : CHR
+#| method clone : dbl<square, ...> | dbl<circle, ...>
+#| new label @ square
+#| new clone @ square
+
+#| label : (x: dbl1) -> lgl1
+#| label.square : (x: any) -> "square"
+l_square <- label(sq_new())
+l_default <- label(0)
+#| l_unknown : (x: dbl1<@label, ...>) -> CHR
+l_unknown <- function(x) label(x)
+# The result may come from another class-overload (it is expected to fail).
+#| l_precise : (x: dbl1<@label, ...>) -> "square"
+l_precise <- function(x) label(x)
+
+#| clone : (x: dbl1) -> dbl1<circle>
+#| clone.square : (x: any) -> dbl1<square>
+c_unknown <- function(x) clone(x)
+
+# Without class-overload, the return type still applies (here, the one of
+# `base::as.character`): `chr_precise` is expected to fail.
+#| chr_unknown : (x: <@as.character, ...>) -> CHR
+chr_unknown <- function(x) as.character(x)
+#| chr_precise : (x: <@as.character, ...>) -> empty
+chr_precise <- function(x) as.character(x)
+
 # ========== Methods of base and stats ==========
 
 # Dates: arithmetic with numbers gives dates, the difference of two dates a

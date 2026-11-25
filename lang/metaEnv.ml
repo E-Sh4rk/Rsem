@@ -35,10 +35,11 @@ module StrSet = Set.Make(String)
 (* [ns] maps a namespace and a name to the variable R code reaches with
    [ns::name]. Such a variable is never bound by the program itself: its type
    only comes from the signatures declared for it.
-   [meths] are the names of the declared methods (cf. [new_method]), and [ovl]
-   lists their declared class-overloads (generic name, class), in their order
-   of declaration. [bound] are the names that have been given a type (which can
-   thus no longer be declared as methods, nor get new class-overloads).
+   [meths] maps the names of the declared methods to their return type, if one
+   has been declared (cf. [new_method]), and [ovl] lists their declared
+   class-overloads (generic name, class), in their order of declaration. [bound]
+   are the names that have been given a type (which can thus no longer be
+   declared as methods, nor get new class-overloads).
    [types] maps each variable to its type, simplified. It is lazy, so that
    only the types that are used (cf. [env]) get simplified, each only once:
    simplifying the intersection of the many signatures of a generic with
@@ -49,7 +50,8 @@ module StrSet = Set.Make(String)
 type t = { types : TyScheme.t Lazy.t VarMap.t ; kinds : kind Lazy.t VarMap.t ;
            senv : sigs VarMap.t ;
            ns : Variable.t StrMap.t StrMap.t ; self : string option ;
-           meths : StrSet.t ; ovl : (string * string) list ; bound : StrSet.t }
+           meths : GTy.t Lazy.t option StrMap.t ;
+           ovl : (string * string) list ; bound : StrSet.t }
 
 let simplify_tl ty =
   let tvs, ty = ty |> TyScheme.bot_instance |> TyScheme.get in
@@ -71,7 +73,7 @@ let initial =
         VarMap.add v (lazy (kind_of_tyscheme ts)) kinds)
       (VarMap.empty, VarMap.empty) in
   { types ; kinds ; senv=VarMap.empty ; ns=StrMap.empty ; self=None ;
-    meths=StrSet.empty ; ovl=[] ; bound=StrSet.empty }
+    meths=StrMap.empty ; ovl=[] ; bound=StrSet.empty }
 let get_sigs v senv =
   match VarMap.find_opt v senv with
   | None -> { base=[] ; methods=[] ; methods_default=[] ; symbolic=[] ; kind=KAny }
@@ -208,19 +210,62 @@ let r_name m =
   | "[]" -> "[" | "[[]]" -> "[[" | "[]<-" -> "[<-" | "[[]]<-" -> "[[<-"
   | m -> m
 
+let is_method m t = StrMap.mem m t.meths
+(* The return type declared for the method [m], if any. *)
+let return_ty m t =
+  StrMap.find_opt m t.meths |> Option.join |> Option.map Lazy.force
+
+(* Declares to rstt the classes of the class-overloads that have not been
+   declared yet, each with the methods of all its class-overloads. It must be
+   called before any type mentioning these classes is built. *)
+let declare_classes t =
+  t.ovl |> List.iter (fun (_,cls) ->
+    if Hashtbl.mem declared cls |> not then begin
+      let methods = t.ovl |> List.filter_map (fun (m,c) ->
+        if String.equal c cls then Some (r_name m) else None) in
+      begin try Rstt.Classes.declare_class cls ~methods
+      with Invalid_argument _ ->
+        failwith (Printf.sprintf
+          "Cannot declare the class %s: it is mentioned by a type built before its class-overloads." cls)
+      end ;
+      Hashtbl.add declared cls ()
+    end)
+
 (* Declares that the function [m] is a method, i.e. a generic that dispatches on
    the class of its first argument. Only a method can have class-overloads, but
    it does not need any: its class-overloads may not be known (e.g. those of
    other packages). As it determines the restrictions of the signatures of [m],
-   it must be declared before [m] is given a type. Declaring the same method
-   again does nothing. *)
-let new_method m t =
-  if StrSet.mem m t.meths then t
-  else if StrSet.mem m t.bound then
-    failwith (Printf.sprintf
-      "Cannot declare the method %s: %s has already been given a type." m m)
-  else { t with meths=StrSet.add m t.meths }
-let is_method m t = StrSet.mem m t.meths
+   it must be declared before [m] is given a type.
+   [ret] is the return type of the class-overloads of [m], if declared: their
+   signatures must comply with it (cf. [check_return_ty]), but not the base
+   signatures of [m]. It is lazy, as it may mention classes whose
+   class-overloads have not been declared yet: it is only forced once [m] is
+   given a type (the classes must then have been declared, cf.
+   [declare_classes]).
+   Declaring the same method again does nothing, but adding its return type if
+   it has none. If it has one, they must be equivalent. *)
+let new_method ?ret m t =
+  let set ret =
+    if StrSet.mem m t.bound then
+      failwith (Printf.sprintf
+        "Cannot declare the method %s%s: %s has already been given a type." m
+        (if StrMap.mem m t.meths then " with a return type" else "") m)
+    else { t with meths=StrMap.add m ret t.meths }
+  in
+  match StrMap.find_opt m t.meths, ret with
+  | None, _ | Some None, Some _ -> set ret
+  | Some _, None -> t
+  | Some (Some ret), Some ret' ->
+    let merged = lazy begin
+      let ret, ret' = Lazy.force ret, Lazy.force ret' in
+      if GTy.equiv ret ret' then ret
+      else failwith (Format.asprintf
+        "The method %s is declared with distinct return types: %a and %a." m GTy.pp ret GTy.pp ret')
+    end in
+    if StrSet.mem m t.bound then begin
+      (* No later signature may force it: the types are compared right away. *)
+      declare_classes t ; Lazy.force merged |> ignore ; t
+    end else { t with meths=StrMap.add m (Some merged) t.meths }
 
 (* Declares the class-overload of the method [m] for the class [cls]: [cls]
    will implement the method class of [m] (named after [r_name m]). The methods
@@ -241,22 +286,6 @@ let new_class_overload m cls t =
       error (cls^" has already been declared (class-overloads must precede any type mentioning their class)") ;
     { t with ovl=t.ovl@[m,cls] }
   end
-
-(* Declares to rstt the classes of the class-overloads that have not been
-   declared yet, each with the methods of all its class-overloads. It must be
-   called before any type mentioning these classes is built. *)
-let declare_classes t =
-  t.ovl |> List.iter (fun (_,cls) ->
-    if Hashtbl.mem declared cls |> not then begin
-      let methods = t.ovl |> List.filter_map (fun (m,c) ->
-        if String.equal c cls then Some (r_name m) else None) in
-      begin try Rstt.Classes.declare_class cls ~methods
-      with Invalid_argument _ ->
-        failwith (Printf.sprintf
-          "Cannot declare the class %s: it is mentioned by a type built before its class-overloads." cls)
-      end ;
-      Hashtbl.add declared cls ()
-    end)
 
 (* Classes of the class-overloads of the generic [m], in their order of
    declaration, and those declared after the class-overload for [cls].
@@ -323,18 +352,18 @@ let first_param_name sigs =
    restriction [<~@m, ...>] (a class implies the method classes it
    implements). Contrarily to the signatures of the methods, it also covers
    the values of these classes whose other classes are unknown.
-   As these values are dispatched to one of the class-overloads of [m], [ret]
-   is the union of the return types of the signatures of its methods [sigs],
-   the type variables of each being instantiated with [TVOp.top_instance]
-   before the union (where a variable could occur with both polarities, and
-   thus survive). In particular, it is [empty] when [m] has no class-overload.
-   It is [any]
-   when this is not possible: when a class-overload has no signature (its
-   return type is unknown), one of them still contains label variables, or
-   type variables remain after the instantiation. *)
+   [ret] is the return type declared for [m], if any (cf. [new_method]).
+   Otherwise, as these values are dispatched to one of the class-overloads of
+   [m], it is the union of the return types of the signatures of its methods
+   [sigs], the type variables of each being instantiated with
+   [TVOp.top_instance] before the union (where a variable could occur with both
+   polarities, and thus survive). In particular, it is [empty] when [m] has no
+   class-overload. It is [any] when this is not possible: when a class-overload
+   has no signature (its return type is unknown), one of them still contains
+   label variables, or type variables remain after the instantiation. *)
 let methods_default_ty m sigs t =
   let open Rstt in
-  let ret =
+  let overloads_ret () =
     let has_sig c = List.exists (fun (c',_) -> String.equal c c') sigs.methods in
     let symbolic = List.exists (fun (c,_) -> Option.is_some c) sigs.symbolic in
     if symbolic || List.for_all has_sig (overloads m t) |> not then Ty.any else
@@ -343,11 +372,41 @@ let methods_default_ty m sigs t =
               |> Ty.disj in
     if GTy.mk ret |> GTy.fv |> MVarSet.is_empty then ret else Ty.any
   in
+  let ret = match return_ty m t with
+    | Some ret -> ret
+    | None -> overloads_ret () |> GTy.mk in
   let field ty = Ty.F.mk_descr (Ty.O.required ty) in
   let x = class_ty [true, method_class m] in
   let dom = Arg.mk { pos_named=[first_param_name sigs, field x] ;
                      pos_tl=field Ty.any ; named=[] ; named_tl=field Ty.any } in
-  Arrow.mk dom ret |> Attr.mk_content |> GTy.mk
+  ret |> GTy.map (fun ret -> Arrow.mk dom ret |> Attr.mk_content)
+
+(* Checks that the signature [s] of the class-overload of the method [m] for the
+   class [cls] complies with the return type declared for [m], if any: each of
+   its arrows must return a subtype of it (if they are gradual, for one of their
+   static instances at least). The label variables of a symbolic signature
+   are not resolved yet: an arrow whose return type contains some is considered
+   to return [any]. *)
+let check_return_ty cls m s t =
+  match return_ty m t with
+  | None -> ()
+  | Some ret ->
+    let tys = match s with
+      | SigFun f ->
+        f.decl |> List.map (fun a ->
+          match Rstt.FunSig.to_regular_ty a.Rstt.FunSig.ret with
+          | b -> f.build b
+          | exception Invalid_argument _ -> GTy.any)
+      | SigTy ty when is_fun_sig ty -> [GTy.lb ty |> GTy.mk |> codomain |> GTy.mk]
+      | SigTy _ -> []
+    in
+    let complies ty = Ty.leq (GTy.lb ty) (GTy.ub ret) in
+    match List.find_opt (fun ty -> complies ty |> not) tys with
+    | None -> ()
+    | Some ty ->
+      failwith (Format.asprintf
+        "The signature of %s.%s does not comply with the return type of the method %s: %a is not a subtype of %a."
+        m cls m GTy.pp ty GTy.pp ret)
 
 (* A partition of the R values the first argument of an application of the
    generic [m] may take, following its dispatch: the values whose class has
@@ -406,8 +465,10 @@ let sigs_kind k ty =
   | KAny, KAny -> KAny
 
 (* The first parameter of a signature of [name] is restricted as described by
-   [restriction]. *)
+   [restriction]. That of a class-overload must comply with the return type of
+   its method. *)
 let add_signature ?cls ~name v s t =
+  Option.iter (fun cls -> check_return_ty cls name s t) cls ;
   let restr = restriction ?cls name t in
   let s =
     match s with

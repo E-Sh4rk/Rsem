@@ -18,8 +18,8 @@ def_:
 | def=ns_sig_def { let (ns,id,ty) = def in Sigs.NsSig (ns,id,ty) }
 | def=local_sig_def { let (f,id,ty) = def in Sigs.LocalSig (f,id,ty) }
 | def=alias_def { let (id,ty) = def in Sigs.Alias (id, ty) }
-| METHOD g=name { Sigs.Method (None, g) }
-| METHOD ns=ID COLONCOLON g=name { Sigs.Method (Some ns, g) }
+| METHOD g=name ty=method_ret { Sigs.Method (None, g, ty) }
+| METHOD ns=ID COLONCOLON g=name ty=method_ret { Sigs.Method (Some ns, g, ty) }
 | NEW g=name AT cls=ID { Sigs.NewClass (None, g, cls) }
 | NEW ns=ID COLONCOLON g=name AT cls=ID { Sigs.NewClass (Some ns, g, cls) }
 
@@ -30,6 +30,10 @@ def_:
 | id=SYM { id }
 | NEW { "new" }
 | METHOD { "method" }
+
+(* The return type of a method is a regular type. *)
+%inline method_ret:
+| ty=TY? { Option.map Rstt_repl.IO.parse_type ty }
 
 sig_def:
 | id=name ty=TY { (id, Sigs.parse_annot ty) }

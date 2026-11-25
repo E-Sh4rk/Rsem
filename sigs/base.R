@@ -53,16 +53,19 @@
 # The generics that dispatch on the class of their first argument. Only those
 # declared here can have class-overloads. Their other signatures do not apply to
 # a first argument whose class has a method (e.g. `<@as.character, ...>`): a
-# default signature covers it, whose result is the union of the results of the
-# class-overloads (`empty` if there is none). A method is thus declared even when
-# no class-overload of it is.
+# default signature covers it, whose result is the return type declared for the
+# method (e.g. `CHR` for `method base::as.character : CHR`), which its
+# class-overloads must comply with, i.e. they must return a subtype of it. If
+# none is declared, it is the union of the results of the class-overloads
+# (`empty` if there is none). A method is thus declared even when no
+# class-overload of it is.
 #| method base::(+)
 #| method base::(-)
 #| method base::(*)
 #| method base::(/)
 #| method base::([])
 #| method base::([[]])
-#| method base::as.character
+#| method base::as.character : CHR
 
 # ========== Class-overloads ==========
 

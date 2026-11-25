@@ -343,7 +343,19 @@ let add_sig ctx str tye =
   let senv = VarMap.add v sigs ctx.senv in
   { ctx with idenv ; tenv ; senv }
 
-let add_method ctx m = { ctx with tenv=MetaEnv.new_method m ctx.tenv }
+(* The return type [tye] of the method [m], if any, is only built when needed:
+   it may mention classes whose class-overloads are not declared yet (cf.
+   [MetaEnv.new_method]). It cannot contain type variables: it is resolved in
+   an environment without any, which must remain so. *)
+let add_method ctx m tye =
+  let open R_types.Types in
+  let ret = tye |> Option.map (fun tye ->
+    let benv = { ctx.benv with venv=Builder.StrMap.empty ; rvenv=Builder.StrMap.empty } in
+    let benv, tye = Builder.resolve benv tye in
+    if not (Builder.StrMap.is_empty benv.venv && Builder.StrMap.is_empty benv.rvenv)
+    then failwith ("The return type of the method "^m^" cannot have type variables.") ;
+    lazy (build_gty ctx.tidenv tye)) in
+  { ctx with tenv=MetaEnv.new_method ?ret m ctx.tenv }
 
 let add_class ctx ns m cls =
   { ctx with tenv=MetaEnv.new_class_overload m cls ctx.tenv ;
@@ -401,7 +413,7 @@ let add_def ctx offset def =
   | Sigs.LocalSig (f, str, tye) -> add_local_sig ctx offset f str tye
   | Sigs.NsSig (ns, str, tye) -> add_ns_sig ctx ns str tye
   | Sigs.Alias (str, tye) -> add_alias ctx str tye
-  | Sigs.Method (_, m) -> add_method ctx m
+  | Sigs.Method (_, m, tye) -> add_method ctx m tye
   | Sigs.NewClass (ns, m, cls) -> add_class ctx ns m cls
 
 (* Name of the top-level definition the offset [offset] falls into, if any. *)
@@ -499,12 +511,17 @@ let parse fn =
    [process] is called on the first. Declaring them again in [process] has then
    no effect. An annotation that cannot be parsed, or a declaration that
    is invalid (e.g. a class-overload of a function not declared as a method), is
-   skipped here: [process] reports it. *)
+   skipped here: [process] reports it. A method whose return type cannot be
+   resolved yet (e.g. it uses an alias) is declared without it: [process] adds
+   it. *)
 let declare_overloads ctx (_, extras) =
   let annots = try annotations extras with Failure _ -> [] in
   annots |> List.fold_left (fun ctx (_, str) ->
     match IO.parse_def str with
-    | Sigs.Method (_, m) -> (try add_method ctx m with Failure _ -> ctx)
+    | Sigs.Method (_, m, tye) ->
+      begin try add_method ctx m tye with Failure _ | Invalid_argument _ ->
+        try add_method ctx m None with Failure _ -> ctx
+      end
     | Sigs.NewClass (ns, m, cls) -> (try add_class ctx ns m cls with Failure _ -> ctx)
     | _ | exception _ -> ctx
   ) ctx

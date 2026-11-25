@@ -25,9 +25,10 @@ type alias_def = string * (string,string,string) Builder.t
 type class_def = string option * string * string
 
 (* Declaration of a method, i.e. a generic that dispatches on the class of its
-   first argument, written [method generic]: its namespace, if any, and its
-   name. Only methods can have class-overloads. *)
-type method_def = string option * string
+   first argument, written [method generic] or [method generic : type]: its
+   namespace, if any, its name, and its return type, if any (its class-overloads
+   must then return a subtype of it). Only methods can have class-overloads. *)
+type method_def = string option * string * (string,string,string) Builder.t option
 
 type t =
 | Sig of sig_def

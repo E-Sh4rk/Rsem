@@ -44,11 +44,12 @@ type sigs
      signatures of the methods do not cover all of them, as
      [<@m, ~c_1, ..., ~c_n, ...>] is not empty. With it, the signatures of a
      method cover all the values its base signatures cover, and those of
-     unknown classes (e.g. [dbl]) in particular. [ret] is the union of the
-     return types of the signatures of the methods (their type variables
-     instantiated with their largest instance; [empty] if it has none), or
-     [any] if one of its class-overloads has no signature or one that still
-     contains label variables, or if type variables remain.
+     unknown classes (e.g. [dbl]) in particular. [ret] is the return type
+     declared for [m], if any. Otherwise, it is the union of the return types
+     of the signatures of the methods (their type variables instantiated with
+     their largest instance; [empty] if it has none), or [any] if one of its
+     class-overloads has no signature or one that still contains label
+     variables, or if type variables remain.
    A function that is not a method only has base signatures (whose first
    parameter is not restricted). Each kind only lists the signatures that
    could be converted to a type: the function signatures that still contain
@@ -89,15 +90,24 @@ val add_signature : ?cls:string -> name:string -> Variable.t -> signature -> t -
    [name]: as a base signature, or as the signature of the method for [cls]
    (whose first parameter must already be restricted to [cls], cf.
    [class_overload_sig]). Its first parameter is restricted as described for
-   [sigs]. *)
+   [sigs].
+   @raise Failure if [cls] is set and the method [name] has been declared with a
+   return type (cf. [new_method]) that [s] does not comply with. *)
 val set_from_tyscheme : Variable.t -> TyScheme.t -> t -> t
 (* The type of [v] is restricted as a signature of its name would be. *)
 
-val new_method : string -> t -> t
-(* [new_method m t] declares that the functions named [m] are methods, i.e.
+val new_method : ?ret:GTy.t Lazy.t -> string -> t -> t
+(* [new_method ~ret m t] declares that the functions named [m] are methods, i.e.
    generics that dispatch on the class of their first argument, whether they
-   have class-overloads or not. It has no effect if it has already been declared.
-   @raise Failure if [m] has already been given a type. *)
+   have class-overloads or not. If set, [ret] is the return type of their
+   class-overloads, whose signatures must return a subtype of it (contrarily to
+   the base signatures). It must not contain type variables, and is only forced
+   once [m] is given a type (or if it already is), when the classes it mentions
+   have been declared (cf. [declare_classes]). If [m] is already declared, it
+   has no effect but adding [ret] if [m] has no return type.
+   @raise Failure if [m] (or its return type) has not been declared yet and [m]
+   has already been given a type. If [m] has another return type that is not
+   equivalent to [ret], the failure may be delayed until [m] is given a type. *)
 val new_class_overload : string -> string -> t -> t
 (* [new_class_overload m cls t] declares the class-overload of the method
    named [m] for the class [cls], after the ones already declared: [cls] will
