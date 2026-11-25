@@ -78,21 +78,18 @@ let resolved_conj =
       let ty = MetaEnv.all sigs |> List.map (GTy.map Rstt.Attr.proj_content) |> GTy.conj in
       cache := (sigs, ty)::!cache ; ty
 
-(* [first_arg_has_class cls arg] tells whether the first positional argument
-   of the call-site type [arg] certainly has the class [cls], i.e. whether it
-   is a subtype of [<cls, ...>]. It does not for an argument whose type is a
-   type variable: only one built with the class (e.g. ['a<cls>]) does. *)
-let first_arg_has_class cls arg =
+(* [first_arg_is ty arg] tells whether the first positional argument of the
+   call-site type [arg] certainly is of type [ty], e.g. [<cls, ...>] for the
+   values of class [cls]. It is not for an argument whose type is a type
+   variable: only one built with the class (e.g. ['a<cls>]) is. *)
+let first_arg_is ty arg =
   let open Rstt in
-  let classes = Classes.mk { pos=[Classes.L (Classes.Class cls, [])] ; neg=[] ; unk=[] ;
-                             tail=Classes.Unknown } in
-  let with_cls = Attr.mk { content=Ty.any ; classes ; attrs=Ty.any } in
-  let has_class f = Ty.leq (Ty.F.get_descr f |> Ty.O.get |> fst) with_cls in
+  let is_ty f = Ty.leq (Ty.F.get_descr f |> Ty.O.get |> fst) ty in
   match Arg.destruct arg with
   | [] -> false
   | atoms ->
     atoms |> List.for_all (function
-      | Arg.CallSite { pos'=f::_ ; _ } -> has_class f
+      | Arg.CallSite { pos'=f::_ ; _ } -> is_ty f
       | Arg.CallSite _ | Arg.DefSite _ -> false)
   | exception _ -> false
 
@@ -372,23 +369,26 @@ let to_mlsem (cfg:cfg) e =
              between:
              - in checking mode (no inference variable in the type of the
                argument, cf. [amask]), all the signatures at once: their
-               intersection, i.e. base signatures, signatures of the methods,
-               and default signature of the methods (plus the symbolic
-               signatures, resolved for the type of the argument);
+               intersection, i.e. base signatures, signatures of the default
+               method and of the class-overloads, and fallback signature (plus
+               the symbolic signatures, resolved for the type of the argument);
              - in inference mode, each signature alone: the base signatures,
-               the default signature of the methods, and the signatures of
-               the methods for the classes the first argument certainly has
-               (cf. [first_arg_has_class]). The other methods are left out,
-               the default signature standing for them: when the class of the
+               the fallback signature, the signatures of the class-overloads
+               for the classes the first argument certainly has, and those of
+               the default method if it certainly has none with a
+               class-overload (cf. [MetaEnv.inference_guard]). The default
+               method is left out otherwise, and only the base signatures stand
+               for it. The other class-overloads are left out too, the fallback
+               signature standing for them: when the class of the
                argument is unknown (e.g. a type variable), considering all
                of them would make the inference blow up, the methods of a
                generic being many (e.g. [+]). The successful alternatives
-               are intersected, so that the default signature only matters
-               when no method applies.
-             The default signature covers the values the base signatures do
+               are intersected, so that the fallback signature only matters
+               when no class-overload applies.
+             The fallback signature covers the values the base signatures do
              not apply to (cf. [MetaEnv.sigs]): an argument whose classes are
              unknown (e.g. [dbl]) is thus covered, its values of a class with a
-             method being given the return type of the default signature. *)
+             method being given the return type of the fallback signature. *)
           let proj = GTy.map Rstt.Attr.proj_content in
           let arg_ty ?(v=varg) env =
             Env.find_opt v env |> Option.map (fun ts -> TyScheme.get ts |> snd |> GTy.ub) in
@@ -437,12 +437,19 @@ let to_mlsem (cfg:cfg) e =
             if partition = [] then alt_default
             else Eid.unique (), A.Let (partition, varg', arg, alt_default)
           in
-          (* The alternatives of the inference mode, each with the class of the
-             method it is a signature of (if any). *)
+          (* Whether the signatures of a given origin are considered in
+             inference mode, for an argument of type [aty]. *)
+          let considered aty origin =
+            match MetaEnv.inference_guard sigs origin with
+            | None -> true
+            | Some ty -> first_arg_is ty aty
+          in
+          (* The alternatives of the inference mode, each with its origin. *)
           let alt ofun = Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun ; ogen=false }, arg) in
           let alt_ty ty = alt (Fun.const (proj ty |> TyScheme.mk_poly)) in
-          (* The union of the base signatures whose domain is not disjoint
-             from the argument: [d_1|...|d_n -> cd_1|...|cd_n], [cd_i] being
+          (* The union of the base signatures (and of those of the default method,
+             if they are considered) whose domain is not disjoint from the
+             argument: [d_1|...|d_n -> cd_1|...|cd_n], [cd_i] being
              the codomain of the signature [i] on its domain [d_i]. It is
              weaker than their intersection, but applies to an argument that
              no signature alone covers (e.g. [INT1 | LGL1 | 'a] for
@@ -454,9 +461,10 @@ let to_mlsem (cfg:cfg) e =
              alternatives then suffice. *)
           let alt_union = alt (fun env ->
             let open Mlsem_types in
-            let aty = arg_ty env |> Option.value ~default:Ty.any
-                      |> TVOp.bot_instance (TVOp.all_vars KNoInfer) in
-            MetaEnv.base sigs |> List.map proj |> GTy.mapl (fun tys ->
+            let aty = arg_ty env |> Option.value ~default:Ty.any in
+            let defaults = if considered aty Default then MetaEnv.defaults sigs else [] in
+            let aty = TVOp.bot_instance (TVOp.all_vars KNoInfer) aty in
+            MetaEnv.base sigs@defaults |> List.map proj |> GTy.mapl (fun tys ->
               let doms = tys |> List.map Arrow.domain in
               let dcds = List.combine tys doms |> List.filter_map (fun (ty, d) ->
                 if Ty.cap d aty |> Ty.is_empty then None
@@ -466,10 +474,12 @@ let to_mlsem (cfg:cfg) e =
               else Arrow.mk (List.map fst dcds |> Ty.disj) (List.map snd dcds |> Ty.disj))
             |> TyScheme.mk_poly) in
           let alts =
-            (None, alt_union)::
-            (MetaEnv.base sigs@MetaEnv.methods_default sigs |> List.map (fun ty -> None, alt_ty ty))
-            @(MetaEnv.methods_with_class sigs |> List.map (fun (cls, ty) -> Some cls, alt_ty ty))
-            @(MetaEnv.symbolic sigs |> List.map (fun (cls, fsig) -> cls, alt (fun env ->
+            (MetaEnv.Base, alt_union)::
+            (MetaEnv.base sigs@MetaEnv.fallback sigs |> List.map (fun ty -> MetaEnv.Base, alt_ty ty))
+            @(MetaEnv.defaults sigs |> List.map (fun ty -> MetaEnv.Default, alt_ty ty))
+            @(MetaEnv.overloads_with_class sigs
+              |> List.map (fun (cls, ty) -> MetaEnv.Overload cls, alt_ty ty))
+            @(MetaEnv.symbolic sigs |> List.map (fun (origin, fsig) -> origin, alt (fun env ->
                 resolve_ty env fsig |> Option.value ~default:GTy.any |> TyScheme.mk_poly)))
           in
           let amask env =
@@ -479,9 +489,7 @@ let to_mlsem (cfg:cfg) e =
             then true::List.map (Fun.const false) alts
             else
               let aty = TyScheme.get arg |> snd |> GTy.ub in
-              false::(alts |> List.map (function
-                | None, _ -> true
-                | Some cls, _ -> first_arg_has_class cls aty))
+              false::(alts |> List.map (fun (origin, _) -> considered aty origin))
           in
           let amask_default = true::List.map (Fun.const false) alts in
           let name = Format.asprintf "%a" Variable.pp v in
