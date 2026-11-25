@@ -213,10 +213,14 @@ l_default: lgl1
 l_unknown: (x: dbl1<@label, ...>) -> CHR
 
 l_precise: Untypeable: untypeable coercion
-Line 148, characters 25-33
+Line 149, characters 25-33
 expected: "square"
 given: CHR
 expression may be: NA_character_
+
+label.circle: ((x: any) -> tt<>)<>
+
+l_circle: CHR
 
 c_unknown: (((x: <@clone, ...>) -> dbl<circle, ...> | dbl<square, ...>) &
  ((x: dbl1<~@clone, ...>) -> dbl1<circle>))<>
@@ -224,7 +228,7 @@ c_unknown: (((x: <@clone, ...>) -> dbl<circle, ...> | dbl<square, ...>) &
 chr_unknown: (x: <@as.character, ...>) -> CHR
 
 chr_precise: Untypeable: untypeable coercion
-Line 159, characters 27-42
+Line 167, characters 27-42
 expected: empty
 given: CHR
 expression may be: NA_character_
@@ -282,7 +286,7 @@ plain_list: "b"<>
 plain_round: dbl1<>
 
 next_val: Untypeable: untypeable coercion
-Line 208, characters 24-29
+Line 216, characters 24-29
 expected: dbl1
 given: (DBL | INT)<difftime> | (DBL | INT)<ts, ...> | DBL1<~@"+", ...> | LGL<> | dbl<Date, ...> | <POSIXt, ...>
 expression may be: structure(new.env(), class = "POSIXt")

@@ -229,13 +229,20 @@ let generic_var ctx m =
    or is the name of the default method of a method (cf.
    [MetaEnv.generic_of_default]). The latter applies to the values whose class
    has no class-overload, as the base signatures of the generic. The signature of [str] itself is not restricted, as a default method
-   can be called directly (or by [NextMethod]) on any value. *)
-let add_to_generic ctx ns str sign =
+   can be called directly (or by [NextMethod]) on any value.
+   With [~inferred], [sign] is the type inferred for [str] (no signature was
+   declared for it): that of a class-overload is only added if it complies with
+   the return type of its method (cf. [MetaEnv.complies]). Otherwise, the
+   generic does not get it, but the definition of [str] keeps its type: an
+   inferred type often has an imprecise arrow (e.g. one returning [any]), which
+   should not make the definition fail as a wrong signature does. *)
+let add_to_generic ?(inferred=false) ctx ns str sign =
   let add origin m =
     let ctx, v = generic_var ctx m in
     { ctx with tenv=MetaEnv.add_signature ~origin ~name:m v sign ctx.tenv }
   in
   match StrMap.find_opt (qualified ctx ns str) ctx.covl with
+  | Some (m, _) when inferred && not (MetaEnv.complies m sign ctx.tenv) -> ctx
   | Some (m, cls) -> add (MetaEnv.Overload cls) m
   | None ->
     match MetaEnv.generic_of_default (ns, str) ctx.tenv with
@@ -330,7 +337,7 @@ let treat_def ctx past =
       let gty = match StrMap.find_opt (qualified ctx None str) ctx.covl with
         | Some (_, cls) -> MetaEnv.class_overload_ty cls gty
         | None -> gty in
-      add_to_generic ctx None str (MetaEnv.SigTy gty)
+      add_to_generic ~inferred:true ctx None str (MetaEnv.SigTy gty)
     | _ -> ctx
     end
   | _ -> treat_ast dummy_var ctx (declared (eid, ast)) |> treat_hoisted (eid, ast)

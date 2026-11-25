@@ -135,6 +135,7 @@ inferred2 <- function(x) UseMethod("inferred2")
 #| method label : CHR
 #| method clone : dbl<square, ...> | dbl<circle, ...>
 #| new label @ square
+#| new label @ circle
 #| new clone @ square
 
 #| label : (x: dbl1) -> lgl1
@@ -146,6 +147,13 @@ l_unknown <- function(x) label(x)
 # The result may come from another class-overload (it is expected to fail).
 #| l_precise : (x: dbl1<@label, ...>) -> "square"
 l_precise <- function(x) label(x)
+
+# A class-overload without signature: the type inferred for it is an overload
+# of its method only if it complies with the return type of the method, which
+# that of `label.circle` does not. `label` then gives a value of class `circle`
+# that return type, and `label.circle` keeps its own type.
+label.circle <- function(x) TRUE
+l_circle <- label(ci_new())
 
 #| clone : (x: dbl1) -> dbl1<circle>
 #| clone.square : (x: any) -> dbl1<square>

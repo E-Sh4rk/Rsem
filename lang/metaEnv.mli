@@ -112,6 +112,10 @@ val add_signature : ?origin:origin -> name:name -> Variable.t -> signature -> t 
    [set_from_tyscheme]) and is a function, it is kept as a base signature.
    @raise Failure if [s] is the signature of a class-overload and the method [name] has been declared with a
    return type (cf. [new_method]) that [s] does not comply with. *)
+val complies : name -> signature -> t -> bool
+(* [complies m s t] tells whether the signature [s] of a class-overload of the
+   method [m] complies with the return type declared for [m], if any: whether
+   [add_signature] accepts it (cf. [check_return_ty]). *)
 val set_from_tyscheme : Variable.t -> TyScheme.t -> t -> t
 (* The type of [v], a global variable, is restricted as a signature of its name
    would be. *)
