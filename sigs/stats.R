@@ -4,29 +4,128 @@
 
 # ========== Methods ==========
 
-# The generics of `stats` (cf. "Methods" in base.R): R dispatches them on the
-# class of their first argument; their result for a class with a method is
-# `dyn`.
+# The S3 generics of `stats` (cf. "Methods" in base.R), with the return type R's
+# conventions give their methods, when there is one.
+#| method stats::add1
+#| method stats::aggregate
+#| method stats::AIC
+#| method stats::alias
+#| method stats::anova
+#| method stats::ansari.test
+#| method stats::ar.burg
+#| method stats::ar.yw
 #| method stats::as.dendrogram : <dendrogram, ...>
 #| method stats::as.dist : <dist, ...>
 #| method stats::as.hclust : <hclust, ...>
+#| method stats::as.stepfun
 #| method stats::as.ts : <ts, ...>
-#| method stats::coef : dyn
-#| method stats::cophenetic : dyn
-#| method stats::end : dyn
-#| method stats::frequency : dyn
-#| method stats::hatvalues : dyn
-#| method stats::median : dyn
-#| method stats::model.frame : dyn
-#| method stats::model.matrix : dyn
-#| method stats::naresid : dyn
-#| method stats::predict : dyn
-#| method stats::residuals : dyn
-#| method stats::start : dyn
-#| method stats::time : dyn
-#| method stats::vcov : dyn
-#| method stats::weighted.mean : dyn
-#| method stats::weights : dyn
+#| method stats::bartlett.test
+#| method stats::BIC
+#| method stats::biplot
+#| method stats::case.names
+#| method stats::coef
+#| method stats::coefficients
+#| method stats::confint
+#| method stats::cooks.distance
+#| method stats::cophenetic
+#| method stats::cor.test
+#| method stats::cycle
+#| method stats::deltat
+#| method stats::density
+#| method stats::deriv
+#| method stats::deriv3
+#| method stats::deviance
+#| method stats::df.residual
+#| method stats::dfbeta
+#| method stats::dfbetas
+#| method stats::dffits
+#| method stats::diffinv
+#| method stats::drop1
+#| method stats::dummy.coef
+#| method stats::effects
+#| method stats::end
+#| method stats::estVar
+#| method stats::extractAIC
+#| method stats::family
+#| method stats::fitted
+#| method stats::fitted.values
+#| method stats::fligner.test
+#| method stats::formula
+#| method stats::free1way
+#| method stats::frequency
+#| method stats::friedman.test
+#| method stats::ftable
+#| method stats::getCall
+#| method stats::getInitial
+#| method stats::hatvalues
+#| method stats::influence
+#| method stats::kernapply
+#| method stats::knots
+#| method stats::kruskal.test
+#| method stats::ks.test
+#| method stats::lag
+#| method stats::logLik
+#| method stats::makepredictcall
+#| method stats::mauchly.test
+#| method stats::median
+#| method stats::model.frame
+#| method stats::model.matrix
+#| method stats::model.tables
+#| method stats::monthplot
+#| method stats::mood.test
+#| method stats::na.action
+#| method stats::na.contiguous
+#| method stats::na.exclude
+#| method stats::na.fail
+#| method stats::na.omit
+#| method stats::napredict
+#| method stats::naprint
+#| method stats::naresid
+#| method stats::NLSstAsymptotic
+#| method stats::NLSstClosestX
+#| method stats::NLSstLfAsymptote
+#| method stats::NLSstRtAsymptote
+#| method stats::nobs
+#| method stats::pacf
+#| method stats::ppr
+#| method stats::prcomp
+#| method stats::predict
+#| method stats::preplot
+#| method stats::princomp
+#| method stats::profile
+#| method stats::proj
+#| method stats::qqnorm
+#| method stats::quade.test
+#| method stats::quantile
+#| method stats::relevel
+#| method stats::reorder
+#| method stats::resid
+#| method stats::residuals
+#| method stats::rstandard
+#| method stats::rstudent
+#| method stats::screeplot
+#| method stats::se.contrast
+#| method stats::selfStart
+#| method stats::sigma
+#| method stats::simulate
+#| method stats::sortedXyData
+#| method stats::SSD
+#| method stats::start
+#| method stats::t.test
+#| method stats::terms
+#| method stats::time
+#| method stats::tsdiag
+#| method stats::tsSmooth
+#| method stats::TukeyHSD
+#| method stats::update
+#| method stats::var.test
+#| method stats::variable.names
+#| method stats::vcov
+#| method stats::weighted.mean
+#| method stats::weights
+#| method stats::wilcox.test
+#| method stats::window
+#| method stats::window<-
 
 # ========== Class-overloads ==========
 

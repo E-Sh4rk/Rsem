@@ -71,65 +71,98 @@
 #| method base::([[]])
 #| method base::as.character : CHR
 
-# The other generics of `base` (and `graphics`): those R dispatches on the
-# class of their first argument, whether a package defines methods for them or
-# not. The signatures below only describe their default behavior: for a class
-# with a method, the result is the return type declared here, which R does not
-# check but its conventions set (a conversion returns its type, a predicate
-# logicals, `length` a count, `format` strings), or else `dyn`, as a method can
-# return anything.
-# The members of the group generics `Ops`, `Math` and `Summary`:
-#| method base::abs : dyn
-#| method base::acos : dyn
+# The other S3 generics of R's attached packages (R 4.6): those R dispatches on
+# the class of their first argument, whether a class-overload is declared for
+# them or not (one can be declared later, by r-typeshed or for the package
+# being typed). A generic is declared with the return type R's conventions give
+# its methods, when there is one (a conversion returns its type, a predicate
+# logicals, `length` a count, `format` strings), and none otherwise. The group
+# generics themselves (`Ops`, `Math`, `Summary`, `Complex`) are not: their
+# members are.
+# The members of the group generics `Ops`, `Math`, `Summary` and `Complex`:
+#| method base::abs
+#| method base::acos
+#| method base::acosh
 #| method base::all : LGL1
 #| method base::any : LGL1
-#| method base::asin : dyn
-#| method base::ceiling : dyn
-#| method base::cummax : dyn
-#| method base::cummin : dyn
-#| method base::cumprod : dyn
-#| method base::cumsum : dyn
-#| method base::exp : dyn
-#| method base::floor : dyn
-#| method base::log : dyn
-#| method base::log10 : dyn
-#| method base::max : dyn
-#| method base::min : dyn
-#| method base::prod : dyn
-#| method base::range : dyn
-#| method base::sqrt : dyn
-#| method base::sum : dyn
-#| method base::trunc : dyn
+#| method base::Arg
+#| method base::asin
+#| method base::asinh
+#| method base::atan
+#| method base::atanh
+#| method base::ceiling
+#| method base::Conj
+#| method base::cos
+#| method base::cosh
+#| method base::cospi
+#| method base::cummax
+#| method base::cummin
+#| method base::cumprod
+#| method base::cumsum
+#| method base::digamma
+#| method base::exp
+#| method base::expm1
+#| method base::floor
+#| method base::gamma
+#| method base::Im
+#| method base::lgamma
+#| method base::log
+#| method base::log10
+#| method base::log1p
+#| method base::log2
+#| method base::max
+#| method base::min
+#| method base::Mod
+#| method base::prod
+#| method base::range
+#| method base::Re
+#| method base::sign
+#| method base::sin
+#| method base::sinh
+#| method base::sinpi
+#| method base::sqrt
+#| method base::sum
+#| method base::tan
+#| method base::tanh
+#| method base::tanpi
+#| method base::trigamma
+#| method base::trunc
 # The internal generics (primitives and `.Internal` functions that dispatch):
-#| method base::(!) : dyn
+#| method base::(!)
 #| method base::(!=) : LGL
-#| method base::(&) : dyn
-#| method base::(%*%) : dyn
-#| method base::(%/%) : dyn
-#| method base::(%%) : dyn
-#| method base::(^) : dyn
+#| method base::([[]]<-)
+#| method base::([]<-)
+#| method base::(@)
+#| method base::(@<-)
+#| method base::(&)
+#| method base::(%*%)
+#| method base::(%/%)
+#| method base::(%%)
+#| method base::(^)
 #| method base::(<) : LGL
 #| method base::(<=) : LGL
 #| method base::(==) : LGL
 #| method base::(>) : LGL
 #| method base::(>=) : LGL
-#| method base::(|) : dyn
-#| method base::($) : dyn
-#| method base::($<-) : dyn
+#| method base::(|)
+#| method base::($)
+#| method base::($<-)
 #| method base::anyNA : LGL1
 #| method base::as.call : lang
+#| method base::as.complex : CLX
 #| method base::as.double : DBL
+#| method base::as.environment : env
 #| method base::as.integer : INT
 #| method base::as.logical : LGL
 #| method base::as.numeric : DBL
 #| method base::as.raw : RAW
-#| method base::as.vector : dyn
-#| method base::c : dyn
-#| method base::cbind : dyn
+#| method base::as.vector
+#| method base::c
+#| method base::cbind
 #| method base::dim : INT | DBL | null
-#| method base::dim<- : dyn
+#| method base::dim<-
 #| method base::dimnames : list | null
-#| method base::dimnames<- : dyn
+#| method base::dimnames<-
 #| method base::is.array : LGL1
 #| method base::is.finite : LGL
 #| method base::is.infinite : LGL
@@ -139,48 +172,110 @@
 #| method base::is.numeric : LGL1
 #| method base::is.unsorted : LGL1
 #| method base::length : INT1 | DBL1
-#| method base::lengths : dyn
+#| method base::length<-
+#| method base::lengths
+#| method base::levels<-
 #| method base::names : CHR | null
-#| method base::names<- : dyn
+#| method base::names<-
 #| method base::nchar : INT
-#| method base::rbind : dyn
-#| method base::rep : dyn
-#| method base::rep_len : dyn
-#| method base::rep.int : dyn
-#| method base::round : dyn
-#| method base::signif : dyn
-#| method base::unlist : dyn
+#| method base::rbind
+#| method base::rep
+#| method base::rep_len
+#| method base::rep.int
+#| method base::round
+#| method base::seq.int
+#| method base::signif
+#| method base::unlist
+#| method base::xtfrm
 # The generics written in R (with `UseMethod`):
 #| method base::all.equal : LGL1 | CHR
 #| method base::anyDuplicated : INT1 | DBL1
-#| method base::as.data.frame : { any }<data.frame, ...> with { names: CHR, any }
+#| method base::aperm
+#| method base::as.array
 #| method base::as.Date : DBL<Date, ...>
+#| method base::as.expression
+#| method base::as.function : (...: any) -> any
 #| method base::as.list : list
-#| method base::as.matrix : dyn
+#| method base::as.matrix
+#| method base::as.null
 #| method base::as.POSIXct : DBL<POSIXct, POSIXt, ...>
 #| method base::as.POSIXlt : { any }<POSIXlt, POSIXt, ...>
-#| method base::close : dyn
+#| method base::as.single
+#| method base::as.table
+#| method base::by
+#| method base::chol
+#| method base::chooseOpsMethod
+#| method base::close
+#| method base::conditionCall
 #| method base::conditionMessage : CHR
-#| method base::diff : dyn
+#| method base::cut
+#| method base::determinant
+#| method base::diff
+#| method base::droplevels
 #| method base::duplicated : LGL
-#| method base::flush : dyn
+#| method base::flush
 #| method base::format : CHR
-#| method base::labels : dyn
-#| method base::levels : dyn
-#| method base::mean : dyn
+#| method base::getDLLRegisteredRoutines
+#| method base::is.na<-
+#| method base::isSymmetric : LGL1
+#| method base::julian : DBL
+#| method base::kappa
+#| method base::labels
+#| method base::levels : CHR | null
+#| method base::mean
+#| method base::merge
 #| method base::months : CHR
-#| method base::open : dyn
-#| method base::print : dyn
+#| method base::mtfrm
+#| method base::nameOfClass
+#| method base::open
+#| method base::plot
+#| method base::pretty
+#| method base::print
+#| method base::qr
 #| method base::quarters : CHR
-#| method base::rev : dyn
-#| method base::seq : dyn
-#| method base::solve : dyn
-#| method base::split : dyn
-#| method base::summary : dyn
-#| method base::t : dyn
-#| method base::unique : dyn
-#| method base::units : dyn
-#| method graphics::lines : dyn
+#| method base::rev
+#| method base::row.names
+#| method base::row.names<-
+#| method base::rowsum
+#| method base::scale
+#| method base::seek
+#| method base::seq
+#| method base::sequence
+#| method base::solve
+#| method base::sort_by
+#| method base::split
+#| method base::split<-
+#| method base::subset
+#| method base::summary
+#| method base::t
+#| method base::toString : CHR1
+#| method base::transform
+#| method base::truncate
+#| method base::unique
+#| method base::units
+#| method base::units<-
+#| method base::weekdays : CHR
+#| method base::with
+#| method base::within
+# Those of `graphics` and `grDevices`:
+#| method graphics::barplot
+#| method graphics::boxplot
+#| method graphics::cdplot
+#| method graphics::contour
+#| method graphics::hist
+#| method graphics::identify
+#| method graphics::image
+#| method graphics::lines
+#| method graphics::mosaicplot
+#| method graphics::pairs
+#| method graphics::persp
+#| method graphics::points
+#| method graphics::spineplot
+#| method graphics::stripchart
+#| method graphics::sunflowerplot
+#| method graphics::text
+#| method grDevices::as.raster
+#| method grDevices::glyphJust
 
 # ========== Class-overloads ==========
 

@@ -8,14 +8,24 @@
 
 # ========== Methods ==========
 
-# The generics of `utils` (cf. "Methods" in base.R): R dispatches them on the
-# class of their first argument; their result for a class with a method is
-# `dyn`.
-#| method utils::head : dyn
-#| method utils::stack : dyn
-#| method utils::str : dyn
-#| method utils::tail : dyn
-#| method utils::type.convert : dyn
+# The S3 generics of `utils` (cf. "Methods" in base.R), with the return type R's
+# conventions give their methods, when there is one.
+#| method utils::.AtNames
+#| method utils::.DollarNames
+#| method utils::as.person
+#| method utils::as.personList
+#| method utils::bitstring
+#| method utils::edit
+#| method utils::head
+#| method utils::prompt
+#| method utils::stack
+#| method utils::str
+#| method utils::tail
+#| method utils::toBibtex
+#| method utils::toLatex
+#| method utils::type.convert
+#| method utils::unstack
+#| method utils::upgrade
 
 # ========== Parts of vectors and lists ==========
 
