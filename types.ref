@@ -91,7 +91,7 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<>
 test_dots1: Untypeable: untypeable coercion
 Line 187, characters 14-131073
 expected: { `r }
-given: list<> | 'I1609
+given: list<> | 'I1612
 expression may be: new.env()
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
@@ -180,8 +180,14 @@ expected: dbl
 given: CHR1
 expression may be: NA_character_
 
+i_unknown: ((x: <@scale2, ...>) | (x: CHR1<~@scale2, ...>) -> CHR1)<>
+
+i_known: ((y: any) -> lgl1)<>
+
+i_annot: (x: dbl1<>) -> dbl
+
 d_op: Untypeable: untypeable application of base::*
-Line 91, characters 8-19
+Line 102, characters 8-19
 argument: @({ 1.<> }<>, 2.<>)
 failing call: base::*(list(), 2)
 
@@ -192,13 +198,13 @@ g_square: CHR1
 g_default: lgl1
 
 g_other: Untypeable: untypeable application of generic1
-Line 103, characters 11-24
+Line 114, characters 11-24
 argument: @("a"<>)
 failing call: generic1("a")
 
 inferred1: ∀'a. ((x: 'a \ <@inferred1, ...>) -> 'a)<>
 
-inferred2: ∀'a. ((x: 'a \ <@inferred2, ...>) -> 'a)<>
+inferred2: ((x: ~<@inferred2, ...>) -> any)<>
 
 l_square: "square"
 
@@ -207,7 +213,7 @@ l_default: lgl1
 l_unknown: (x: dbl1<@label, ...>) -> CHR
 
 l_precise: Untypeable: untypeable coercion
-Line 137, characters 25-33
+Line 148, characters 25-33
 expected: "square"
 given: CHR
 expression may be: NA_character_
@@ -218,7 +224,7 @@ c_unknown: (((x: <@clone, ...>) -> dbl<circle, ...> | dbl<square, ...>) &
 chr_unknown: (x: <@as.character, ...>) -> CHR
 
 chr_precise: Untypeable: untypeable coercion
-Line 148, characters 27-42
+Line 159, characters 27-42
 expected: empty
 given: CHR
 expression may be: NA_character_
@@ -276,7 +282,7 @@ plain_list: "b"<>
 plain_round: dbl1<>
 
 next_val: Untypeable: untypeable coercion
-Line 197, characters 24-29
+Line 208, characters 24-29
 expected: dbl1
 given: (DBL | INT)<difftime> | (DBL | INT)<ts, ...> | DBL1<~@"+", ...> | LGL<> | dbl<Date, ...> | <POSIXt, ...>
 expression may be: structure(new.env(), class = "POSIXt")
@@ -319,7 +325,7 @@ annot_dot_use: (() -> CHR1)<>
 
 .dot_local: (() -> dbl)<>
 
-annot_pow: ∀`a. (((x: <@"^", ...>) -> any) & ((x: dbl1<~@"^", . | `a>) ->
+annot_pow: ∀`a. (((x: <@"^", ...>) -> empty) & ((x: dbl1<~@"^", . | `a>) ->
  DBL1<~@"^", . | `a>) & ((x: dbl<~@"^", . | `a> | null) ->
  DBL<~@"^", . | `a>))<>
 
@@ -429,7 +435,7 @@ loop_in_local: DBL1 | INT1
 to_json: ∀'a. ((x: 'a, force: any?) -> 'a)<>
 
 local_c: ∀'a,'b,`a. (((x: (DBL | v('b))<~@c, `a>) -> (DBL | v('b))<`a>) & ((x: (DBL |
- v('b)) | null) -> (DBL | v('b)) | null) & ((x: <@c, ...>) -> any) &
+ v('b)) | null) -> (DBL | v('b)) | null) & ((x: <@c, ...>) -> empty) &
  ((x: { 'a }<~@c, ...>) -> { DBL1<> | 'a }<>))<>
 
 local: ∀'a. ((e: 'a) -> 'a)<>
@@ -444,31 +450,31 @@ shadow_fn: (() -> 3.<>)<>
 
 
 ===== Processing tests/07_namespace.r =====
-ns_call: (((x: <@median, ...>) | (x: ~<@median, ...>) -> any) &
- ((x: CHR<~@median, ...>) -> CHR1) & ((x: dbl<~@median, ...>) -> (DBL1 |
- INT1)<>))<>
+ns_call: (((x: <@median, ...>) -> empty) & ((x: CHR<~@median, ...>) -> CHR1) &
+ ((x: dbl<~@median, ...>) -> (DBL1 | INT1)<>) & ((x: ~<@median, ...>) ->
+ any))<>
 
 ns_call_num: (() -> (DBL1 | INT1)<>)<>
 
-ns_internal: (((x: <@median, ...>) | (x: ~<@median, ...>) -> any) &
- ((x: CHR<~@median, ...>) -> CHR1) & ((x: dbl<~@median, ...>) -> (DBL1 |
- INT1)<>))<>
+ns_internal: (((x: <@median, ...>) -> empty) & ((x: CHR<~@median, ...>) -> CHR1) &
+ ((x: dbl<~@median, ...>) -> (DBL1 | INT1)<>) & ((x: ~<@median, ...>) ->
+ any))<>
 
 ns_value: (() -> dbl1)<>
 
-ns_string: (((x: <@median, ...>) | (x: ~<@median, ...>) -> any) &
- ((x: CHR<~@median, ...>) -> CHR1) & ((x: dbl<~@median, ...>) -> (DBL1 |
- INT1)<>))<>
+ns_string: (((x: <@median, ...>) -> empty) & ((x: CHR<~@median, ...>) -> CHR1) &
+ ((x: dbl<~@median, ...>) -> (DBL1 | INT1)<>) & ((x: ~<@median, ...>) ->
+ any))<>
 
-ns_shadow: (((x: <@median, ...>) | (x: ~<@median, ...>) -> any) &
- ((x: CHR<~@median, ...>) -> CHR1) & ((x: dbl<~@median, ...>) -> (DBL1 |
- INT1)<>))<>
+ns_shadow: (((x: <@median, ...>) -> empty) & ((x: CHR<~@median, ...>) -> CHR1) &
+ ((x: dbl<~@median, ...>) -> (DBL1 | INT1)<>) & ((x: ~<@median, ...>) ->
+ any))<>
 
 ns_global: ((x: { dbl }) -> dbl1)<>
 
-ns_global_ns: (((x: <@median, ...>) | (x: ~<@median, ...>) -> any) &
- ((x: CHR<~@median, ...>) -> CHR1) & ((x: dbl<~@median, ...>) -> (DBL1 |
- INT1)<>))<>
+ns_global_ns: (((x: <@median, ...>) -> empty) & ((x: CHR<~@median, ...>) -> CHR1) &
+ ((x: dbl<~@median, ...>) -> (DBL1 | INT1)<>) & ((x: ~<@median, ...>) ->
+ any))<>
 
 ns_first_class: (() -> (DBL1 | INT1)<>)<>
 
@@ -490,11 +496,13 @@ ns_skip: (() -> "double"<>)<>
 
 ns_no_skip: (() -> "not a function"<>)<>
 
-ns_print: ∀'a. (((x: 'a \ <@print, ...>) -> 'a) & ((x: <@print, ...> & 'a) -> any))<>
+ns_print: ∀'a. (((x: 'a \ <@print, ...>) -> 'a) & ((x: <@print, ...> & 'a) -> CHR1 |
+ LGL1))<>
 
 ns_print_rec: CHR1
 
-ns_method: ∀'a. (((x: 'a \ <@print, ...>) -> 'a) & ((x: <@print, ...> & 'a) -> any))<>
+ns_method: ∀'a. (((x: 'a \ <@print, ...>) -> 'a) & ((x: <@print, ...> & 'a) -> CHR1 |
+ LGL1))<>
 
 ns_method_direct: ((x: <ns_df, ...>) -> LGL1)<>
 
@@ -522,10 +530,9 @@ inf_square: CHR1
 
 inf_default: lgl1
 
-inf_replaced: Untypeable: untypeable application of inferred2
-Line 123, characters 16-30
-argument: @("a"<>)
-failing call: inferred2("a")
+inf_other: any
+
+inf_infer: (((x: <@inferred2, ...>) -> CHR1) & ((x: ~<@inferred2, ...>) -> any))<>
 
 
 ===== Processing tests/08_aliases.r =====

@@ -19,20 +19,17 @@ type fsig = {
   build : builder -> GTy.t ;
 }
 
-(* The signatures of a function are of three kinds (cf. the interface):
-   [base], [methods] (each with the class it is the class-overload for) and
-   [methods_default]. [symbolic] are the signatures that still contain label
-   variables, with the class of the class-overload they come from, if any.
-   [inferred] tells whether [base] is not declared but the type inferred for the
-   variable (cf. [get_sigs]), and [generic] is the name of the variable if it is
-   a method (cf. [new_method]). *)
+(* The signatures of a function (cf. the interface): the [regular] ones and the
+   [symbolic] ones (that still contain label variables), each with its origin,
+   and the [fallback] one. [generic] is the name of the variable if it is a method
+   (cf. [new_method]). *)
+type origin = Base | Default | Overload of string
 type kind = KFun | KVal | KAny
 (* A name, with its namespace ([None] for a global name). *)
 type name = string option * string
 (* [kind] is the kind of the type of the variable (cf. [sigs_kind]). *)
-type sigs = { base:GTy.t list ; methods:(string * GTy.t) list ;
-              methods_default:GTy.t list ; symbolic:(string option * fsig) list ;
-              inferred:bool ; generic:name option ; kind:kind }
+type sigs = { regular:(origin * GTy.t) list ; symbolic:(origin * fsig) list ;
+              fallback:GTy.t list ; generic:name option ; kind:kind }
 type signature = SigTy of GTy.t | SigFun of fsig
 
 module StrMap = Map.Make(String)
@@ -87,8 +84,7 @@ let initial =
       (VarMap.empty, VarMap.empty) in
   { types ; kinds ; senv=VarMap.empty ; ns=StrMap.empty ; self=None ;
     imports=StrMap.empty ; meths=NameMap.empty ; ovl=[] ; bound=NameSet.empty }
-let no_sigs = { base=[] ; methods=[] ; methods_default=[] ; symbolic=[] ;
-                inferred=false ; generic=None ; kind=KAny }
+let no_sigs = { regular=[] ; symbolic=[] ; fallback=[] ; generic=None ; kind=KAny }
 (* The signatures of [v]. If none has been declared but a function type has been
    inferred for [v], this type (already restricted, cf. [set_from_tyscheme]) is
    its base signature. *)
@@ -98,8 +94,14 @@ let get_sigs v t =
   | None ->
     match VarMap.find_opt v t.types, VarMap.find_opt v t.kinds with
     | Some ts, Some (lazy KFun) ->
-      { no_sigs with base=[Lazy.force ts |> TyScheme.get |> snd] ; inferred=true ; kind=KFun }
+      { no_sigs with regular=[Base, Lazy.force ts |> TyScheme.get |> snd] ; kind=KFun }
     | _ -> no_sigs
+let base sigs =
+  sigs.regular |> List.filter_map (fun (o,ty) -> if o = Base then Some ty else None)
+let defaults sigs =
+  sigs.regular |> List.filter_map (fun (o,ty) -> if o = Default then Some ty else None)
+let overloads_with_class sigs =
+  sigs.regular |> List.filter_map (function (Overload cls, ty) -> Some (cls,ty) | _ -> None)
 
 (* ===== S3 dispatch (class overloads) ===== *)
 let is_fun_sig ty =
@@ -357,22 +359,21 @@ let overloads_after cls m t =
    TODO: Method classes are not namespaced: two methods [pa::m] and [pb::m] share
    the method class [@m]. This is unsound: a class with a class-overload of
    [pb::m] only is excluded from the base signatures of [pa::m], and only its
-   default signature applies (cf. [methods_default_ty]). But the return type of
+   fallback signature applies (cf. [fallback_ty]). But the return type of
    the latter is the one of the class-overloads of [pa::m], whereas R calls its
    default method. *)
 let method_class (_, m) = Rstt.Classes.Method (r_name m)
 
 (* The restriction of the first parameter of a signature of the generic [m]
    (cf. [add_signature]): the values whose class has no class-overload of [m]
-   (i.e. [<~@m, ...>]) for a base signature, and those whose class has no
-   class-overload of [m] declared after the one for [cls] for the signature of
-   that class-overload (whose first parameter is already restricted to [cls],
-   cf. [class_overload_sig]). *)
-let restriction ?cls m t =
-  match cls with
-  | None when is_method m t -> [false, method_class m]
-  | None -> []
-  | Some cls -> overloads_after cls m t |> List.map (fun c -> false, Rstt.Classes.Class c)
+   (i.e. [<~@m, ...>]) for a base signature or the one of its default method, and
+   those whose class has no class-overload of [m] declared after the one for
+   [cls] for the signature of that class-overload (whose first parameter is
+   already restricted to [cls], cf. [class_overload_sig]). *)
+let restriction origin m t =
+  match origin with
+  | Base | Default -> if is_method m t then [false, method_class m] else []
+  | Overload cls -> overloads_after cls m t |> List.map (fun c -> false, Rstt.Classes.Class c)
 
 (* The return type of the signature [ty]: the union of the codomains of its
    arrows. *)
@@ -383,7 +384,7 @@ let codomain ty =
   |> List.concat_map (fun a -> Arrow.dnf a.Attr.content |> List.concat |> List.map snd)
   |> Ty.disj
 
-(* The default signature of the methods of the generic [m],
+(* The fallback signature of the generic [m],
    [(X: <@m, ...>, ...: any) -> ret] (whatever the name of the first parameter
    of [m] is): it covers the values for which the base signatures do not apply,
    i.e. the complement [<@m, ...>] of their restriction [<~@m, ...>] (a class
@@ -399,14 +400,18 @@ let codomain ty =
    when [m] has no class-overload. It is [any] when this is not possible: when a
    class-overload has no signature (its return type is unknown), one of them
    still contains label variables, or type variables remain after the
-   instantiation. *)
-let methods_default_ty m sigs t =
+   instantiation. This union assumes a fixed context: all the class-overloads of
+   [m] (e.g. those of the libraries the project uses) must have been declared. *)
+let fallback_ty m sigs t =
   let open Rstt in
   let overloads_ret () =
-    let has_sig c = List.exists (fun (c',_) -> String.equal c c') sigs.methods in
-    let symbolic = List.exists (fun (c,_) -> Option.is_some c) sigs.symbolic in
+    let methods = overloads_with_class sigs in
+    let has_sig c = List.exists (fun (c',_) -> String.equal c c') methods in
+    let symbolic = sigs.symbolic |> List.exists (function
+      | Overload _, _ -> true
+      | (Base | Default), _ -> false) in
     if symbolic || List.for_all has_sig (overloads m t) |> not then Ty.any else
-    let ret = sigs.methods
+    let ret = methods
               |> List.map (fun (_,ty) -> codomain ty |> TVOp.top_instance MVarSet.empty)
               |> Ty.disj in
     if GTy.mk ret |> GTy.fv |> MVarSet.is_empty then ret else Ty.any
@@ -447,6 +452,10 @@ let check_return_ty cls m s t =
         "The signature of %s.%s does not comply with the return type of the method %s: %a is not a subtype of %a."
         (string_of_name m) cls (string_of_name m) GTy.pp ty GTy.pp ret)
 
+(* The values whose class has no class-overload of [m] ([<~@m, ...>]), or that
+   have no class. *)
+let no_overload m = Ty.cup (class_ty [false, method_class m]) unattributed
+
 (* A partition of the R values the first argument of an application of the
    generic [m] may take, following its dispatch: the values whose class has
    no class-overload of [m] ([<~@m, ...>], which the base signatures cover),
@@ -459,7 +468,7 @@ let dispatch_partition m t =
   if is_method m t |> not then []
   else
     let clss = overloads m t in
-    let base = Ty.cup (class_ty [false, method_class m]) unattributed in
+    let base = no_overload m in
     let rec meths clss =
       match clss with
       | [] -> []
@@ -499,7 +508,7 @@ let class_overload_ty cls ty = restrict_first_param [true, Rstt.Classes.Class cl
 let sigs_ty sigs =
   lazy begin
     let ty =
-      match sigs.base@List.map snd sigs.methods with
+      match base sigs@defaults sigs@List.map snd (overloads_with_class sigs) with
       | [] -> GTy.any
       | tys -> GTy.conj tys
     in
@@ -520,12 +529,14 @@ let sigs_kind k ty =
 
 (* The first parameter of a signature of [name] is restricted as described by
    [restriction]. That of a class-overload must comply with the return type of
-   its method. If the type of [v] was inferred, it is kept as a base signature
-   until one is declared (e.g. that of its default method). *)
-let add_signature ?cls ~name v s t =
+   its method. If the type of [v] was inferred, it is kept as a base signature. *)
+let add_signature ?(origin=Base) ~name v s t =
   let name = normalize name t in
-  Option.iter (fun cls -> check_return_ty cls name s t) cls ;
-  let restr = restriction ?cls name t in
+  begin match origin with
+  | Overload cls -> check_return_ty cls name s t
+  | Base | Default -> ()
+  end ;
+  let restr = restriction origin name t in
   let s =
     match s with
     | SigTy ty -> SigTy (restrict_first_param restr ty)
@@ -533,22 +544,17 @@ let add_signature ?cls ~name v s t =
   in
   let t = { t with bound=NameSet.add name t.bound } in
   let sigs = get_sigs v t in
-  let sigs =
-    if sigs.inferred && cls = None then { sigs with base=[] ; inferred=false } else sigs in
   let add ty sigs =
-    match cls with
-    | None -> { sigs with base=ty::sigs.base ; kind=sigs_kind sigs.kind ty }
-    | Some cls -> { sigs with methods=(cls,ty)::sigs.methods ; kind=sigs_kind sigs.kind ty }
-  in
+    { sigs with regular=(origin,ty)::sigs.regular ; kind=sigs_kind sigs.kind ty } in
   let sigs =
     match s with
     | SigTy ty -> add ty sigs
     | SigFun f when is_resolved f -> add (fsig_ty f) sigs
-    | SigFun f -> { sigs with symbolic=(cls,f)::sigs.symbolic }
+    | SigFun f -> { sigs with symbolic=(origin,f)::sigs.symbolic }
   in
   let sigs =
     if is_method name t
-    then { sigs with generic=Some name ; methods_default=[methods_default_ty name sigs t] }
+    then { sigs with generic=Some name ; fallback=[fallback_ty name sigs t] }
     else sigs
   in
   { t with types=VarMap.add v (sigs_ty sigs) t.types ;
@@ -565,7 +571,7 @@ let set_from_tyscheme v ts t =
     | Some name ->
       let name = None, name in
       let t = { t with bound=NameSet.add name t.bound } in
-      match restriction name t with
+      match restriction Base name t with
       | [] -> ts, t
       | restr ->
         let tvs, ty = TyScheme.get ts in
@@ -590,17 +596,19 @@ let env dom t =
 let get v t = VarMap.find v t.types |> Lazy.force
 let get_signatures v t = VarMap.find_opt v t.senv
 
-let base sigs = sigs.base
-let methods ?cls sigs =
-  sigs.methods |> List.filter_map (fun (c,ty) ->
-    match cls with
-    | Some cls when String.equal c cls |> not -> None
-    | _ -> Some ty)
-let methods_with_class sigs = sigs.methods
-let methods_default sigs = sigs.methods_default
+let fallback sigs = sigs.fallback
 let symbolic sigs = sigs.symbolic
 let generic sigs = sigs.generic
-let all sigs = sigs.base@(List.map snd sigs.methods)@sigs.methods_default
+let all sigs =
+  base sigs@defaults sigs@List.map snd (overloads_with_class sigs)@sigs.fallback
+(* The values the first argument must be a subtype of for the signatures of
+   origin [origin] to be considered in inference mode. *)
+let inference_guard sigs origin =
+  match origin, sigs.generic with
+  | Base, _ -> None
+  | Default, Some m -> Some (no_overload m)
+  | Default, None -> None
+  | Overload cls, _ -> Some (class_ty [true, Rstt.Classes.Class cls])
 
 (* ===== Namespaces ===== *)
 

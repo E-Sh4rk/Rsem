@@ -228,19 +228,18 @@ let generic_var ctx m =
    an overload of its generic, if [str] has been declared as a class-overload
    or is the name of the default method of a method (cf.
    [MetaEnv.generic_of_default]). The latter applies to the values whose class
-   has no class-overload: it is a base signature of the generic, restricted as
-   such. The signature of [str] itself is not restricted, as a default method
+   has no class-overload, as the base signatures of the generic. The signature of [str] itself is not restricted, as a default method
    can be called directly (or by [NextMethod]) on any value. *)
 let add_to_generic ctx ns str sign =
-  let add ?cls m =
+  let add origin m =
     let ctx, v = generic_var ctx m in
-    { ctx with tenv=MetaEnv.add_signature ?cls ~name:m v sign ctx.tenv }
+    { ctx with tenv=MetaEnv.add_signature ~origin ~name:m v sign ctx.tenv }
   in
   match StrMap.find_opt (qualified ctx ns str) ctx.covl with
-  | Some (m, cls) -> add ~cls m
+  | Some (m, cls) -> add (MetaEnv.Overload cls) m
   | None ->
     match MetaEnv.generic_of_default (ns, str) ctx.tenv with
-    | Some m when MetaEnv.is_fun sign -> add m
+    | Some m when MetaEnv.is_fun sign -> add MetaEnv.Default m
     | _ -> ctx
 
 (* The names a top-level statement assigns from *inside* an expression, rather

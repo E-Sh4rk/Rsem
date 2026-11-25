@@ -50,12 +50,12 @@ m_default <- some_shape(0)
 # `area` gives such a value the union of the results of its class-overloads:
 # its other classes are unknown, and the class records do not respect the class
 # hierarchy, so that `<@area, ...>` has values of neither `square` nor
-# `circle`, which only the default signature of the methods covers (cf.
+# `circle`, which only the fallback signature of `area` covers (cf.
 # `MetaEnv.sigs`).
 #| any_shape : (s: dbl1<@area, ...>) -> vec1
 any_shape <- function(s) area(s)
 
-# The default signature of `area` excludes `@area`.
+# The base signature of `area` excludes `@area`.
 #| default_area : (s: dbl1<~@area, ...>) -> dbl1
 default_area <- function(s) area(s)
 
@@ -85,6 +85,17 @@ d_direct <- scale2.default(sq_new())
 #| d_unknown : (x: dbl1<@scale2, ...>) -> dbl
 d_unknown <- function(x) scale2(x)
 
+# When the type of an argument is inferred, the default method is only
+# considered if the first argument certainly has no class-overload, as for `0`:
+# `i_unknown` only has the types of the other signatures. An annotated function
+# is checked with all the signatures.
+i_unknown <- function(x) scale2(x)
+#| method scale3
+#| scale3.default : (x: dbl, y: any) -> lgl1
+i_known <- function(y) scale3(0, y)
+#| i_annot : (x: dbl1<>) -> dbl
+i_annot <- function(x) scale2(x)
+
 # The operators have no default method: this signature does not affect `*`
 # (it is expected to fail).
 #| (*.default) : (e1: list, e2: any) -> CHR1
@@ -112,7 +123,7 @@ g_other <- generic1("a")
 #| new inferred1 @ square
 #| new inferred2 @ square
 inferred1 <- function(x) x
-inferred2 <- function(x) x
+inferred2 <- function(x) UseMethod("inferred2")
 
 # ========== Return type of a method ==========
 
@@ -189,7 +200,7 @@ plain_list <- list(a = 1, b = "b")[["b"]]
 plain_round <- round(plain)
 
 # A value of unknown class may have a class with a method: for it, only the
-# default signature of the methods applies (cf. `MetaEnv.sigs`), whose result
+# fallback signature of `+` applies (cf. `MetaEnv.sigs`), whose result
 # is the union of the results of the methods of `+` (e.g. those for `Date` or
 # `difftime`), not `dbl1` (it is expected to fail). Its classes must be given,
 # or none with `<>`.

@@ -29,55 +29,62 @@ type name = string option * string
    package being typed (cf. [set_self]) are the global ones. *)
 val string_of_name : name -> string
 
+type origin = Base | Default | Overload of string
+(* Where a signature of a function comes from: the function itself, its default
+   method, or its class-overload for a class (cf. [sigs]). *)
+
 type sigs
 (* Signatures declared for a variable. Those of a method [m], i.e. a generic
-   declared as such (cf. [new_method]), are of three kinds:
-   - its base signatures, i.e. the ones declared for [m] itself or for its
-     default method [m.default] (cf. [generic_of_default]). Their first
+   declared as such (cf. [new_method]), are of four kinds:
+   - its base signatures, i.e. the ones declared for [m] itself. Their first
      parameter is restricted to the values whose class has no class-overload
      of [m], i.e. to [<~@m, ...>] (with [@m] the method class of [m]), to the
      values that have no class (e.g. [NULL]), and may be absent;
-   - the signatures of its methods, i.e. of its class-overloads, each with the
-     class [c_i] it is the class-overload for. Their first parameter is
-     restricted to [<c_i, ~c_(i+1), ..., ~c_n, ...>], where
-     [c_(i+1), ..., c_n] are the classes of the class-overloads of [m]
-     declared after the one for [c_i] (which take precedence over it);
-   - the default signature of its methods,
-     [(X: <@m, ...>, ...: any) -> ret] (whatever the name of the first
-     parameter of [m] is), which covers the values the base signatures do not
-     apply to, i.e. [<@m, ...>] (a class implies the method
+   - the signatures of its default method [m.default] (cf.
+     [generic_of_default]), restricted as the base ones. Contrarily to them, they
+     are not always considered when the arguments of an application must be
+     inferred (cf. [inference_guard]);
+   - the signatures of its class-overloads, each with the class [c_i] it is the
+     class-overload for. Their first parameter is restricted to
+     [<c_i, ~c_(i+1), ..., ~c_n, ...>], where [c_(i+1), ..., c_n] are the classes
+     of the class-overloads of [m] declared after the one for [c_i] (which take
+     precedence over it);
+   - its fallback signature, [(X: <@m, ...>, ...: any) -> ret] (whatever the name
+     of the first parameter of [m] is), which covers the values the base
+     signatures do not apply to, i.e. [<@m, ...>] (a class implies the method
      classes it implements, so these are the values of the classes that have
      a class-overload of [m], whatever their other classes are). The
-     signatures of the methods do not cover all of them, as
+     signatures of the class-overloads do not cover all of them, as
      [<@m, ~c_1, ..., ~c_n, ...>] is not empty. With it, the signatures of a
      method cover all the values its base signatures cover, and those of
      unknown classes (e.g. [dbl]) in particular. [ret] is the return type
      declared for [m], if any. Otherwise, it is the union of the return types
-     of the signatures of the methods (their type variables instantiated with
-     their largest instance; [empty] if it has none), or [any] if one of its
+     of the signatures of the class-overloads (their type variables instantiated
+     with their largest instance; [empty] if it has none), or [any] if one of its
      class-overloads has no signature or one that still contains label
      variables, or if type variables remain.
    A function that is not a method only has base signatures (whose first
    parameter is not restricted). Each kind only lists the signatures that
    could be converted to a type: the function signatures that still contain
    label variables are listed apart ([symbolic]).
-   The type of the variable is the intersection of its base and method
-   signatures: the default signature of the methods is only used for its
-   applications (cf. [Transform]). *)
+   The type of the variable is the intersection of all its signatures but the
+   fallback one, which is only used for its applications (cf. [Transform]). *)
 val base : sigs -> GTy.t list
-val methods : ?cls:string -> sigs -> GTy.t list
-(* [methods ~cls sigs] are the signatures of the method for the class [cls],
-   and [methods sigs] those of all the methods. *)
-val methods_with_class : sigs -> (string * GTy.t) list
-(* The signatures of the methods, each with its class. *)
-val methods_default : sigs -> GTy.t list
-(* The default signature of the methods (none if the function is not a
-   method). *)
+val defaults : sigs -> GTy.t list
+val overloads_with_class : sigs -> (string * GTy.t) list
+(* The signatures of the class-overloads, each with its class. *)
+val fallback : sigs -> GTy.t list
+(* The fallback signature (none if the function is not a method). *)
 val all : sigs -> GTy.t list
-(* All the signatures of the three kinds above. *)
-val symbolic : sigs -> (string option * fsig) list
-(* The signatures that still contain label variables, with the class of the
-   method they are a signature of, if any. *)
+(* All the signatures of the four kinds above. *)
+val symbolic : sigs -> (origin * fsig) list
+(* The signatures that still contain label variables, with their origin. *)
+val inference_guard : sigs -> origin -> Ty.t option
+(* When the arguments of an application must be inferred, the signatures of the
+   given origin are only considered if its first argument certainly is of the
+   type [inference_guard sigs origin] (always if [None]): the values without
+   class-overload for the default method, and those of the class for a
+   class-overload. *)
 val generic : sigs -> name option
 (* The name of the method they are the signatures of, if any. *)
 type signature = SigTy of GTy.t | SigFun of fsig
@@ -96,14 +103,14 @@ type t
 (* val simplify_tl : TyScheme.t -> TyScheme.t *)
 
 val initial : t
-val add_signature : ?cls:string -> name:name -> Variable.t -> signature -> t -> t
-(* [add_signature ~name v s t] adds the signature [s] to [v], a variable named
-   [name]: as a base signature, or as the signature of the method for [cls]
-   (whose first parameter must already be restricted to [cls], cf.
-   [class_overload_sig]). Its first parameter is restricted as described for
-   [sigs]. If the type of [v] was inferred (cf. [set_from_tyscheme]) and is a
-   function, it is kept as a base signature until one is declared.
-   @raise Failure if [cls] is set and the method [name] has been declared with a
+val add_signature : ?origin:origin -> name:name -> Variable.t -> signature -> t -> t
+(* [add_signature ~origin ~name v s t] adds the signature [s] to [v], a variable
+   named [name], with the given origin ([Base] by default). The first parameter
+   of the signature of a class-overload must already be restricted to its class
+   (cf. [class_overload_sig]). The first parameter of [s] is restricted as
+   described for [sigs]. If the type of [v] was inferred (cf.
+   [set_from_tyscheme]) and is a function, it is kept as a base signature.
+   @raise Failure if [s] is the signature of a class-overload and the method [name] has been declared with a
    return type (cf. [new_method]) that [s] does not comply with. *)
 val set_from_tyscheme : Variable.t -> TyScheme.t -> t -> t
 (* The type of [v], a global variable, is restricted as a signature of its name

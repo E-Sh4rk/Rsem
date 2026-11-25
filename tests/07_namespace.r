@@ -69,7 +69,7 @@ ns_no_skip <- function() typeof
 #| print.ns_rec : (x:any) -> CHR1
 ns_print <- function(x) print(x)
 # The parameter of `ns_print` has an unknown class: inferring its type only
-# considers the default signature of the methods (cf. `MetaEnv.sigs`). The
+# considers the fallback signature of `print` (cf. `MetaEnv.sigs`). The
 # method applies to a value of known class.
 #| ns_rec_new : () -> dbl1<ns_rec>
 ns_print_rec <- print(ns_rec_new())
@@ -111,13 +111,14 @@ ns_gen_global <- ns_gen(ns_a_new())
 
 # ========== Methods of an inferred generic ==========
 
-# The type inferred for a generic (cf. 04_s3.r) is kept when a class-overload is
-# added to it, and replaced by the signature of its default method, if any
-# (`inf_replaced` is expected to fail).
+# The type inferred for a generic (cf. 04_s3.r) is kept as a base signature when
+# the signature of a class-overload or of its default method is added to it: the
+# latter makes it more precise (`inf_default`), but not applicable to fewer values.
 #| inferred1.square : (x: any) -> CHR1
 #| inferred2.square : (x: any) -> CHR1
 #| inferred2.default : (x: dbl) -> lgl1
 inf_kept <- inferred1("a")
 inf_square <- inferred1(sq_new())
 inf_default <- inferred2(0)
-inf_replaced <- inferred2("a")
+inf_other <- inferred2("a")
+inf_infer <- function(x) inferred2(x)
