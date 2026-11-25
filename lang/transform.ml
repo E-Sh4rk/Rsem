@@ -96,28 +96,22 @@ let first_arg_has_class cls arg =
       | Arg.CallSite _ | Arg.DefSite _ -> false)
   | exception _ -> false
 
-(* The partition of the call-site arguments of an application of the
-   variable [v] following its dispatch, if it is a method (cf.
-   [MetaEnv.new_method]) and its first positional argument [pos] (cf.
+(* The partition of the call-site arguments of an application of a variable with
+   the signatures [sigs] following its dispatch, if it is a method (cf.
+   [MetaEnv.generic]) and its first positional argument [pos] (cf.
    [ArgBuilder]) is passed: the arguments whose first positional one is in each part of
    [MetaEnv.dispatch_partition]. Each part has as many positional arguments
    as the call ([pos]), as a call-site argument keeps track of their number
    (an argument passed but absent differs from none passed). It is empty
    otherwise. *)
-let dispatch_partition env v pos =
-  match Variable.get_name v, pos with
+let dispatch_partition env sigs pos =
+  match MetaEnv.generic sigs, pos with
   | None, _ | _, ([] | false::_) -> []
-  | Some name, true::pos ->
-    (* The name of a variable of a namespace is prefixed with it. *)
-    let name =
-      match String.split_on_char ':' name |> List.rev with
-      | name::""::_::_ -> name
-      | _ -> name
-    in
+  | Some m, true::pos ->
     let open Rstt in
     let opt_any = Ty.F.mk_descr (Ty.O.optional Ty.any) in
     let others = List.map (Fun.const opt_any) pos in
-    MetaEnv.dispatch_partition name env |> List.map (fun p ->
+    MetaEnv.dispatch_partition m env |> List.map (fun p ->
       Arg.mk' { pos'=Ty.F.mk_descr (Ty.O.required p)::others ; pos_tl'=opt_any ;
                 named'=[] ; named_tl'=opt_any })
 
@@ -394,7 +388,7 @@ let to_mlsem (cfg:cfg) e =
              The default signature covers the values the base signatures do
              not apply to (cf. [MetaEnv.sigs]): an argument whose classes are
              unknown (e.g. [dbl]) is thus covered, its values of a class with a
-             method being given the type [any]. *)
+             method being given the return type of the default signature. *)
           let proj = GTy.map Rstt.Attr.proj_content in
           let arg_ty ?(v=varg) env =
             Env.find_opt v env |> Option.map (fun ts -> TyScheme.get ts |> snd |> GTy.ub) in
@@ -430,7 +424,7 @@ let to_mlsem (cfg:cfg) e =
              whose domain is not disjoint from it (cf. [resolved]), which
              avoids the intersection of all of them when the class of the
              argument is unknown (e.g. [dbl]). *)
-          let partition = dispatch_partition cfg.env v pos in
+          let partition = dispatch_partition cfg.env sigs pos in
           let varg' = if partition = [] then varg else MVariable.create Immut None in
           let alt_default =
             Eid.refresh eid, A.Operation (SA.OCustom { oname="app" ; ofun=(fun env ->

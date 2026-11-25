@@ -51,14 +51,18 @@
 # ========== Methods ==========
 
 # The generics that dispatch on the class of their first argument. Only those
-# declared here can have class-overloads. Their other signatures do not apply to
-# a first argument whose class has a method (e.g. `<@as.character, ...>`): a
-# default signature covers it, whose result is the return type declared for the
-# method (e.g. `CHR` for `method base::as.character : CHR`), which its
-# class-overloads must comply with, i.e. they must return a subtype of it. If
-# none is declared, it is the union of the results of the class-overloads
-# (`empty` if there is none). A method is thus declared even when no
-# class-overload of it is.
+# declared here can have class-overloads. They are the ones of their namespace:
+# `method g` declares the global `g`, not `base::g`. Their other signatures do
+# not apply to a first argument whose class has a method (e.g.
+# `<@as.character, ...>`): a default signature covers it, whose result is the
+# return type declared for the method (e.g. `CHR` for
+# `method base::as.character : CHR`), which its class-overloads must comply with,
+# i.e. they must return a subtype of it. If none is declared, it is the union of
+# the results of the class-overloads (`empty` if there is none). A method is thus
+# declared even when no class-overload of it is. A signature of the default
+# method of a method (e.g. `as.character.default`) is also added to the other
+# signatures of the method, except for the operators of the `Ops` group generic,
+# which have none.
 #| method base::(+)
 #| method base::(-)
 #| method base::(*)

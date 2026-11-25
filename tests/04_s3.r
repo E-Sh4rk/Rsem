@@ -47,8 +47,8 @@ m_square <- some_shape(sq_new())
 m_circle <- some_shape(ci_new())
 m_default <- some_shape(0)
 
-# But `area` gives such a value the type `any` (it is expected to fail): its
-# other classes are unknown, and the class records do not respect the class
+# `area` gives such a value the union of the results of its class-overloads:
+# its other classes are unknown, and the class records do not respect the class
 # hierarchy, so that `<@area, ...>` has values of neither `square` nor
 # `circle`, which only the default signature of the methods covers (cf.
 # `MetaEnv.sigs`).
@@ -58,6 +58,61 @@ any_shape <- function(s) area(s)
 # The default signature of `area` excludes `@area`.
 #| default_area : (s: dbl1<~@area, ...>) -> dbl1
 default_area <- function(s) area(s)
+
+# ========== Default method ==========
+
+# The signature of a default method is also an overload of its generic, which
+# applies to the values whose class has no class-overload (including those that
+# have no class), or if there is no argument. The default method is not declared
+# with `new`, `default` not being a class.
+#| method scale2
+#| new scale2 @ square
+#| scale2 : (x: CHR1) -> CHR1
+scale2 <- function(x) x
+#| scale2.default : (x: (dbl | null)?) -> dbl
+scale2.default <- function(x = 0) 0
+#| scale2.square : (x: any) -> CHR1
+scale2.square <- function(x) "square"
+d_base <- scale2("a")
+d_default <- scale2(0)
+d_null <- scale2(NULL)
+d_absent <- scale2()
+d_circle <- scale2(ci_new())
+d_square <- scale2(sq_new())
+# It can be called directly on any value.
+d_direct <- scale2.default(sq_new())
+# The default method does not apply to `@scale2` (it is expected to fail).
+#| d_unknown : (x: dbl1<@scale2, ...>) -> dbl
+d_unknown <- function(x) scale2(x)
+
+# The operators have no default method: this signature does not affect `*`
+# (it is expected to fail).
+#| (*.default) : (e1: list, e2: any) -> CHR1
+d_op <- list(1) * 2
+
+# The signature of a class-overload or of a default method may come before the
+# ones of its generic, or be its only ones: the definition of the generic is then
+# not checked (`g_other` is expected to fail).
+#| method generic1
+#| new generic1 @ square
+#| generic1.square : (x: any) -> CHR1
+#| generic1.default : (x: dbl) -> lgl1
+generic1 <- function(x) UseMethod("generic1")
+g_square <- generic1(sq_new())
+g_default <- generic1(0)
+g_other <- generic1("a")
+
+# ========== Inferred generic ==========
+
+# The type of these generics is inferred: the signatures of their methods are
+# declared in another file (cf. 07_namespace.r), as the annotations of a file are
+# treated before its definitions.
+#| method inferred1
+#| method inferred2
+#| new inferred1 @ square
+#| new inferred2 @ square
+inferred1 <- function(x) x
+inferred2 <- function(x) x
 
 # ========== Return type of a method ==========
 

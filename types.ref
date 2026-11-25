@@ -112,9 +112,8 @@ pred: (() -> (DBL | INT)<>)<>
 
 
 ===== Processing tests/04_s3.r =====
-area: ((shape: dbl1<circle, ~ns_square, ...>) -> lgl1) &
- ((shape: dbl1<square, ~circle, ~ns_square, ...>) -> vec1) &
- ((shape: dbl1<~@area, ...>) -> dbl1)
+area: ((shape: dbl1<circle, ...>) -> lgl1) & ((shape: dbl1<square, ~circle, ...>)
+ -> vec1) & ((shape: dbl1<~@area, ...>) -> dbl1)
 
 area.square: (shape: dbl1<square, ...>) -> vec1
 
@@ -141,13 +140,56 @@ Line 48, characters 13-26
 argument: @(0.<>)
 failing call: some_shape(0)
 
-any_shape: Untypeable: untypeable coercion
-Line 56, characters 25-32
-expected: vec1
-given: any
-expression may be: new.env()
+any_shape: (s: dbl1<@area, ...>) -> vec1
 
 default_area: (s: dbl1<~@area, ...>) -> dbl1
+
+scale2: ((x: (dbl<~@scale2, ...> | null)?) -> dbl) & ((x: <square, ...>) |
+ (x: CHR1<~@scale2, ...>) -> CHR1)
+
+scale2.default: (x: (dbl | null)?) -> dbl
+
+scale2.square: (x: <square, ...>) -> CHR1
+
+d_base: CHR1
+
+d_default: dbl
+
+d_null: dbl
+
+d_absent: dbl
+
+d_circle: dbl
+
+d_square: CHR1
+
+d_direct: dbl
+
+d_unknown: Untypeable: untypeable coercion
+Line 86, characters 25-34
+expected: dbl
+given: CHR1
+expression may be: NA_character_
+
+d_op: Untypeable: untypeable application of base::*
+Line 91, characters 8-19
+argument: @({ 1.<> }<>, 2.<>)
+failing call: base::*(list(), 2)
+
+generic1: ((x: <square, ...>) -> CHR1) & ((x: dbl<~@generic1, ...>) -> lgl1)
+
+g_square: CHR1
+
+g_default: lgl1
+
+g_other: Untypeable: untypeable application of generic1
+Line 103, characters 11-24
+argument: @("a"<>)
+failing call: generic1("a")
+
+inferred1: ∀'a. ((x: 'a \ <@inferred1, ...>) -> 'a)<>
+
+inferred2: ∀'a. ((x: 'a \ <@inferred2, ...>) -> 'a)<>
 
 l_square: "square"
 
@@ -156,7 +198,7 @@ l_default: lgl1
 l_unknown: (x: dbl1<@label, ...>) -> CHR
 
 l_precise: Untypeable: untypeable coercion
-Line 82, characters 25-33
+Line 137, characters 25-33
 expected: "square"
 given: CHR
 expression may be: NA_character_
@@ -167,7 +209,7 @@ c_unknown: (((x: <@clone, ...>) -> dbl<circle, ...> | dbl<square, ...>) &
 chr_unknown: (x: <@as.character, ...>) -> CHR
 
 chr_precise: Untypeable: untypeable coercion
-Line 93, characters 27-42
+Line 148, characters 27-42
 expected: empty
 given: CHR
 expression may be: NA_character_
@@ -225,7 +267,7 @@ plain_list: "b"<>
 plain_round: dbl1<>
 
 next_val: Untypeable: untypeable coercion
-Line 142, characters 24-29
+Line 197, characters 24-29
 expected: dbl1
 given: (DBL | INT)<difftime> | (DBL | INT)<ts, ...> | DBL1<~@"+", ...> | LGL<> | dbl<Date, ...> | <POSIXt, ...>
 expression may be: structure(new.env(), class = "POSIXt")
@@ -421,11 +463,32 @@ ns_method_direct: ((x: <ns_df, ...>) -> LGL1)<>
 
 ns_method_df: LGL1
 
-ns_area: (((s: <@area, ...>) -> any) & ((s: dbl1<~@area, ...>) -> dbl1))<>
+ns_area: (((s: <@area, ...>) -> CHR1) & ((s: dbl1<~@area, ...>) -> dbl1))<>
 
-ns_area_global: (((s: <@area, ...>) -> any) & ((s: dbl1<~@area, ...>) -> dbl1))<>
+ns_area_global: (((s: <@area, ...>) -> vec1) & ((s: dbl1<~@area, ...>) -> dbl1))<>
 
 ns_area_square: CHR1
+
+ns_gen_a: CHR1
+
+ns_gen_b: LGL1
+
+ns_gen_first_class: (x: <ns_b, ...>) -> LGL1
+
+ns_gen: ∀'a. ((x: 'a) -> 'a)<>
+
+ns_gen_global: dbl1<ns_a>
+
+inf_kept: "a"<>
+
+inf_square: CHR1
+
+inf_default: lgl1
+
+inf_replaced: Untypeable: untypeable application of inferred2
+Line 123, characters 16-30
+argument: @("a"<>)
+failing call: inferred2("a")
 
 
 ===== Processing tests/08_aliases.r =====

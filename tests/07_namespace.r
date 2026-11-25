@@ -1,8 +1,11 @@
 # ========== Namespaces ==========
 
-# The class-overloads used below (cf. 04_s3.r). For a method of a namespace,
-# the namespace is written before the generic, as in `base::print.ns_df`.
-#| method print
+# The methods and class-overloads used below (cf. 04_s3.r). A method is
+# associated with its namespace (the global one if it has none). The
+# namespace of a class-overload, as in `base::print.ns_df`, is written before the
+# generic: the latter is the method of this namespace, or else of the search path
+# (for `new print @ ns_rec`, `base::print`, as there is no global one).
+#| method base::print
 #| method shapes::area
 #| new print @ ns_rec
 #| new base::print @ ns_df
@@ -88,3 +91,33 @@ ns_area <- function(s) shapes::area(s)
 ns_area_global <- function(s) area(s)
 #| ns_square_new : () -> dbl1<ns_square>
 ns_area_square <- shapes::area(ns_square_new())
+
+# Two methods with the same name do not affect each other: neither the
+# class-overloads, nor the return type of `pa::ns_gen` apply to `pb::ns_gen`. A
+# global function with the name of a method is not a method.
+#| method pa::ns_gen : CHR
+#| method pb::ns_gen
+#| new pa::ns_gen @ ns_a
+#| new pb::ns_gen @ ns_b
+#| ns_a_new : () -> dbl1<ns_a>
+#| ns_b_new : () -> dbl1<ns_b>
+#| pa::ns_gen.ns_a : (x:any) -> CHR1
+#| pb::ns_gen.ns_b : (x:any) -> LGL1
+ns_gen_a <- pa::ns_gen(ns_a_new())
+ns_gen_b <- pb::ns_gen(ns_b_new())
+ns_gen_first_class <- pb::ns_gen
+ns_gen <- function(x) x
+ns_gen_global <- ns_gen(ns_a_new())
+
+# ========== Methods of an inferred generic ==========
+
+# The type inferred for a generic (cf. 04_s3.r) is kept when a class-overload is
+# added to it, and replaced by the signature of its default method, if any
+# (`inf_replaced` is expected to fail).
+#| inferred1.square : (x: any) -> CHR1
+#| inferred2.square : (x: any) -> CHR1
+#| inferred2.default : (x: dbl) -> lgl1
+inf_kept <- inferred1("a")
+inf_square <- inferred1(sq_new())
+inf_default <- inferred2(0)
+inf_replaced <- inferred2("a")

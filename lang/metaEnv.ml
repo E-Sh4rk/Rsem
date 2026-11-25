@@ -22,19 +22,31 @@ type fsig = {
 (* The signatures of a function are of three kinds (cf. the interface):
    [base], [methods] (each with the class it is the class-overload for) and
    [methods_default]. [symbolic] are the signatures that still contain label
-   variables, with the class of the class-overload they come from, if any. *)
+   variables, with the class of the class-overload they come from, if any.
+   [inferred] tells whether [base] is not declared but the type inferred for the
+   variable (cf. [get_sigs]), and [generic] is the name of the variable if it is
+   a method (cf. [new_method]). *)
 type kind = KFun | KVal | KAny
+(* A name, with its namespace ([None] for a global name). *)
+type name = string option * string
 (* [kind] is the kind of the type of the variable (cf. [sigs_kind]). *)
 type sigs = { base:GTy.t list ; methods:(string * GTy.t) list ;
               methods_default:GTy.t list ; symbolic:(string option * fsig) list ;
-              kind:kind }
+              inferred:bool ; generic:name option ; kind:kind }
 type signature = SigTy of GTy.t | SigFun of fsig
 
 module StrMap = Map.Make(String)
-module StrSet = Set.Make(String)
+module Name = struct type t = name let compare = Stdlib.compare end
+module NameMap = Map.Make(Name)
+module NameSet = Set.Make(Name)
+let string_of_name (ns, str) =
+  match ns with
+  | None -> str
+  | Some ns -> ns^"::"^str
 (* [ns] maps a namespace and a name to the variable R code reaches with
    [ns::name]. Such a variable is never bound by the program itself: its type
-   only comes from the signatures declared for it.
+   only comes from the signatures declared for it. [imports] maps the names the
+   package being typed imports to the namespace they come from (cf. [ns_import]).
    [meths] maps the names of the declared methods to their return type, if one
    has been declared (cf. [new_method]), and [ovl] lists their declared
    class-overloads (generic name, class), in their order of declaration. [bound]
@@ -50,8 +62,9 @@ module StrSet = Set.Make(String)
 type t = { types : TyScheme.t Lazy.t VarMap.t ; kinds : kind Lazy.t VarMap.t ;
            senv : sigs VarMap.t ;
            ns : Variable.t StrMap.t StrMap.t ; self : string option ;
-           meths : GTy.t Lazy.t option StrMap.t ;
-           ovl : (string * string) list ; bound : StrSet.t }
+           imports : string StrMap.t ;
+           meths : GTy.t Lazy.t option NameMap.t ;
+           ovl : (name * string) list ; bound : NameSet.t }
 
 let simplify_tl ty =
   let tvs, ty = ty |> TyScheme.bot_instance |> TyScheme.get in
@@ -73,11 +86,20 @@ let initial =
         VarMap.add v (lazy (kind_of_tyscheme ts)) kinds)
       (VarMap.empty, VarMap.empty) in
   { types ; kinds ; senv=VarMap.empty ; ns=StrMap.empty ; self=None ;
-    meths=StrMap.empty ; ovl=[] ; bound=StrSet.empty }
-let get_sigs v senv =
-  match VarMap.find_opt v senv with
-  | None -> { base=[] ; methods=[] ; methods_default=[] ; symbolic=[] ; kind=KAny }
+    imports=StrMap.empty ; meths=NameMap.empty ; ovl=[] ; bound=NameSet.empty }
+let no_sigs = { base=[] ; methods=[] ; methods_default=[] ; symbolic=[] ;
+                inferred=false ; generic=None ; kind=KAny }
+(* The signatures of [v]. If none has been declared but a function type has been
+   inferred for [v], this type (already restricted, cf. [set_from_tyscheme]) is
+   its base signature. *)
+let get_sigs v t =
+  match VarMap.find_opt v t.senv with
   | Some s -> s
+  | None ->
+    match VarMap.find_opt v t.types, VarMap.find_opt v t.kinds with
+    | Some ts, Some (lazy KFun) ->
+      { no_sigs with base=[Lazy.force ts |> TyScheme.get |> snd] ; inferred=true ; kind=KFun }
+    | _ -> no_sigs
 
 (* ===== S3 dispatch (class overloads) ===== *)
 let is_fun_sig ty =
@@ -191,6 +213,11 @@ let instance_ty ?(polymorphic=false) f decl =
   |> if f.restr = [] then Fun.id else GTy.map Rstt.TyOp.simplify
 let fsig_ty ?polymorphic f = instance_ty ?polymorphic f f.decl
 
+let is_fun s =
+  match s with
+  | SigFun _ -> true
+  | SigTy ty -> is_fun_sig ty
+
 let resolve_signature arg f =
   (* [specialize] fails when a label variable has no possible instantiation, and
      [instance_ty] when one could not be resolved at all. *)
@@ -210,10 +237,30 @@ let r_name m =
   | "[]" -> "[" | "[[]]" -> "[[" | "[]<-" -> "[<-" | "[[]]<-" -> "[[<-"
   | m -> m
 
-let is_method m t = StrMap.mem m t.meths
+(* The packages R attaches by default, in the order of its search path. *)
+let search_path = ["stats"; "graphics"; "grDevices"; "utils"; "datasets"; "methods"; "base"]
+
+(* The names of the package being typed (cf. [set_self]) are the global ones. *)
+let normalize (ns, str) t =
+  match ns with
+  | Some _ when ns = t.self -> None, str
+  | _ -> ns, str
+
+let is_method m t = NameMap.mem m t.meths
+(* The declared method that [m] refers to, if any: [m] itself, or else the one
+   the package being typed imports or the one of the search path (as in
+   [search], but among the methods: they may not have a signature yet). *)
+let find_method m t =
+  let (_, str) as m = normalize m t in
+  let others = match StrMap.find_opt str t.imports with
+    | Some ns -> [ns]
+    | None -> search_path
+  in
+  m::List.map (fun ns -> Some ns, str) others
+  |> List.find_opt (fun m -> is_method m t)
 (* The return type declared for the method [m], if any. *)
 let return_ty m t =
-  StrMap.find_opt m t.meths |> Option.join |> Option.map Lazy.force
+  NameMap.find_opt m t.meths |> Option.join |> Option.map Lazy.force
 
 (* Declares to rstt the classes of the class-overloads that have not been
    declared yet, each with the methods of all its class-overloads. It must be
@@ -221,8 +268,9 @@ let return_ty m t =
 let declare_classes t =
   t.ovl |> List.iter (fun (_,cls) ->
     if Hashtbl.mem declared cls |> not then begin
-      let methods = t.ovl |> List.filter_map (fun (m,c) ->
-        if String.equal c cls then Some (r_name m) else None) in
+      let methods = t.ovl |> List.filter_map (fun ((_,m),c) ->
+        if String.equal c cls then Some (r_name m) else None)
+        |> List.sort_uniq String.compare in
       begin try Rstt.Classes.declare_class cls ~methods
       with Invalid_argument _ ->
         failwith (Printf.sprintf
@@ -245,14 +293,16 @@ let declare_classes t =
    Declaring the same method again does nothing, but adding its return type if
    it has none. If it has one, they must be equivalent. *)
 let new_method ?ret m t =
+  let m = normalize m t in
+  let str = string_of_name m in
   let set ret =
-    if StrSet.mem m t.bound then
+    if NameSet.mem m t.bound then
       failwith (Printf.sprintf
-        "Cannot declare the method %s%s: %s has already been given a type." m
-        (if StrMap.mem m t.meths then " with a return type" else "") m)
-    else { t with meths=StrMap.add m ret t.meths }
+        "Cannot declare the method %s%s: %s has already been given a type." str
+        (if is_method m t then " with a return type" else "") str)
+    else { t with meths=NameMap.add m ret t.meths }
   in
-  match StrMap.find_opt m t.meths, ret with
+  match NameMap.find_opt m t.meths, ret with
   | None, _ | Some None, Some _ -> set ret
   | Some _, None -> t
   | Some (Some ret), Some ret' ->
@@ -260,12 +310,12 @@ let new_method ?ret m t =
       let ret, ret' = Lazy.force ret, Lazy.force ret' in
       if GTy.equiv ret ret' then ret
       else failwith (Format.asprintf
-        "The method %s is declared with distinct return types: %a and %a." m GTy.pp ret GTy.pp ret')
+        "The method %s is declared with distinct return types: %a and %a." str GTy.pp ret GTy.pp ret')
     end in
-    if StrSet.mem m t.bound then begin
+    if NameSet.mem m t.bound then begin
       (* No later signature may force it: the types are compared right away. *)
       declare_classes t ; Lazy.force merged |> ignore ; t
-    end else { t with meths=StrMap.add m (Some merged) t.meths }
+    end else { t with meths=NameMap.add m (Some merged) t.meths }
 
 (* Declares the class-overload of the method [m] for the class [cls]: [cls]
    will implement the method class of [m] (named after [r_name m]). The methods
@@ -275,26 +325,24 @@ let new_method ?ret m t =
    given a type. [m] must have been declared as a method (cf. [new_method]).
    Declaring the same class-overload again does nothing. *)
 let new_class_overload m cls t =
+  let m = normalize m t in
   if List.mem (m,cls) t.ovl then t
   else begin
+    let str = string_of_name m in
     let error reason =
-      failwith (Printf.sprintf "Cannot declare the class-overload %s @ %s: %s." m cls reason) in
+      failwith (Printf.sprintf "Cannot declare the class-overload %s @ %s: %s." str cls reason) in
     if is_method m t |> not then
-      error (m^" is not a method (it must be declared first, with 'method "^m^"')") ;
-    if StrSet.mem m t.bound then error (m^" has already been given a type") ;
+      error (str^" is not a method (it must be declared first, with 'method "^str^"')") ;
+    if NameSet.mem m t.bound then error (str^" has already been given a type") ;
     if Hashtbl.mem declared cls then
       error (cls^" has already been declared (class-overloads must precede any type mentioning their class)") ;
     { t with ovl=t.ovl@[m,cls] }
   end
 
 (* Classes of the class-overloads of the generic [m], in their order of
-   declaration, and those declared after the class-overload for [cls].
-   Methods and class-overloads are matched with the generics by name only, as
-   the method classes are: those of two distinct generics with the same name
-   (e.g. a global one and the one of a namespace) are mixed together.
-   TODO: improve *)
+   declaration, and those declared after the class-overload for [cls]. *)
 let overloads m t =
-  t.ovl |> List.filter_map (fun (m',c) -> if String.equal m m' then Some c else None)
+  t.ovl |> List.filter_map (fun (m',c) -> if Name.compare m m' = 0 then Some c else None)
 let overloads_after cls m t =
   let rec after clss =
     match clss with
@@ -305,8 +353,14 @@ let overloads_after cls m t =
   after (overloads m t)
 
 (* The method class of the generic [m], i.e. the class of the values whose
-   class has a class-overload of [m]. *)
-let method_class m = Rstt.Classes.Method (r_name m)
+   class has a class-overload of [m].
+   TODO: Method classes are not namespaced: two methods [pa::m] and [pb::m] share
+   the method class [@m]. This is unsound: a class with a class-overload of
+   [pb::m] only is excluded from the base signatures of [pa::m], and only its
+   default signature applies (cf. [methods_default_ty]). But the return type of
+   the latter is the one of the class-overloads of [pa::m], whereas R calls its
+   default method. *)
+let method_class (_, m) = Rstt.Classes.Method (r_name m)
 
 (* The restriction of the first parameter of a signature of the generic [m]
    (cf. [add_signature]): the values whose class has no class-overload of [m]
@@ -329,38 +383,23 @@ let codomain ty =
   |> List.concat_map (fun a -> Arrow.dnf a.Attr.content |> List.concat |> List.map snd)
   |> Ty.disj
 
-(* The name of the first parameter of the first base signature that has one,
-   [X] if there is none. *)
-let first_param_name sigs =
-  let open Rstt in
-  let name ty =
-    GTy.ub ty |> Attr.destruct
-    |> List.concat_map fst
-    |> List.concat_map (fun a -> Arrow.dnf a.Attr.content |> List.concat |> List.map fst)
-    |> List.concat_map Arg.destruct
-    |> List.find_map (function
-      | Arg.DefSite { pos_named=(name,_)::_ ; _ } -> Some name
-      | Arg.DefSite _ | Arg.CallSite _ -> None)
-  in
-  List.rev sigs.base |> List.filter is_fun_sig |> List.find_map name
-  |> Option.value ~default:"X"
-
 (* The default signature of the methods of the generic [m],
-   [(x: <@m, ...>, ...: any) -> ret], with [x] the name of its first parameter
-   (so that it can be passed by name): it covers the values for which the
-   base signatures do not apply, i.e. the complement [<@m, ...>] of their
-   restriction [<~@m, ...>] (a class implies the method classes it
-   implements). Contrarily to the signatures of the methods, it also covers
-   the values of these classes whose other classes are unknown.
+   [(X: <@m, ...>, ...: any) -> ret] (whatever the name of the first parameter
+   of [m] is): it covers the values for which the base signatures do not apply,
+   i.e. the complement [<@m, ...>] of their restriction [<~@m, ...>] (a class
+   implies the method classes it implements). Contrarily to the signatures of
+   the methods, it also covers the values of these classes whose other classes
+   are unknown.
    [ret] is the return type declared for [m], if any (cf. [new_method]).
    Otherwise, as these values are dispatched to one of the class-overloads of
-   [m], it is the union of the return types of the signatures of its methods
-   [sigs], the type variables of each being instantiated with
-   [TVOp.top_instance] before the union (where a variable could occur with both
-   polarities, and thus survive). In particular, it is [empty] when [m] has no
-   class-overload. It is [any] when this is not possible: when a class-overload
-   has no signature (its return type is unknown), one of them still contains
-   label variables, or type variables remain after the instantiation. *)
+   [m] (but see the TODO of [method_class]), it is the union of the return types
+   of the signatures of its methods [sigs], the type variables of each being
+   instantiated with [TVOp.top_instance] before the union (where a variable could
+   occur with both polarities, and thus survive). In particular, it is [empty]
+   when [m] has no class-overload. It is [any] when this is not possible: when a
+   class-overload has no signature (its return type is unknown), one of them
+   still contains label variables, or type variables remain after the
+   instantiation. *)
 let methods_default_ty m sigs t =
   let open Rstt in
   let overloads_ret () =
@@ -377,7 +416,7 @@ let methods_default_ty m sigs t =
     | None -> overloads_ret () |> GTy.mk in
   let field ty = Ty.F.mk_descr (Ty.O.required ty) in
   let x = class_ty [true, method_class m] in
-  let dom = Arg.mk { pos_named=[first_param_name sigs, field x] ;
+  let dom = Arg.mk { pos_named=["X", field x] ;
                      pos_tl=field Ty.any ; named=[] ; named_tl=field Ty.any } in
   ret |> GTy.map (fun ret -> Arrow.mk dom ret |> Attr.mk_content)
 
@@ -406,7 +445,7 @@ let check_return_ty cls m s t =
     | Some ty ->
       failwith (Format.asprintf
         "The signature of %s.%s does not comply with the return type of the method %s: %a is not a subtype of %a."
-        m cls m GTy.pp ty GTy.pp ret)
+        (string_of_name m) cls (string_of_name m) GTy.pp ty GTy.pp ret)
 
 (* A partition of the R values the first argument of an application of the
    generic [m] may take, following its dispatch: the values whose class has
@@ -416,6 +455,7 @@ let check_return_ty cls m s t =
    ([<c_i, ~c_(i+1), ..., ~c_n, ...>]), and the rest ([<@m, ~c_1, ..., ~c_n,
    ...>], if not empty). It is empty if [m] is not a method. *)
 let dispatch_partition m t =
+  let m = normalize m t in
   if is_method m t |> not then []
   else
     let clss = overloads m t in
@@ -429,6 +469,20 @@ let dispatch_partition m t =
     in
     let rest = class_ty ((true, method_class m)::List.map (fun c -> false, Rstt.Classes.Class c) clss) in
     base::meths clss@(if Ty.is_empty rest then [] else [rest])
+
+(* The operators of R's [Ops] group generic: contrarily to the other generics,
+   they never dispatch to a default method. *)
+let ops = ["+";"-";"*";"/";"^";"%%";"%/%";"==";"!=";"<";">";"<=";">=";"&";"|";"!"]
+
+(* The method whose default method is named [str], if any: the one [m] refers to
+   (cf. [find_method]) if [str] is [m.default] (unless [m] is an operator, cf.
+   [ops]). *)
+let generic_of_default (ns, str) t =
+  let suffix = ".default" in
+  if String.ends_with ~suffix str then
+    let m = String.sub str 0 (String.length str - String.length suffix) in
+    if List.mem m ops then None else find_method (ns, m) t
+  else None
 
 (* Restrictions of the signature of the class-overload of a generic for the
    class [cls]: its first parameter is restricted to the values of class
@@ -466,8 +520,10 @@ let sigs_kind k ty =
 
 (* The first parameter of a signature of [name] is restricted as described by
    [restriction]. That of a class-overload must comply with the return type of
-   its method. *)
+   its method. If the type of [v] was inferred, it is kept as a base signature
+   until one is declared (e.g. that of its default method). *)
 let add_signature ?cls ~name v s t =
+  let name = normalize name t in
   Option.iter (fun cls -> check_return_ty cls name s t) cls ;
   let restr = restriction ?cls name t in
   let s =
@@ -475,8 +531,10 @@ let add_signature ?cls ~name v s t =
     | SigTy ty -> SigTy (restrict_first_param restr ty)
     | SigFun f -> SigFun (restrict_sig restr f)
   in
-  let t = { t with bound=StrSet.add name t.bound } in
-  let sigs = get_sigs v t.senv in
+  let t = { t with bound=NameSet.add name t.bound } in
+  let sigs = get_sigs v t in
+  let sigs =
+    if sigs.inferred && cls = None then { sigs with base=[] ; inferred=false } else sigs in
   let add ty sigs =
     match cls with
     | None -> { sigs with base=ty::sigs.base ; kind=sigs_kind sigs.kind ty }
@@ -490,7 +548,7 @@ let add_signature ?cls ~name v s t =
   in
   let sigs =
     if is_method name t
-    then { sigs with methods_default=[methods_default_ty name sigs t] }
+    then { sigs with generic=Some name ; methods_default=[methods_default_ty name sigs t] }
     else sigs
   in
   { t with types=VarMap.add v (sigs_ty sigs) t.types ;
@@ -505,7 +563,8 @@ let set_from_tyscheme v ts t =
     match Variable.get_name v with
     | None -> ts, t
     | Some name ->
-      let t = { t with bound=StrSet.add name t.bound } in
+      let name = None, name in
+      let t = { t with bound=NameSet.add name t.bound } in
       match restriction name t with
       | [] -> ts, t
       | restr ->
@@ -540,6 +599,7 @@ let methods ?cls sigs =
 let methods_with_class sigs = sigs.methods
 let methods_default sigs = sigs.methods_default
 let symbolic sigs = sigs.symbolic
+let generic sigs = sigs.generic
 let all sigs = sigs.base@(List.map snd sigs.methods)@sigs.methods_default
 
 (* ===== Namespaces ===== *)
@@ -547,22 +607,20 @@ let all sigs = sigs.base@(List.map snd sigs.methods)@sigs.methods_default
 let ns_find ns name t =
   StrMap.find_opt ns t.ns |> Option.map (StrMap.find_opt name) |> Option.join
 
-(* The successive signatures of a same name are its overloads: contrarily to a
+(* The variable of [ns::name], created if there is none.
+   The successive signatures of a same name are its overloads: contrarily to a
    top-level name, a namespaced one is never redefined by the program, so a new
    signature cannot be shadowing the previous ones. *)
+let ns_var ns name t =
+  match ns_find ns name t with
+  | Some v -> v, t
+  | None ->
+    let v = Mlsem.Lang.MVariable.create Immut (Some (string_of_name (Some ns, name))) in
+    let names = StrMap.find_opt ns t.ns |> Option.value ~default:StrMap.empty in
+    v, { t with ns=StrMap.add ns (StrMap.add name v names) t.ns }
 let ns_add_signature ns name s t =
-  let v, t =
-    match ns_find ns name t with
-    | Some v -> v, t
-    | None ->
-      let v = Mlsem.Lang.MVariable.create Immut (Some (ns^"::"^name)) in
-      let names = StrMap.find_opt ns t.ns |> Option.value ~default:StrMap.empty in
-      v, { t with ns=StrMap.add ns (StrMap.add name v names) t.ns }
-  in
-  add_signature ~name v s t
-
-(* The packages R attaches by default, in the order of its search path. *)
-let search_path = ["stats"; "graphics"; "grDevices"; "utils"; "datasets"; "methods"; "base"]
+  let v, t = ns_var ns name t in
+  add_signature ~name:(Some ns, name) v s t
 
 (* The imports of the package being typed, as R's imports environment: a
    namespace no R code can name, searched first (cf. [search]). *)
@@ -585,7 +643,8 @@ let ns_import ?names ?(except=[]) ns t =
   in
   let imports = StrMap.find_opt imports_ns t.ns |> Option.value ~default:StrMap.empty in
   let imports = List.fold_left add imports names in
-  { t with ns=StrMap.add imports_ns imports t.ns }
+  let from = List.fold_left (fun from name -> StrMap.add name ns from) t.imports names in
+  { t with ns=StrMap.add imports_ns imports t.ns ; imports=from }
 
 let set_self name t = { t with self=Some name }
 let self t = t.self

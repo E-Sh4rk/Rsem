@@ -54,10 +54,10 @@ type lannot = { loffset: int ; lfun: string ; lvar: string ; lty: GTy.t }
 
 (* [covl] maps the name of the method of each declared class-overload (e.g.
    [print.myclass], or [base::print.data.frame] for one of a namespace, cf.
-   [qualified]) to the name of its generic function and to the class it
-   dispatches on. *)
+   [qualified]) to the name of its generic function (cf. [MetaEnv.find_method])
+   and to the class it dispatches on. *)
 type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: MetaEnv.t ; senv: GTy.t list VarMap.t ;
-                    covl: (string * string) StrMap.t ; lannots: lannot list ;
+                    covl: (MetaEnv.name * string) StrMap.t ; lannots: lannot list ;
                     benv: Rstt.Builder.env ; tidenv: Ty.t Rstt.Builder.TIdMap.t }
 let initial_ctx = { benv=Rstt.Builder.empty_env ; tidenv=Rstt.Builder.TIdMap.empty ;
                     idenv=StrMap.empty ; tenv=MetaEnv.initial ; senv=VarMap.empty ;
@@ -276,11 +276,11 @@ let build_sig ctx cls tye =
     { ctx with benv }, MetaEnv.SigTy gty, [rigidify gty]
 
 (* Name under which the class-overload [str] of the namespace [ns] is
-   registered. A global name cannot contain [::], so it cannot clash with it. *)
-let qualified ns str =
-  match ns with
-  | None -> str
-  | Some ns -> ns^"::"^str
+   registered. A global name cannot contain [::], so it cannot clash with it. The
+   names of the package being typed are the global ones. *)
+let qualified ctx ns str =
+  let ns = if ns = MetaEnv.self ctx.tenv then None else ns in
+  MetaEnv.string_of_name (ns, str)
 
 (* The variable the top-level name [str] refers to: its global definition, or
    else the one of the search path (cf. [MetaEnv.search]). *)
@@ -289,32 +289,42 @@ let lookup ctx str =
   | Some v -> Some v
   | None -> MetaEnv.search str ctx.tenv
 
-(* The generic a method of the namespace [ns] extends is looked up from that
-   namespace: in the namespace itself, and then in the search path. As in R, the
-   global definitions of the program play no part in it. *)
-let lookup_from ctx ns str =
-  match ns with
-  | None -> lookup ctx str
-  | Some ns ->
-    match MetaEnv.ns_find ns str ctx.tenv with
-    | Some v -> Some v
-    | None -> MetaEnv.search str ctx.tenv
+(* The variable of the method named [m] (cf. [MetaEnv.find_method]). If it has
+   none yet (its first signature is the one of a class-overload or of its
+   default method), it is created without base signatures. A global one is then
+   considered as declared: its definition is not checked, and its other
+   signatures are overloads of it. *)
+let generic_var ctx m =
+  match m with
+  | None, str ->
+    begin match StrMap.find_opt str ctx.idenv with
+    | Some v -> ctx, v
+    | None ->
+      let v = MVariable.create Immut (Some str) in
+      { ctx with idenv=StrMap.add str v ctx.idenv ; senv=VarMap.add v [] ctx.senv }, v
+    end
+  | Some ns, str ->
+    let v, tenv = MetaEnv.ns_var ns str ctx.tenv in
+    { ctx with tenv }, v
 
-(* The variable of the generic [m] that the method of the namespace [ns] is
-   registered in (cf. [lookup_from]). *)
-let generic_of ctx ns m cls =
-  match lookup_from ctx ns m with
-  | Some vg -> vg
+(* Registers the signature [sign] of the function [str] of the namespace [ns] as
+   an overload of its generic, if [str] has been declared as a class-overload
+   or is the name of the default method of a method (cf.
+   [MetaEnv.generic_of_default]). The latter applies to the values whose class
+   has no class-overload: it is a base signature of the generic, restricted as
+   such. The signature of [str] itself is not restricted, as a default method
+   can be called directly (or by [NextMethod]) on any value. *)
+let add_to_generic ctx ns str sign =
+  let add ?cls m =
+    let ctx, v = generic_var ctx m in
+    { ctx with tenv=MetaEnv.add_signature ?cls ~name:m v sign ctx.tenv }
+  in
+  match StrMap.find_opt (qualified ctx ns str) ctx.covl with
+  | Some (m, cls) -> add ~cls m
   | None ->
-    failwith ("Cannot add the signature of the class-overload "^(qualified ns (m^"."^cls))^
-      ": no generic function found (it must be declared before its overloads).")
-
-(* Registers the signature [sign] of the method [str] of the namespace [ns] as
-   an overload of its generic, if [str] has been declared as a class-overload. *)
-let add_to_generic ctx ns str sign tenv =
-  match StrMap.find_opt (qualified ns str) ctx.covl with
-  | None -> tenv
-  | Some (m, cls) -> MetaEnv.add_signature ~cls ~name:m (generic_of ctx ns m cls) sign tenv
+    match MetaEnv.generic_of_default (ns, str) ctx.tenv with
+    | Some m when MetaEnv.is_fun sign -> add m
+    | _ -> ctx
 
 let add_sig ctx str tye =
   let open Mlsem_common in
@@ -338,16 +348,16 @@ let add_sig ctx str tye =
       then failwith "Non-functional signatures cannot have type variables" ;
       MVariable.create (AnnotMut s) (Some str), [s]
   in
-  let tenv = MetaEnv.add_signature ~name:str v sign ctx.tenv |> add_to_generic ctx None str sign in
+  let tenv = MetaEnv.add_signature ~name:(None, str) v sign ctx.tenv in
   let idenv = StrMap.add str v ctx.idenv in
   let senv = VarMap.add v sigs ctx.senv in
-  { ctx with idenv ; tenv ; senv }
+  add_to_generic { ctx with idenv ; tenv ; senv } None str sign
 
 (* The return type [tye] of the method [m], if any, is only built when needed:
    it may mention classes whose class-overloads are not declared yet (cf.
    [MetaEnv.new_method]). It cannot contain type variables: it is resolved in
    an environment without any, which must remain so. *)
-let add_method ctx m tye =
+let add_method ctx ns m tye =
   let open R_types.Types in
   let ret = tye |> Option.map (fun tye ->
     let benv = { ctx.benv with venv=Builder.StrMap.empty ; rvenv=Builder.StrMap.empty } in
@@ -355,11 +365,20 @@ let add_method ctx m tye =
     if not (Builder.StrMap.is_empty benv.venv && Builder.StrMap.is_empty benv.rvenv)
     then failwith ("The return type of the method "^m^" cannot have type variables.") ;
     lazy (build_gty ctx.tidenv tye)) in
-  { ctx with tenv=MetaEnv.new_method ?ret m ctx.tenv }
+  { ctx with tenv=MetaEnv.new_method ?ret (ns, m) ctx.tenv }
 
+(* The generic a class-overload of the namespace [ns] extends is the method [m]
+   of this namespace (the global one if there is none), or else of the search
+   path (cf. [MetaEnv.find_method]). It is resolved once: declaring the same
+   class-overload again has no effect. *)
 let add_class ctx ns m cls =
-  { ctx with tenv=MetaEnv.new_class_overload m cls ctx.tenv ;
-             covl=StrMap.add (qualified ns (m^"."^cls)) (m, cls) ctx.covl }
+  let str = qualified ctx ns (m^"."^cls) in
+  match StrMap.find_opt str ctx.covl with
+  | Some ((_, m'), cls') when String.equal m m' && String.equal cls cls' -> ctx
+  | _ ->
+    let g = MetaEnv.find_method (ns, m) ctx.tenv |> Option.value ~default:(ns, m) in
+    { ctx with tenv=MetaEnv.new_class_overload g cls ctx.tenv ;
+               covl=StrMap.add str (g, cls) ctx.covl }
 
 let add_alias ctx str tye =
   let open R_types.Types in
@@ -393,16 +412,15 @@ let add_local_sig ctx offset f x tye =
    As for a global name, a declared class-overload is restricted to its class
    and also registered as an overload of its generic. *)
 let add_ns_sig ctx ns str tye =
-  let generic = StrMap.find_opt (qualified (Some ns) str) ctx.covl in
+  let generic = StrMap.find_opt (qualified ctx (Some ns) str) ctx.covl in
   let ctx, sign, chk = build_sig ctx (Option.map snd generic) tye in
   begin match sign, chk with
   | MetaEnv.SigTy _, [s] when GTy.fv s |> MVarSet.is_empty |> not ->
     failwith "Non-functional signatures cannot have type variables"
   | _ -> ()
   end ;
-  let tenv = MetaEnv.ns_add_signature ns str sign ctx.tenv
-    |> add_to_generic ctx (Some ns) str sign in
-  { ctx with tenv }
+  let tenv = MetaEnv.ns_add_signature ns str sign ctx.tenv in
+  add_to_generic { ctx with tenv } (Some ns) str sign
 
 (* Every declaration but a method or a class-overload may build types that mention
    classes: the classes declared so far must be declared to rstt first. *)
@@ -413,7 +431,7 @@ let add_def ctx offset def =
   | Sigs.LocalSig (f, str, tye) -> add_local_sig ctx offset f str tye
   | Sigs.NsSig (ns, str, tye) -> add_ns_sig ctx ns str tye
   | Sigs.Alias (str, tye) -> add_alias ctx str tye
-  | Sigs.Method (_, m, tye) -> add_method ctx m tye
+  | Sigs.Method (ns, m, tye) -> add_method ctx ns m tye
   | Sigs.NewClass (ns, m, cls) -> add_class ctx ns m cls
 
 (* Name of the top-level definition the offset [offset] falls into, if any. *)
@@ -518,9 +536,9 @@ let declare_overloads ctx (_, extras) =
   let annots = try annotations extras with Failure _ -> [] in
   annots |> List.fold_left (fun ctx (_, str) ->
     match IO.parse_def str with
-    | Sigs.Method (_, m, tye) ->
-      begin try add_method ctx m tye with Failure _ | Invalid_argument _ ->
-        try add_method ctx m None with Failure _ -> ctx
+    | Sigs.Method (ns, m, tye) ->
+      begin try add_method ctx ns m tye with Failure _ | Invalid_argument _ ->
+        try add_method ctx ns m None with Failure _ -> ctx
       end
     | Sigs.NewClass (ns, m, cls) -> (try add_class ctx ns m cls with Failure _ -> ctx)
     | _ | exception _ -> ctx

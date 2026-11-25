@@ -24,21 +24,28 @@ val fsig_ty : ?polymorphic:bool -> fsig -> GTy.t
    matched with the argument of any definition.
    @raise Invalid_argument if [is_resolved] is false. *)
 
+type name = string option * string
+(* A name, with its namespace ([None] for a global name). The names of the
+   package being typed (cf. [set_self]) are the global ones. *)
+val string_of_name : name -> string
+
 type sigs
 (* Signatures declared for a variable. Those of a method [m], i.e. a generic
    declared as such (cf. [new_method]), are of three kinds:
-   - its base signatures, i.e. the ones declared for [m] itself. Their first
+   - its base signatures, i.e. the ones declared for [m] itself or for its
+     default method [m.default] (cf. [generic_of_default]). Their first
      parameter is restricted to the values whose class has no class-overload
-     of [m], i.e. to [<~@m, ...>] (with [@m] the method class of [m]);
+     of [m], i.e. to [<~@m, ...>] (with [@m] the method class of [m]), to the
+     values that have no class (e.g. [NULL]), and may be absent;
    - the signatures of its methods, i.e. of its class-overloads, each with the
      class [c_i] it is the class-overload for. Their first parameter is
      restricted to [<c_i, ~c_(i+1), ..., ~c_n, ...>], where
      [c_(i+1), ..., c_n] are the classes of the class-overloads of [m]
      declared after the one for [c_i] (which take precedence over it);
    - the default signature of its methods,
-     [(x: <@m, ...>, ...: any) -> ret] (with [x] the name of the first
-     parameter of the base signatures), which covers the values the base
-     signatures do not apply to, i.e. [<@m, ...>] (a class implies the method
+     [(X: <@m, ...>, ...: any) -> ret] (whatever the name of the first
+     parameter of [m] is), which covers the values the base signatures do not
+     apply to, i.e. [<@m, ...>] (a class implies the method
      classes it implements, so these are the values of the classes that have
      a class-overload of [m], whatever their other classes are). The
      signatures of the methods do not cover all of them, as
@@ -71,7 +78,11 @@ val all : sigs -> GTy.t list
 val symbolic : sigs -> (string option * fsig) list
 (* The signatures that still contain label variables, with the class of the
    method they are a signature of, if any. *)
+val generic : sigs -> name option
+(* The name of the method they are the signatures of, if any. *)
 type signature = SigTy of GTy.t | SigFun of fsig
+val is_fun : signature -> bool
+(* Whether it is the signature of a function. *)
 
 type label = string
 type arg_label = Positional | Named of label | Ell
@@ -85,19 +96,22 @@ type t
 (* val simplify_tl : TyScheme.t -> TyScheme.t *)
 
 val initial : t
-val add_signature : ?cls:string -> name:string -> Variable.t -> signature -> t -> t
+val add_signature : ?cls:string -> name:name -> Variable.t -> signature -> t -> t
 (* [add_signature ~name v s t] adds the signature [s] to [v], a variable named
    [name]: as a base signature, or as the signature of the method for [cls]
    (whose first parameter must already be restricted to [cls], cf.
    [class_overload_sig]). Its first parameter is restricted as described for
-   [sigs].
+   [sigs]. If the type of [v] was inferred (cf. [set_from_tyscheme]) and is a
+   function, it is kept as a base signature until one is declared.
    @raise Failure if [cls] is set and the method [name] has been declared with a
    return type (cf. [new_method]) that [s] does not comply with. *)
 val set_from_tyscheme : Variable.t -> TyScheme.t -> t -> t
-(* The type of [v] is restricted as a signature of its name would be. *)
+(* The type of [v], a global variable, is restricted as a signature of its name
+   would be. *)
 
-val new_method : ?ret:GTy.t Lazy.t -> string -> t -> t
-(* [new_method ~ret m t] declares that the functions named [m] are methods, i.e.
+val new_method : ?ret:GTy.t Lazy.t -> name -> t -> t
+(* [new_method ~ret m t] declares that the functions named [m] (those of its
+   namespace only, or the global ones if it has none) are methods, i.e.
    generics that dispatch on the class of their first argument, whether they
    have class-overloads or not. If set, [ret] is the return type of their
    class-overloads, whose signatures must return a subtype of it (contrarily to
@@ -108,7 +122,11 @@ val new_method : ?ret:GTy.t Lazy.t -> string -> t -> t
    @raise Failure if [m] (or its return type) has not been declared yet and [m]
    has already been given a type. If [m] has another return type that is not
    equivalent to [ret], the failure may be delayed until [m] is given a type. *)
-val new_class_overload : string -> string -> t -> t
+val find_method : name -> t -> name option
+(* [find_method m t] is the declared method [m] refers to, if any: [m] itself, or
+   else the one an unqualified name reaches (cf. [search]), whether it has
+   signatures or not. *)
+val new_class_overload : name -> string -> t -> t
 (* [new_class_overload m cls t] declares the class-overload of the method
    named [m] for the class [cls], after the ones already declared: [cls] will
    implement the method class of [m]. It has no effect if it already does.
@@ -119,11 +137,16 @@ val declare_classes : t -> unit
    declared yet, with their methods. It must be called before any type
    mentioning these classes is built, and makes later class-overloads for them
    fail. *)
-val dispatch_partition : string -> t -> Ty.t list
+val dispatch_partition : name -> t -> Ty.t list
 (* [dispatch_partition m t] partitions the R values of the first argument of an
    application of the generic [m] following its dispatch: [<~@m, ...>], then
    [<c_i, ~c_(i+1), ..., ~c_n, ...>] for each class-overload of [m], and the
    rest ([<@m, ...>] if it has none). It is empty if [m] is not a method. *)
+val generic_of_default : name -> t -> name option
+(* [generic_of_default str t] is the method [str] is the name of the default
+   method of, if any: the method [m] refers to (cf. [find_method]) if [str] is
+   [m.default]. The operators of R's [Ops] group generic have no default
+   method. *)
 val class_overload_sig : string -> fsig -> fsig
 val class_overload_ty : string -> GTy.t -> GTy.t
 (* Restriction of the signature of a class-overload for the class [cls]: its
@@ -150,6 +173,9 @@ val resolve_signature : Ty.t -> fsig -> GTy.t option
 val ns_find : string -> string -> t -> Variable.t option
 (* [ns_find ns name t] is the variable R code reaches with [ns::name], if a
    signature has been declared for it. *)
+val ns_var : string -> string -> t -> Variable.t * t
+(* [ns_var ns name t] is the variable R code reaches with [ns::name], which is
+   created, without any signature, if there is none. *)
 val ns_add_signature : string -> string -> signature -> t -> t
 (* [ns_add_signature ns name s t] declares [s] as a signature of [ns::name], in
    addition to the ones it already has. *)
