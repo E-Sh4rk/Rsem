@@ -331,6 +331,25 @@ inter_get_a: 1.<>
 
 inter_get_null: null
 
+params_renamed: Untypeable: signature incompatible with the definition
+Line 116, characters 18-39
+signature: (x: dbl, suff: lgl) -> dbl
+definition: function(x, suffix)
+
+params_missing: Untypeable: signature incompatible with the definition
+Line 119, characters 18-31
+signature: (x: dbl, ...: any) -> dbl
+definition: function(x)
+
+params_arrow: Untypeable: signature incompatible with the definition
+Line 123, characters 16-29
+signature: (y: lgl) -> lgl
+definition: function(x)
+
+params_omitted: (x: dbl) -> dbl
+
+params_body: (x: dbl) -> any
+
 
 ===== Processing tests/06_scope.r =====
 blk: 1.<>

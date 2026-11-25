@@ -629,6 +629,16 @@ let to_mlsem (cfg:cfg) e =
   in
   aux e
 
+(* The function definition [e], as encoded by [to_mlsem], without its body (it
+   is replaced by a value of type [any]), and the type of its argument. [None]
+   if [e] is not a function definition. *)
+let fun_header (id,e) =
+  match e with
+  | SA.Constructor (c, [lid, SA.Lambda (Some pty, v, (bid,_))]) ->
+    let body = bid, SA.Value GTy.any in
+    Some ((id, SA.Constructor (c, [lid, SA.Lambda (Some pty, v, body)])), pty)
+  | _ -> None
+
 let to_mlsem cfg e =
   e |> recognize_const_comparison
     |> encode_short_circuit

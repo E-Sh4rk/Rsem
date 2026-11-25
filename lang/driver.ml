@@ -52,11 +52,16 @@ let extend_env mlast env =
    definition of [lfun] that follows it, [loffset] being its position. *)
 type lannot = { loffset: int ; lfun: string ; lvar: string ; lty: GTy.t }
 
+(* A type a definition must be checked against. For an arrow of a function
+   signature, [decl] is the arrow as declared, i.e. without the transformations
+   applied to [ty] (cf. [rigidify]): it is what errors show. *)
+type check = { ty: GTy.t ; decl: GTy.t Lazy.t option }
+
 (* [covl] maps the name of the method of each declared class-overload (e.g.
    [print.myclass], or [base::print.data.frame] for one of a namespace, cf.
    [qualified]) to the name of its generic function (cf. [MetaEnv.find_method])
    and to the class it dispatches on. *)
-type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: MetaEnv.t ; senv: GTy.t list VarMap.t ;
+type typing_ctx = { idenv: Variable.t StrMap.t ; tenv: MetaEnv.t ; senv: check list VarMap.t ;
                     covl: (MetaEnv.name * string) StrMap.t ; lannots: lannot list ;
                     benv: Rstt.Builder.env ; tidenv: Ty.t Rstt.Builder.TIdMap.t }
 let initial_ctx = { benv=Rstt.Builder.empty_env ; tidenv=Rstt.Builder.TIdMap.empty ;
@@ -102,6 +107,24 @@ type outcome =
 
 let on_outcome : (Variable.t -> outcome -> unit) ref = ref (fun _ _ -> ())
 
+(* Fails if the check is an arrow of a function signature that cannot be unified
+   with the parameters of the function definition [mlast]. Its coercion could
+   then not be pushed inside [mlast], which would be inferred without
+   annotations before failing on the coercion, with an error that is hard to
+   read. Only the header of [mlast] is considered: a coercion that cannot be
+   pushed further inside its body may still succeed (e.g. the one of
+   [function() 1] to [any]). *)
+let check_header mlast { ty ; decl } =
+  match decl, Transform.fun_header mlast with
+  | Some decl, Some (header, pty) ->
+    let open System.Ast in
+    begin
+      try coerce ~duplicate_arrows:true ~raise_on_failure:true CheckStatic ty header |> ignore
+      with CoercionFailure ->
+        raise (System.Error.Untypeable (Error.sig_mismatch mlast (Lazy.force decl) pty))
+    end
+  | _, _ -> ()
+
 let treat_ast ?(post=Fun.id) v ctx ast =
   let open Mlsem_system.Ast in
   try
@@ -118,8 +141,9 @@ let treat_ast ?(post=Fun.id) v ctx ast =
     | Some sigs (* Type checking mode *) ->
       let mlast = Transform.to_mlsem { env=ctx.tenv } ast in
       (* Format.printf "%a@.@." System.Ast.pp mlast ; *)
-      let asts = sigs |> List.map (fun s -> 
-        (Eid.refresh (fst mlast), TypeCoerce (mlast, s, CheckStatic)) |> push_coercions ~duplicate_arrows:true) in
+      List.iter (check_header mlast) sigs ;
+      let asts = sigs |> List.map (fun { ty ; _ } ->
+        (Eid.refresh (fst mlast), TypeCoerce (mlast, ty, CheckStatic)) |> push_coercions ~duplicate_arrows:true) in
       let _ = List.map (infer ctx) asts in
       { ctx with senv=VarMap.remove v ctx.senv } (* The signature has been verified, remove it *)
     in
@@ -264,7 +288,9 @@ let build_sig ctx cls tye =
       | Some cls -> MetaEnv.class_overload_sig cls fsig in
     let chk =
       if MetaEnv.is_resolved fsig
-      then MetaEnv.arrows fsig |> List.map (fun f -> MetaEnv.fsig_ty ~polymorphic:true f |> rigidify)
+      then MetaEnv.arrows fsig |> List.map (fun f ->
+        { ty=MetaEnv.fsig_ty ~polymorphic:true f |> rigidify ;
+          decl=Some (lazy (MetaEnv.fsig_ty f)) })
       else [] in
     { ctx with benv }, MetaEnv.SigFun fsig, chk
   | Sigs.ATy tye ->
@@ -273,7 +299,7 @@ let build_sig ctx cls tye =
     let gty = match cls with
       | None -> gty
       | Some cls -> MetaEnv.class_overload_ty cls gty in
-    { ctx with benv }, MetaEnv.SigTy gty, [rigidify gty]
+    { ctx with benv }, MetaEnv.SigTy gty, [{ ty=rigidify gty ; decl=None }]
 
 (* Name under which the class-overload [str] of the namespace [ns] is
    registered. A global name cannot contain [::], so it cannot clash with it. The
@@ -343,10 +369,10 @@ let add_sig ctx str tye =
       | _ -> MVariable.create Immut (Some str), chk
       end
     | MetaEnv.SigTy _ -> (* Definition (or redefinition) of a mutable variable *)
-      let s = GTy.conj chk in
+      let s = chk |> List.map (fun c -> c.ty) |> GTy.conj in
       if GTy.fv s |> MVarSet.is_empty |> not
       then failwith "Non-functional signatures cannot have type variables" ;
-      MVariable.create (AnnotMut s) (Some str), [s]
+      MVariable.create (AnnotMut s) (Some str), chk
   in
   let tenv = MetaEnv.add_signature ~name:(None, str) v sign ctx.tenv in
   let idenv = StrMap.add str v ctx.idenv in
@@ -400,7 +426,7 @@ let add_local_sig ctx offset f x tye =
   let ctx, _, chk = build_sig ctx None tye in
   match chk with
   | _::_ ->
-    let lty = GTy.conj chk in
+    let lty = chk |> List.map (fun c -> c.ty) |> GTy.conj in
     { ctx with lannots = ctx.lannots@[{ loffset=offset ; lfun=f ; lvar=x ; lty }] }
   | [] ->
     failwith ("The annotation of the local variable "^f^"/"^x^
@@ -415,7 +441,7 @@ let add_ns_sig ctx ns str tye =
   let generic = StrMap.find_opt (qualified ctx (Some ns) str) ctx.covl in
   let ctx, sign, chk = build_sig ctx (Option.map snd generic) tye in
   begin match sign, chk with
-  | MetaEnv.SigTy _, [s] when GTy.fv s |> MVarSet.is_empty |> not ->
+  | MetaEnv.SigTy _, [s] when GTy.fv s.ty |> MVarSet.is_empty |> not ->
     failwith "Non-functional signatures cannot have type variables"
   | _ -> ()
   end ;

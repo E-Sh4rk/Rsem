@@ -107,3 +107,26 @@ inter_use <- function(y) inter_id(y)
 inter_get <- function(x, k) x[[k]]
 inter_get_a <- inter_get(list(a = 1), "a")
 inter_get_null <- inter_get(NULL, "a")
+
+# ========== Signatures incompatible with their definition ==========
+
+# The parameters of a signature must be the ones of the definition it annotates:
+# otherwise, the definition is rejected before its body is typed.
+#| params_renamed : (x: dbl, suff: lgl) -> dbl
+params_renamed <- function(x, suffix) x
+
+#| params_missing : (x: dbl, ...: any) -> dbl
+params_missing <- function(x) x
+
+# Only the arrow that is incompatible is reported.
+#| params_arrow : (x: dbl) -> dbl && (y: lgl) -> lgl
+params_arrow <- function(x) x
+
+# Parameters that have a default value, or that are in `...`, can be omitted.
+#| params_omitted : (x: dbl) -> dbl
+params_omitted <- function(x, y = 2, ...) x
+
+# This only concerns the parameters of the definition itself, not the ones of
+# the functions in its body.
+#| params_body : (x: dbl) -> any
+params_body <- function(x) function() x
