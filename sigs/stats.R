@@ -2,6 +2,32 @@
 # generics of `base` (cf. "Class-overloads" in base.R). They are in a file of
 # their own, as the methods of a package only exist when it is loaded.
 
+# ========== Methods ==========
+
+# The generics of `stats` (cf. "Methods" in base.R): R dispatches them on the
+# class of their first argument; their result for a class with a method is
+# `dyn`.
+#| method stats::as.dendrogram : <dendrogram, ...>
+#| method stats::as.dist : <dist, ...>
+#| method stats::as.hclust : <hclust, ...>
+#| method stats::as.ts : <ts, ...>
+#| method stats::coef : dyn
+#| method stats::cophenetic : dyn
+#| method stats::end : dyn
+#| method stats::frequency : dyn
+#| method stats::hatvalues : dyn
+#| method stats::median : dyn
+#| method stats::model.frame : dyn
+#| method stats::model.matrix : dyn
+#| method stats::naresid : dyn
+#| method stats::predict : dyn
+#| method stats::residuals : dyn
+#| method stats::start : dyn
+#| method stats::time : dyn
+#| method stats::vcov : dyn
+#| method stats::weighted.mean : dyn
+#| method stats::weights : dyn
+
 # ========== Class-overloads ==========
 
 # The time series: their arithmetic (the `Ops` group) and their subsets.

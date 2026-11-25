@@ -6,6 +6,17 @@
 # The functions are the ones packages call (measured on the dashboard's
 # packages and a hundred CRAN ones).
 
+# ========== Methods ==========
+
+# The generics of `utils` (cf. "Methods" in base.R): R dispatches them on the
+# class of their first argument; their result for a class with a method is
+# `dyn`.
+#| method utils::head : dyn
+#| method utils::stack : dyn
+#| method utils::str : dyn
+#| method utils::tail : dyn
+#| method utils::type.convert : dyn
+
 # ========== Parts of vectors and lists ==========
 
 # The first (last) `n` elements. `head` and `tail` are generic: data frames

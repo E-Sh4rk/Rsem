@@ -71,6 +71,117 @@
 #| method base::([[]])
 #| method base::as.character : CHR
 
+# The other generics of `base` (and `graphics`): those R dispatches on the
+# class of their first argument, whether a package defines methods for them or
+# not. The signatures below only describe their default behavior: for a class
+# with a method, the result is the return type declared here, which R does not
+# check but its conventions set (a conversion returns its type, a predicate
+# logicals, `length` a count, `format` strings), or else `dyn`, as a method can
+# return anything.
+# The members of the group generics `Ops`, `Math` and `Summary`:
+#| method base::abs : dyn
+#| method base::acos : dyn
+#| method base::all : LGL1
+#| method base::any : LGL1
+#| method base::asin : dyn
+#| method base::ceiling : dyn
+#| method base::cummax : dyn
+#| method base::cummin : dyn
+#| method base::cumprod : dyn
+#| method base::cumsum : dyn
+#| method base::exp : dyn
+#| method base::floor : dyn
+#| method base::log : dyn
+#| method base::log10 : dyn
+#| method base::max : dyn
+#| method base::min : dyn
+#| method base::prod : dyn
+#| method base::range : dyn
+#| method base::sqrt : dyn
+#| method base::sum : dyn
+#| method base::trunc : dyn
+# The internal generics (primitives and `.Internal` functions that dispatch):
+#| method base::(!) : dyn
+#| method base::(!=) : LGL
+#| method base::(&) : dyn
+#| method base::(%*%) : dyn
+#| method base::(%/%) : dyn
+#| method base::(%%) : dyn
+#| method base::(^) : dyn
+#| method base::(<) : LGL
+#| method base::(<=) : LGL
+#| method base::(==) : LGL
+#| method base::(>) : LGL
+#| method base::(>=) : LGL
+#| method base::(|) : dyn
+#| method base::($) : dyn
+#| method base::($<-) : dyn
+#| method base::anyNA : LGL1
+#| method base::as.call : lang
+#| method base::as.double : DBL
+#| method base::as.integer : INT
+#| method base::as.logical : LGL
+#| method base::as.numeric : DBL
+#| method base::as.raw : RAW
+#| method base::as.vector : dyn
+#| method base::c : dyn
+#| method base::cbind : dyn
+#| method base::dim : INT | DBL | null
+#| method base::dim<- : dyn
+#| method base::dimnames : list | null
+#| method base::dimnames<- : dyn
+#| method base::is.array : LGL1
+#| method base::is.finite : LGL
+#| method base::is.infinite : LGL
+#| method base::is.matrix : LGL1
+#| method base::is.na : LGL
+#| method base::is.nan : LGL
+#| method base::is.numeric : LGL1
+#| method base::is.unsorted : LGL1
+#| method base::length : INT1 | DBL1
+#| method base::lengths : dyn
+#| method base::names : CHR | null
+#| method base::names<- : dyn
+#| method base::nchar : INT
+#| method base::rbind : dyn
+#| method base::rep : dyn
+#| method base::rep_len : dyn
+#| method base::rep.int : dyn
+#| method base::round : dyn
+#| method base::signif : dyn
+#| method base::unlist : dyn
+# The generics written in R (with `UseMethod`):
+#| method base::all.equal : LGL1 | CHR
+#| method base::anyDuplicated : INT1 | DBL1
+#| method base::as.data.frame : { any }<data.frame, ...> with { names: CHR, any }
+#| method base::as.Date : DBL<Date, ...>
+#| method base::as.list : list
+#| method base::as.matrix : dyn
+#| method base::as.POSIXct : DBL<POSIXct, POSIXt, ...>
+#| method base::as.POSIXlt : { any }<POSIXlt, POSIXt, ...>
+#| method base::close : dyn
+#| method base::conditionMessage : CHR
+#| method base::diff : dyn
+#| method base::duplicated : LGL
+#| method base::flush : dyn
+#| method base::format : CHR
+#| method base::labels : dyn
+#| method base::levels : dyn
+#| method base::mean : dyn
+#| method base::months : CHR
+#| method base::open : dyn
+#| method base::print : dyn
+#| method base::quarters : CHR
+#| method base::rev : dyn
+#| method base::seq : dyn
+#| method base::solve : dyn
+#| method base::split : dyn
+#| method base::summary : dyn
+#| method base::t : dyn
+#| method base::unique : dyn
+#| method base::units : dyn
+#| method graphics::lines : dyn
+
 # ========== Class-overloads ==========
 
 # The S3 methods `base` defines for its own classes. They are declared before
