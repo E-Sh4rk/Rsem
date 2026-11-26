@@ -452,6 +452,14 @@ let check_return_ty cls m s t =
         "The signature of %s.%s does not comply with the return type of the method %s: %a is not a subtype of %a."
         (string_of_name m) cls (string_of_name m) GTy.pp ty GTy.pp ret)
 
+(* Whether the signature [s], inferred for a class-overload of the method [m],
+   complies with the return type declared for [m], if any (cf.
+   [check_return_ty]). *)
+let complies m s t =
+  match check_return_ty "" (normalize m t) s t with
+  | () -> true
+  | exception Failure _ -> false
+
 (* The values whose class has no class-overload of [m] ([<~@m, ...>]), or that
    have no class. *)
 let no_overload m = Ty.cup (class_ty [false, method_class m]) unattributed

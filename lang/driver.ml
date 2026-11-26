@@ -192,6 +192,63 @@ let close_uninit ts =
   let gty = GTy.map (TVOp.bot_instance tvs) gty in
   TyScheme.mk (MVarSet.union tvs (GTy.fv gty)) gty
 
+(* Name under which the class-overload [str] of the namespace [ns] is
+   registered. A global name cannot contain [::], so it cannot clash with it. The
+   names of the package being typed are the global ones. *)
+let qualified ctx ns str =
+  let ns = if ns = MetaEnv.self ctx.tenv then None else ns in
+  MetaEnv.string_of_name (ns, str)
+
+(* The variable the top-level name [str] refers to: its global definition, or
+   else the one of the search path (cf. [MetaEnv.search]). *)
+let lookup ctx str =
+  match StrMap.find_opt str ctx.idenv with
+  | Some v -> Some v
+  | None -> MetaEnv.search str ctx.tenv
+
+(* The variable of the method named [m] (cf. [MetaEnv.find_method]). If it has
+   none yet (its first signature is the one of a class-overload or of its
+   default method), it is created without base signatures. A global one is then
+   considered as declared: its definition is not checked, and its other
+   signatures are overloads of it. *)
+let generic_var ctx m =
+  match m with
+  | None, str ->
+    begin match StrMap.find_opt str ctx.idenv with
+    | Some v -> ctx, v
+    | None ->
+      let v = MVariable.create Immut (Some str) in
+      { ctx with idenv=StrMap.add str v ctx.idenv ; senv=VarMap.add v [] ctx.senv }, v
+    end
+  | Some ns, str ->
+    let v, tenv = MetaEnv.ns_var ns str ctx.tenv in
+    { ctx with tenv }, v
+
+(* Registers the signature [sign] of the function [str] of the namespace [ns] as
+   an overload of its generic, if [str] has been declared as a class-overload
+   or is the name of the default method of a method (cf.
+   [MetaEnv.generic_of_default]). The latter applies to the values whose class
+   has no class-overload, as the base signatures of the generic. The signature of [str] itself is not restricted, as a default method
+   can be called directly (or by [NextMethod]) on any value.
+   With [~inferred], [sign] is the type inferred for [str] (no signature was
+   declared for it): that of a class-overload is only added if it complies with
+   the return type of its method (cf. [MetaEnv.complies]). Otherwise, the
+   generic does not get it, but the definition of [str] keeps its type: an
+   inferred type often has an imprecise arrow (e.g. one returning [any]), which
+   should not make the definition fail as a wrong signature does. *)
+let add_to_generic ?(inferred=false) ctx ns str sign =
+  let add origin m =
+    let ctx, v = generic_var ctx m in
+    { ctx with tenv=MetaEnv.add_signature ~origin ~name:m v sign ctx.tenv }
+  in
+  match StrMap.find_opt (qualified ctx ns str) ctx.covl with
+  | Some (m, _) when inferred && not (MetaEnv.complies m sign ctx.tenv) -> ctx
+  | Some (m, cls) -> add (MetaEnv.Overload cls) m
+  | None ->
+    match MetaEnv.generic_of_default (ns, str) ctx.tenv with
+    | Some m when MetaEnv.is_fun sign -> add MetaEnv.Default m
+    | _ -> ctx
+
 (* The names a top-level statement assigns from *inside* an expression, rather
    than as a definition of its own. A brace is not a scope in R, so
    [blk <- { u <- 1 ; u }] defines [u] just as much as [blk], and so do a
@@ -261,7 +318,28 @@ let treat_def ctx past =
       | Some str -> { ctx with idenv = StrMap.add str v ctx.idenv }
       | None -> ctx
     in
-    treat_ast v ctx (declared e) |> treat_hoisted e
+    let annotated = VarMap.mem v ctx.senv in
+    let ctx = treat_ast v ctx (declared e) |> treat_hoisted e in
+    (* The type inferred for a class-overload or a default method without a
+       signature is an overload of its generic, as a signature would be (cf.
+       [add_sig]); one with a signature is already. That of a class-overload is
+       first restricted to its class, as [build_sig] does for a signature. *)
+    begin match name with
+    | Some str when not annotated && MetaEnv.mem v ctx.tenv ->
+      (* R names the methods of the subsets [\[.cls] and [\[\[.cls], Rsem
+         [\[\].cls] and [\[\[\]\].cls] (cf. [MetaEnv.r_name]). *)
+      let str =
+        let n = String.length str in
+        if n > 2 && String.sub str 0 2 = "[[" && str.[2] <> ']' then "[[]]" ^ String.sub str 2 (n - 2)
+        else if n > 1 && str.[0] = '[' && str.[1] <> '[' && str.[1] <> ']' then "[]" ^ String.sub str 1 (n - 1)
+        else str in
+      let _, gty = TyScheme.get (MetaEnv.get v ctx.tenv) in
+      let gty = match StrMap.find_opt (qualified ctx None str) ctx.covl with
+        | Some (_, cls) -> MetaEnv.class_overload_ty cls gty
+        | None -> gty in
+      add_to_generic ~inferred:true ctx None str (MetaEnv.SigTy gty)
+    | _ -> ctx
+    end
   | _ -> treat_ast dummy_var ctx (declared (eid, ast)) |> treat_hoisted (eid, ast)
 
 (* Conversion of a type, as written in an annotation, to a gradual type. *)
@@ -300,56 +378,6 @@ let build_sig ctx cls tye =
       | None -> gty
       | Some cls -> MetaEnv.class_overload_ty cls gty in
     { ctx with benv }, MetaEnv.SigTy gty, [{ ty=rigidify gty ; decl=None }]
-
-(* Name under which the class-overload [str] of the namespace [ns] is
-   registered. A global name cannot contain [::], so it cannot clash with it. The
-   names of the package being typed are the global ones. *)
-let qualified ctx ns str =
-  let ns = if ns = MetaEnv.self ctx.tenv then None else ns in
-  MetaEnv.string_of_name (ns, str)
-
-(* The variable the top-level name [str] refers to: its global definition, or
-   else the one of the search path (cf. [MetaEnv.search]). *)
-let lookup ctx str =
-  match StrMap.find_opt str ctx.idenv with
-  | Some v -> Some v
-  | None -> MetaEnv.search str ctx.tenv
-
-(* The variable of the method named [m] (cf. [MetaEnv.find_method]). If it has
-   none yet (its first signature is the one of a class-overload or of its
-   default method), it is created without base signatures. A global one is then
-   considered as declared: its definition is not checked, and its other
-   signatures are overloads of it. *)
-let generic_var ctx m =
-  match m with
-  | None, str ->
-    begin match StrMap.find_opt str ctx.idenv with
-    | Some v -> ctx, v
-    | None ->
-      let v = MVariable.create Immut (Some str) in
-      { ctx with idenv=StrMap.add str v ctx.idenv ; senv=VarMap.add v [] ctx.senv }, v
-    end
-  | Some ns, str ->
-    let v, tenv = MetaEnv.ns_var ns str ctx.tenv in
-    { ctx with tenv }, v
-
-(* Registers the signature [sign] of the function [str] of the namespace [ns] as
-   an overload of its generic, if [str] has been declared as a class-overload
-   or is the name of the default method of a method (cf.
-   [MetaEnv.generic_of_default]). The latter applies to the values whose class
-   has no class-overload, as the base signatures of the generic. The signature of [str] itself is not restricted, as a default method
-   can be called directly (or by [NextMethod]) on any value. *)
-let add_to_generic ctx ns str sign =
-  let add origin m =
-    let ctx, v = generic_var ctx m in
-    { ctx with tenv=MetaEnv.add_signature ~origin ~name:m v sign ctx.tenv }
-  in
-  match StrMap.find_opt (qualified ctx ns str) ctx.covl with
-  | Some (m, cls) -> add (MetaEnv.Overload cls) m
-  | None ->
-    match MetaEnv.generic_of_default (ns, str) ctx.tenv with
-    | Some m when MetaEnv.is_fun sign -> add MetaEnv.Default m
-    | _ -> ctx
 
 let add_sig ctx str tye =
   let open Mlsem_common in
