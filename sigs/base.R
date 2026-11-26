@@ -1561,21 +1561,12 @@
 
 # ========== Other attached packages ==========
 
-# The functions of `methods` and `graphics`, which R attaches at startup:
-# their names are looked up after those of `stats` (cf. `search_path` in
-# lang/metaEnv.ml).
+# The functions of `graphics`, which R attaches at startup: their names are
+# looked up after those of `stats` (cf. `search_path` in lang/metaEnv.ml). Those
+# of `methods` are in methods.R.
 
-# Whether `object` is of the class `class2`, or, without it, the classes
-# `object` is (and extends). A literal `class2` narrows `object`, as for
-# `inherits` (only its S3 classes are tracked).
-#| methods::is : (object:any, class2:CHR1) -> LGL1<>
-#| methods::is : (object:any, class2:absent) -> CHR<>
-#| methods::is : (object:<#c, ...>, class2:#c) -> tt<>
-#| methods::is : (object:<~#c, ...>, class2:#c) -> ff<>
 # The graphical parameters: the previous values of the ones that are set (a
 # list, invisibly), or the value of the one that is queried.
 #| graphics::par : (...: any, no.readonly:lgl1?) -> any
 # Adds lines to the current plot.
 #| graphics::lines : (x:any, ...: any) -> null
-# Defines a method of the S4 generic `f`, and returns `f` (invisibly).
-#| methods::setMethod : (f:CHR1, signature:any?, definition:any?, where:any?, valueClass:any?, sealed:lgl1?) -> CHR1<>
