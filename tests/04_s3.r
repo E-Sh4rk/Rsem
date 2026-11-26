@@ -125,6 +125,50 @@ g_other <- generic1("a")
 inferred1 <- function(x) x
 inferred2 <- function(x) UseMethod("inferred2")
 
+# ========== Inferred methods ==========
+
+# The type inferred for a class-overload or a default method that has no
+# signature is an overload of its generic, as a signature would be: the one of
+# a class-overload is restricted to its class (and to the classes of the
+# class-overloads declared after it, cf. `MetaEnv.sigs`), the one of a default
+# method to the values whose class has no class-overload. R names the methods
+# of the subsets `[.cls` and `[[.cls`, which are the class-overloads of `([])`
+# and `([[]])`.
+#| method inferred3
+#| new inferred3 @ square
+#| new inferred3 @ circle
+#| new ([]) @ inf_rect
+#| inf_rect_new : () -> dbl1<inf_rect>
+inferred3 <- function(s) UseMethod("inferred3")
+inferred3.square <- function(s) "square"
+inferred3.circle <- function(s) 1L
+inferred3.default <- function(s) TRUE
+"[.inf_rect" <- function(x, i) "element"
+im_square <- inferred3(sq_new())
+im_circle <- inferred3(ci_new())
+im_default <- inferred3(0)
+im_unknown <- function(s) inferred3(s)
+im_subset <- inf_rect_new()[1]
+
+# ========== Literal classes ==========
+
+# A class given as a literal string is the class of the result of `class<-`
+# and `structure` (cf. their signatures in base.R): a value built that way is
+# dispatched on it. A class that is not a literal string leaves the classes
+# unknown.
+lc_structure <- structure(list(side = 2), class = "square")
+lc_assign <- function(x) { class(x) <- "circle" ; x }
+lc_dispatch <- inferred3(structure(list(side = 2), class = "square"))
+lc_unknown <- function(x, cl) { class(x) <- cl ; x }
+lc_old <- function(x) { oldClass(x) <- "circle" ; x }
+# A test of a literal class narrows (`inherits`, `methods::is`), and is decided
+# by the type of the value when its classes are known.
+lc_narrow <- function(x) if (inherits(x, "square")) x else NULL
+lc_true <- inherits(lc_structure, "square")
+lc_false <- inherits(lc_structure, "circle")
+lc_is <- function(x) methods::is(x, "square")
+lc_any <- function(x, cl) inherits(x, cl)
+
 # ========== Return type of a method ==========
 
 # The return type of a method can be declared. Its class-overloads must return a

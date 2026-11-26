@@ -457,6 +457,9 @@
 # ========== Classes and attributes ==========
 
 #| base::class : (x:any) -> CHR<>
+# A class given as a literal string is the class of the result (the label
+# variable `#c` stands for it); otherwise the classes are unknown.
+#| base::class<- : (x:'a<...>, v:#c) -> 'a<#c>
 #| base::class<- : (x:'a<...>, v:chr) -> 'a<...>
 #| base::class<- : (x:'a<...>, v:null) -> 'a<>
 #| base::unclass : (x:'a<...>) -> 'a<>
@@ -464,23 +467,20 @@
 # gives the implicit class.
 #| base::oldClass : (x:<>) -> null
 #| base::oldClass : (x:~<>) -> CHR<>
+# Sets the class attribute, as `class<-` does.
+#| base::oldClass<- : (x:'a<...>, v:#c) -> 'a<#c>
+#| base::oldClass<- : (x:'a<...>, v:chr) -> 'a<...>
+#| base::oldClass<- : (x:'a<...>, v:null) -> 'a<>
 # Whether `x` has a class (of its class attribute: the implicit classes, such
-# as `integer` or `matrix`, are not tracked). With a literal `what`, the type
-# of `x` decides the result, so that the test narrows it (e.g.
-# `if (inherits(r, "try-error"))` after `try`). The algebra has no variables
-# for class names, so each class is an overload of its own, and a `what` that
-# is not a literal splits the inference in two cases per class: the cost grows
-# quickly (`function(x, cl) inherits(x, cl)` takes 0.3 s more with 3 classes,
-# 1 s with 5, and 22 s with 9; grouping the arrows is slower still). Only the
-# classes of `base` most tested this way are here.
+# as `integer` or `matrix`, are not tracked). With a literal `what` (the label
+# variable `#c` stands for it), the type of `x` decides the result, so that the
+# test narrows it (e.g. `if (inherits(r, "try-error"))` after `try`). A `what`
+# that is not a literal leaves `#c` unresolved: these overloads then do not
+# apply, and cost nothing.
 #| base::inherits : (x:any, what:CHR, which:ff?) -> LGL1<>
 #| base::inherits : (x:any, what:CHR, which:tt) -> INT<>
-#| base::inherits : (x:<"try-error", ...>, what:"try-error", which:ff?) -> tt<>
-#|               && (x:<~"try-error", ...>, what:"try-error", which:ff?) -> ff<>
-#| base::inherits : (x:<connection, ...>, what:"connection", which:ff?) -> tt<>
-#|               && (x:<~connection, ...>, what:"connection", which:ff?) -> ff<>
-#| base::inherits : (x:<AsIs, ...>, what:"AsIs", which:ff?) -> tt<>
-#|               && (x:<~AsIs, ...>, what:"AsIs", which:ff?) -> ff<>
+#| base::inherits : (x:<#c, ...>, what:#c, which:ff?) -> tt<>
+#| base::inherits : (x:<~#c, ...>, what:#c, which:ff?) -> ff<>
 #| base::names : (x:any) -> CHR<> | null
 #| base::names<- : (x:'a, v:chr|null) -> 'a
 #| base::rownames<- : (x:'a, v:vec|null) -> 'a
@@ -507,8 +507,10 @@
 #|                  && (x:(<> with { `r }) & ~(<> with { })) -> { `r }<>
 #|                  && (x:(any with { `r }) & ~<>) -> { class: CHR, `r }<>
 
-# The attributes it sets, the class among them, are not tracked: the result has
-# the type of `.Data` with any attributes.
+# The attributes it sets are not tracked: the result has the type of `.Data`
+# with any attributes. Its class, when given as a literal string, is.
+#| base::structure : (.Data:v('a), class:#c, ...: any) -> v('a)<#c>
+#| base::structure : (.Data:{'a}, class:#c, ...: any) -> {'a}<#c>
 #| base::structure : (.Data:v('a), ...: any) -> v('a)
 #|                && (.Data:any, ...: any) -> any
 #| base::structure : (.Data:{'a}, ...: any) -> {'a}
@@ -1564,9 +1566,12 @@
 # lang/metaEnv.ml).
 
 # Whether `object` is of the class `class2`, or, without it, the classes
-# `object` is (and extends).
+# `object` is (and extends). A literal `class2` narrows `object`, as for
+# `inherits` (only its S3 classes are tracked).
 #| methods::is : (object:any, class2:CHR1) -> LGL1<>
 #| methods::is : (object:any, class2:absent) -> CHR<>
+#| methods::is : (object:<#c, ...>, class2:#c) -> tt<>
+#| methods::is : (object:<~#c, ...>, class2:#c) -> ff<>
 # The graphical parameters: the previous values of the ones that are set (a
 # list, invisibly), or the value of the one that is queried.
 #| graphics::par : (...: any, no.readonly:lgl1?) -> any

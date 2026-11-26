@@ -206,6 +206,50 @@ inferred1: ∀'a. ((x: 'a \ <@inferred1, ...>) -> 'a)<>
 
 inferred2: ((x: ~<@inferred2, ...>) -> any)<>
 
+inferred3: ((s: ~<@inferred3, ...>) -> any)<>
+
+inferred3.square: ((s: any) -> "square"<>)<>
+
+inferred3.circle: ((s: any) -> 1L<>)<>
+
+inferred3.default: ((s: any) -> tt<>)<>
+
+[.inf_rect: ((x: any, i: any) -> "element"<>)<>
+
+im_square: "square"<>
+
+im_circle: 1L<>
+
+im_default: tt<>
+
+im_unknown: (((s: <@inferred3, ...>) -> "square"<> | 1L<>) & ((s: ~<@inferred3, ...>) ->
+ any))<>
+
+im_subset: "element"<>
+
+lc_structure: { 2.<> }<square>
+
+lc_assign: ∀'a,'b. (((x: 'a<...>) -> 'a<circle>) & ((x: 'b<...>) -> 'b<circle>))<>
+
+lc_dispatch: "square"<>
+
+lc_unknown: ∀'a,'b. (((x: 'a<...>, cl: null) -> 'a<>) & ((x: 'b<...>, cl: vec) ->
+ 'b<...>))<>
+
+lc_old: ∀'a,'b. (((x: 'a<...>) -> 'a<circle>) & ((x: 'b<...>) -> 'b<circle>))<>
+
+lc_narrow: ∀'a. (((x: 'a) -> null | 'a \ <~square, ...>) & ((x: <square, ...> & 'a) ->
+ <square, ...> & 'a) & ((x: <~square, ...> & 'a) -> null))<>
+
+lc_true: tt<>
+
+lc_false: ff<>
+
+lc_is: (((x: <square, ...>) -> tt<>) & ((x: <~square, ...>) -> ff<>) & ((x: any) ->
+ LGL1<>))<>
+
+lc_any: ((x: any, cl: CHR) -> LGL1<>)<>
+
 l_square: "square"
 
 l_default: lgl1
@@ -213,7 +257,7 @@ l_default: lgl1
 l_unknown: (x: dbl1<@label, ...>) -> CHR
 
 l_precise: Untypeable: untypeable coercion
-Line 149, characters 25-33
+Line 193, characters 25-33
 expected: "square"
 given: CHR
 expression may be: NA_character_
@@ -228,7 +272,7 @@ c_unknown: (((x: <@clone, ...>) -> dbl<circle, ...> | dbl<square, ...>) &
 chr_unknown: (x: <@as.character, ...>) -> CHR
 
 chr_precise: Untypeable: untypeable coercion
-Line 167, characters 27-42
+Line 211, characters 27-42
 expected: empty
 given: CHR
 expression may be: NA_character_
@@ -286,7 +330,7 @@ plain_list: "b"<>
 plain_round: dbl1<>
 
 next_val: Untypeable: untypeable coercion
-Line 216, characters 24-29
+Line 260, characters 24-29
 expected: dbl1
 given: (DBL | INT)<difftime> | (DBL | INT)<ts, ...> | DBL1<~@"+", ...> | LGL<> | dbl<Date, ...> | <POSIXt, ...>
 expression may be: structure(new.env(), class = "POSIXt")
