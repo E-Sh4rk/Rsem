@@ -243,7 +243,7 @@ im_unknown: (((s: <@inferred3, ...>) -> "square"<> | 1L<>) & ((s: ~<@inferred3, 
 
 im_subset: "element"<>
 
-lc_structure: { 2.<> }<square>
+lc_structure: { side: 2.<> }<square>
 
 lc_assign: ∀'a. ((x: 'a<...>) -> 'a<circle>)<>
 
@@ -603,8 +603,8 @@ inf_infer: (((x: <@inferred2, ...>) -> CHR1) & ((x: ~<@inferred2, ...>) -> any))
 num_with_suffix: Untypeable: untypeable coercion
 Line 9, characters 2-58
 expected: 'a<num_with_suffix, `c>
-given: any
-expression may be: new.env()
+given: 'a<num_with_suffix>
+expression may be: structure(new.env(), class = "num_with_suffix")
 
 
 ===== Processing tests/02_simple/break-for.r =====

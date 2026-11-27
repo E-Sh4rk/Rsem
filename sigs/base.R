@@ -510,12 +510,12 @@
 #|                  && (x:(any with { `r }) & ~<>) -> { class: CHR, `r }<>
 
 # The attributes it sets are not tracked: the result has the type of `.Data`
-# with any attributes. Its class, when given as a literal string, is.
-#| base::structure : (.Data:v('a), class:#c, ...: any) -> v('a)<#c>
-#|                && (.Data:v('a), ...: any) -> v('a)
-#|                && (.Data:any, ...: any) -> any
-#| base::structure : (.Data:{'a}, class:#c, ...: any) -> {'a}<#c>
-#|                && (.Data:{'a}, ...: any) -> {'a}
+# with any attributes. Its class, when given as a literal string, is: it
+# replaces the classes of `.Data`. As for `class<-`, `'a<...>` stands for any
+# value, so that a vector, a list or an environment keeps its type, rather
+# than overloads for each kind and a catch-all returning `any`.
+#| base::structure : (.Data:'a<...>, class:#c, ...: any) -> 'a<#c>
+#|                && (.Data:'a<...>, ...: any) -> 'a<...>
 # The same for `attributes<-`, which sets them all (the class among them), or
 # removes them all with `NULL`.
 #| base::attributes<- : (x:v('a), v:{ any }) -> v('a)
