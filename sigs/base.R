@@ -134,8 +134,6 @@
 #| method base::(!=) : LGL
 #| method base::([[]]<-)
 #| method base::([]<-)
-#| method base::(@)
-#| method base::(@<-)
 #| method base::(&)
 #| method base::(%*%)
 #| method base::(%/%)
@@ -860,6 +858,21 @@
 # The solution of `a %*% x = b`: of a vector `b`, a vector; of a matrix `b`
 # (or the inverse of `a`, without `b`), a matrix.
 #| base::solve : (a:dbl, b:dbl?, ...: any) -> DBL<> with { dim: INT?, dimnames: list?, any }
+# The solution of a triangular system `r %*% x = b`: a matrix (`x` as given, a
+# vector or a matrix).
+#| base::backsolve : (r:dbl, x:dbl, k:dbl1?, upper.tri:lgl1?, transpose:lgl1?) -> DBL<> with { dim: INT?, any }
+#| base::forwardsolve : (l:dbl, x:dbl, k:dbl1?, upper.tri:lgl1?, transpose:lgl1?) -> DBL<> with { dim: INT?, any }
+# The Choleski factor of a symmetric positive-definite matrix.
+#| base::chol : (x:dbl, ...: any) -> DBL<> with { dim: INT, any }
+# The QR decomposition of a matrix: its compact form, its rank, and the
+# auxiliary information and pivoting it needs.
+#| base::qr : (x:dbl, tol:dbl1?, LAPACK:lgl1?, ...: any) -> { qr: DBL<> with { dim: INT, any }, rank: INT1<>, qraux: DBL<>, pivot: INT<>, any }<qr>
+# The eigenvalues of a matrix, and its eigenvectors (as the columns of a
+# matrix, `NULL` with `only.values = TRUE`): complex when the matrix is not
+# symmetric.
+#| base::eigen : (x:any, symmetric:lgl1?, only.values:lgl1?, EISPACK:lgl1?) -> { values: DBL<> | CLX<>, vectors: (DBL | CLX)<> with { dim: INT, any } | null, any }<eigen>
+# The dimensions of extent 1 removed (a matrix with one row is a vector).
+#| base::drop : (x:v('a)) -> v('a)
 # The groups of `x` defined by the factor `f`, in a list named after its
 # levels. The groups keep the class of `x` (e.g. of a factor).
 #| base::split : (x:v('a)<`c>, f:any, drop:lgl1?, ...: any) -> { v('a)<`c> }<>
@@ -951,6 +964,13 @@
 #| base::sqrt : (x:dbl1<`c>) -> DBL1<`c>
 #|           && (x:dbl<`c>) -> DBL<`c>
 #| base::exp : (x:dbl1<`c>) -> DBL1<`c>
+#|          && (x:dbl<`c>) -> DBL<`c>
+# The trigonometric functions, as `exp` (they are members of the `Math` group).
+#| base::cos : (x:dbl1<`c>) -> DBL1<`c>
+#|          && (x:dbl<`c>) -> DBL<`c>
+#| base::sin : (x:dbl1<`c>) -> DBL1<`c>
+#|          && (x:dbl<`c>) -> DBL<`c>
+#| base::tan : (x:dbl1<`c>) -> DBL1<`c>
 #|          && (x:dbl<`c>) -> DBL<`c>
 # The cumulative functions drop the class (not the names). `cumprod` is a
 # double even for integers, the others are like arithmetic.

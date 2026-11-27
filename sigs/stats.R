@@ -215,7 +215,24 @@
 #|          && (p:dbl, df:dbl, ncp:dbl?, lower.tail:lgl1?, log.p:lgl1?) -> DBL<>
 #| stats::qchisq : (p:dbl1, df:dbl1, ncp:dbl1?, lower.tail:lgl1?, log.p:lgl1?) -> DBL1<>
 #|              && (p:dbl, df:dbl, ncp:dbl?, lower.tail:lgl1?, log.p:lgl1?) -> DBL<>
+# Random numbers: `n` of them (or as many as `n` has elements, when it is not a
+# single number). The counts may be doubles, when too large for integers.
 #| stats::runif : (n:dbl, min:dbl?, max:dbl?) -> DBL<>
+#| stats::rnorm : (n:dbl, mean:dbl?, sd:dbl?) -> DBL<>
+#| stats::rlnorm : (n:dbl, meanlog:dbl?, sdlog:dbl?) -> DBL<>
+#| stats::rexp : (n:dbl, rate:dbl?) -> DBL<>
+#| stats::rgamma : (n:dbl, shape:dbl, rate:dbl?, scale:dbl?) -> DBL<>
+#| stats::rbeta : (n:dbl, shape1:dbl, shape2:dbl, ncp:dbl?) -> DBL<>
+#| stats::rt : (n:dbl, df:dbl, ncp:dbl?) -> DBL<>
+#| stats::rchisq : (n:dbl, df:dbl, ncp:dbl?) -> DBL<>
+#| stats::rweibull : (n:dbl, shape:dbl, scale:dbl?) -> DBL<>
+#| stats::rpois : (n:dbl, lambda:dbl) -> INT<> | DBL<>
+#| stats::rbinom : (n:dbl, size:dbl, prob:dbl) -> INT<> | DBL<>
+# The density and the distribution function of the normal distribution.
+#| stats::dnorm : (x:dbl1, mean:dbl1?, sd:dbl1?, log:lgl1?) -> DBL1<>
+#|             && (x:dbl, mean:dbl?, sd:dbl?, log:lgl1?) -> DBL<>
+#| stats::pnorm : (q:dbl1, mean:dbl1?, sd:dbl1?, lower.tail:lgl1?, log.p:lgl1?) -> DBL1<>
+#|             && (q:dbl, mean:dbl?, sd:dbl?, lower.tail:lgl1?, log.p:lgl1?) -> DBL<>
 
 # ========== Summaries ==========
 
