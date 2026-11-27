@@ -93,7 +93,7 @@ dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<>
 test_dots1: Untypeable: untypeable coercion
 Line 187, characters 14-131073
 expected: { `r }
-given: list<> | 'I1669
+given: list<> | 'I1658
 expression may be: new.env()
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
@@ -231,14 +231,14 @@ im_subset: "element"<>
 
 lc_structure: { 2.<> }<square>
 
-lc_assign: ∀'a,'b. (((x: 'a<...>) -> 'a<circle>) & ((x: 'b<...>) -> 'b<circle>))<>
+lc_assign: ∀'a. ((x: 'a<...>) -> 'a<circle>)<>
 
 lc_dispatch: "square"<>
 
 lc_unknown: ∀'a,'b. (((x: 'a<...>, cl: null) -> 'a<>) & ((x: 'b<...>, cl: vec) ->
  'b<...>))<>
 
-lc_old: ∀'a,'b. (((x: 'a<...>) -> 'a<circle>) & ((x: 'b<...>) -> 'b<circle>))<>
+lc_old: ∀'a. ((x: 'a<...>) -> 'a<circle>)<>
 
 lc_narrow: ∀'a. (((x: 'a) -> null | 'a \ <~square, ...>) & ((x: <square, ...> & 'a) ->
  <square, ...> & 'a) & ((x: <~square, ...> & 'a) -> null))<>

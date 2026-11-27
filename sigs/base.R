@@ -456,9 +456,13 @@
 
 #| base::class : (x:any) -> CHR<>
 # A class given as a literal string is the class of the result (the label
-# variable `#c` stands for it); otherwise the classes are unknown.
+# variable `#c` stands for it); otherwise the classes are unknown. Overloads
+# whose domains overlap (here a literal string is also a `chr`) are grouped
+# with `&&` in one signature, so that they share their type variables: as
+# separate signatures, each would get its own, and the type of a caller would
+# repeat the same arrow once per signature.
 #| base::class<- : (x:'a<...>, v:#c) -> 'a<#c>
-#| base::class<- : (x:'a<...>, v:chr) -> 'a<...>
+#|               && (x:'a<...>, v:chr) -> 'a<...>
 #| base::class<- : (x:'a<...>, v:null) -> 'a<>
 #| base::unclass : (x:'a<...>) -> 'a<>
 # The class attribute only: `NULL` for a value without one, where `class`
@@ -467,7 +471,7 @@
 #| base::oldClass : (x:~<>) -> CHR<>
 # Sets the class attribute, as `class<-` does.
 #| base::oldClass<- : (x:'a<...>, v:#c) -> 'a<#c>
-#| base::oldClass<- : (x:'a<...>, v:chr) -> 'a<...>
+#|                  && (x:'a<...>, v:chr) -> 'a<...>
 #| base::oldClass<- : (x:'a<...>, v:null) -> 'a<>
 # Whether `x` has a class (of its class attribute: the implicit classes, such
 # as `integer` or `matrix`, are not tracked). With a literal `what` (the label
@@ -508,10 +512,10 @@
 # The attributes it sets are not tracked: the result has the type of `.Data`
 # with any attributes. Its class, when given as a literal string, is.
 #| base::structure : (.Data:v('a), class:#c, ...: any) -> v('a)<#c>
-#| base::structure : (.Data:{'a}, class:#c, ...: any) -> {'a}<#c>
-#| base::structure : (.Data:v('a), ...: any) -> v('a)
+#|                && (.Data:v('a), ...: any) -> v('a)
 #|                && (.Data:any, ...: any) -> any
-#| base::structure : (.Data:{'a}, ...: any) -> {'a}
+#| base::structure : (.Data:{'a}, class:#c, ...: any) -> {'a}<#c>
+#|                && (.Data:{'a}, ...: any) -> {'a}
 # The same for `attributes<-`, which sets them all (the class among them), or
 # removes them all with `NULL`.
 #| base::attributes<- : (x:v('a), v:{ any }) -> v('a)
