@@ -307,7 +307,7 @@ let to_mlsem (cfg:cfg) e =
     match e with
     | Const c -> eid, A.Value (typeof_const c |> GTy.mk)
     | Id v -> eid, A.Var v
-    | Declare (v,e) -> eid, A.Declare (v, aux e)
+    | Declare (v,e) -> eid, A.Declare ([Ty.any], v, aux e)
     | Let (v, e1, e2) -> eid, A.Let ([Ty.any], v, aux e1, aux e2)
     | VarAssign (v, e) -> eid, A.VarAssign (v, aux e)
     | Unop (v,e) -> aux (eid, Call ((Eid.unique (), Id v), [(Positional, Some e)]))
