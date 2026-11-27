@@ -104,6 +104,17 @@ narrowing_ann2 <- function(x) {
   return(-x)
 }
 
+# `stopifnot` fails on a condition that is certainly not `TRUE`, which narrows
+# with its first three conditions: a value that is not a string gives `empty`.
+# The fourth is not considered, nor a condition passed by name (with the
+# message as its name), which goes to `...`.
+stop_first <- function(x) { stopifnot(is.character(x)); x }
+stop_third <- function(x, n) { stopifnot(TRUE, n > 0, is.character(x)); x }
+stop_fourth <- function(x) { stopifnot(TRUE, TRUE, TRUE, is.character(x)); x }
+stop_named <- function(x) { stopifnot("x must be a string" = is.character(x)); x }
+stop_false <- function() { stopifnot(TRUE, FALSE); 1 }
+stop_true <- function() { stopifnot(c(TRUE, TRUE), TRUE); 1 }
+
 # Annotated, as inferring the type of `i + 1` for an unknown `i` is slow.
 #| loop_break/i : dbl<> | null
 loop_break <- function(x) {

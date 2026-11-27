@@ -66,6 +66,20 @@ narrowing_ann: ((x: dbl<>) -> dbl) & ((x: null) -> null)
 
 narrowing_ann2: (x: dbl<> | null) -> dbl | null
 
+stop_first: ∀'a. (((x: 'a \ CHR) -> empty) & ((x: CHR & 'a) -> CHR & 'a))<>
+
+stop_third: ∀'a. (((x: 'a \ CHR, n: <@">", ...>) | (x: 'a \ CHR, n: null |
+ vec<~@">", ...>) -> empty) & ((x: CHR & 'a, n: <@">", ...>) | (x: CHR &
+ 'a, n: null | vec<~@">", ...>) -> CHR & 'a))<>
+
+stop_fourth: ∀'a. (((x: 'a \ CHR) -> 'a \ CHR) & ((x: CHR & 'a) -> CHR & 'a))<>
+
+stop_named: ∀'a. (((x: 'a \ CHR) -> 'a \ CHR) & ((x: CHR & 'a) -> CHR & 'a))<>
+
+stop_false: (() -> empty)<>
+
+stop_true: (() -> 1.<>)<>
+
 loop_break: ((x: dbl<> | null) -> dbl<> | null)<>
 
 cases: ((x: DBL) -> 0.<>)<>
@@ -91,9 +105,9 @@ test_classes: ∀'a. ((x: 'a<...>) -> 'a<...>)<>
 dots_encoding: ∀'a,`a. ((...: ('a, `a)) -> @(...: ('a, `a)))<>
 
 test_dots1: Untypeable: untypeable coercion
-Line 187, characters 14-131073
+Line 198, characters 14-131073
 expected: { `r }
-given: list<> | 'I1658
+given: list<> | 'I1718
 expression may be: new.env()
 
 test_dots2: ∀'a. (...: 'a) -> { 'a }
@@ -112,12 +126,12 @@ rollmean: ∀'a. (((x: any, k: any, fill: 'a?, na.pad: any?, ...: any) -> (LGL1 
  ^LGL1)<> | null | 'a) & ((x: any, k: any, fill: 'a?, na.pad: ff?, ...: any)
  -> null | 'a))<>
 
-num_to_char_R: ((x: <@is.numeric, ...>, digits: (~(<@is.na, ...> |
+num_to_char_R: (((x: <@is.numeric, ...>, digits: (~(<@is.na, ...> |
  <@is.numeric, ...>))?, na_as_string: any?) | (x: DBL<~@is.numeric, ...> |
  INT<~@is.numeric, ...>, digits: (~(<@is.na, ...> |
- <@is.numeric, ...>))?, na_as_string: any?) | (x: ~((DBL | INT) |
- <@is.numeric, ...>), digits: (~(<@is.na, ...> |
- <@is.numeric, ...>))?, na_as_string: any?) -> null)<>
+ <@is.numeric, ...>))?, na_as_string: any?) -> null) & ((x: ~((DBL | INT) |
+ <@is.numeric, ...>), digits: (~<@is.na, ...>)?, na_as_string: any?) ->
+ empty))<>
 
 pred: (() -> (DBL | INT)<>)<>
 
